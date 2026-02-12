@@ -1,0 +1,72 @@
+{
+  "name": "hrplatform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise CRM/HCM Platform - Company Portal (CRM Tool for managing employees, attendance, leave, payroll)",
+  "author": "Milind Prabhakar",
+  "license": "MIT",
+  "packageManager": "yarn@4.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "test:coverage": "turbo run test:coverage",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:migrate": "yarn workspace @hrplatform/database prisma migrate deploy",
+    "db:migrate:dev": "yarn workspace @hrplatform/database prisma migrate dev",
+    "db:studio": "yarn workspace @hrplatform/database prisma studio",
+    "db:seed": "yarn workspace @hrplatform/database prisma db seed",
+    "db:reset": "yarn workspace @hrplatform/database prisma migrate reset",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:restart": "docker-compose restart",
+    "docker:logs": "docker-compose logs -f",
+    "docker:logs:elasticsearch": "docker-compose logs -f elasticsearch",
+    "docker:logs:kibana": "docker-compose logs -f kibana",
+    "docker:clean": "docker-compose down -v",
+    "deploy:web": "vercel --prod",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@turbo/gen": "^1.12.4",
+    "@types/node": "^20.11.19",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-jest": "^27.6.3",
+    "husky": "^9.0.10",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
+    "turbo": "^1.12.4",
+    "typescript": "^5.3.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "yarn": ">=4.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
+    "dotenv": "^17.2.4"
+  }
+}

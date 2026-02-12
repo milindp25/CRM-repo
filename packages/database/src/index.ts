@@ -1,0 +1,10 @@
+/**
+ * Database Package Exports
+ * Central export point for Prisma client and types
+ */
+
+export { prisma } from './client';
+export type { PrismaClient } from './client';
+
+// Re-export Prisma types for convenience
+export * from '@prisma/client';

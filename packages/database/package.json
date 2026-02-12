@@ -1,0 +1,32 @@
+{
+  "name": "@hrplatform/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/client.ts",
+  "types": "./src/client.ts",
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:create": "prisma migrate dev --create-only",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx src/seed.ts",
+    "db:reset": "prisma migrate reset",
+    "lint": "echo 'No linting configured'",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "dotenv-cli": "^11.0.0",
+    "prisma": "^5.9.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "prisma": {
+    "seed": "tsx src/seed.ts"
+  }
+}
