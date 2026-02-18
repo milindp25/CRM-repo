@@ -23,7 +23,7 @@ export class DesignationRepository {
     return this.prisma.designation.create({
       data,
       include: {
-        _count: { select: { employees: true } },
+        _count: { select: { employees: { where: { deletedAt: null } } } },
       },
     });
   }
@@ -46,13 +46,13 @@ export class DesignationRepository {
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.designation.findMany({
         where,
         skip,
         take: limit,
         orderBy: { [sortBy]: sortOrder },
-        include: { _count: { select: { employees: true } } },
+        include: { _count: { select: { employees: { where: { deletedAt: null } } } } },
       }),
       this.prisma.designation.count({ where }),
     ]);
@@ -73,7 +73,7 @@ export class DesignationRepository {
   async findById(id: string, companyId: string) {
     return this.prisma.designation.findFirst({
       where: { id, companyId, deletedAt: null },
-      include: { _count: { select: { employees: true } } },
+      include: { _count: { select: { employees: { where: { deletedAt: null } } } } },
     });
   }
 
@@ -81,7 +81,7 @@ export class DesignationRepository {
     return this.prisma.designation.update({
       where: { id, companyId },
       data,
-      include: { _count: { select: { employees: true } } },
+      include: { _count: { select: { employees: { where: { deletedAt: null } } } } },
     });
   }
 

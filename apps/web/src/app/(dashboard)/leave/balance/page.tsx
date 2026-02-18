@@ -58,7 +58,7 @@ export default function LeaveBalancePage() {
       setError('');
 
       const [empRes, approvedRes, pendingRes] = await Promise.all([
-        apiClient.getEmployees({ limit: 1000, status: 'ACTIVE' }),
+        apiClient.getEmployees({ limit: 100, status: 'ACTIVE' }),
         apiClient.getLeave({
           status: 'APPROVED',
           startDate: `${year}-01-01`,

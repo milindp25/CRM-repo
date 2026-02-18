@@ -19,38 +19,74 @@ interface EmployeeFormProps {
 
 export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProps) {
   const router = useRouter();
-  const { createEmployee, updateEmployee, loading } = useEmployee(employeeId);
+  const { employee, createEmployee, updateEmployee, loading } = useEmployee(employeeId);
+
+  const effectiveData = initialData || employee;
 
   const [formData, setFormData] = useState<Partial<CreateEmployeeData>>({
-    employeeCode: initialData?.employeeCode || '',
-    firstName: initialData?.firstName || '',
-    middleName: initialData?.middleName || '',
-    lastName: initialData?.lastName || '',
-    workEmail: initialData?.workEmail || '',
-    personalEmail: initialData?.personalEmail || '',
-    workPhone: initialData?.workPhone || '',
-    personalPhone: initialData?.personalPhone || '',
-    dateOfBirth: initialData?.dateOfBirth || '',
-    gender: initialData?.gender,
-    dateOfJoining: initialData?.dateOfJoining || '',
-    employmentType: initialData?.employmentType || 'FULL_TIME',
-    status: initialData?.status || 'ACTIVE',
-    aadhaar: initialData?.aadhaar || '',
-    pan: initialData?.pan || '',
-    passport: initialData?.passport || '',
-    addressLine1: initialData?.addressLine1 || '',
-    addressLine2: initialData?.addressLine2 || '',
-    city: initialData?.city || '',
-    state: initialData?.state || '',
-    postalCode: initialData?.postalCode || '',
-    country: initialData?.country || 'India',
-    departmentId: initialData?.department?.id || '',
-    designationId: initialData?.designation?.id || '',
-    reportingManagerId: initialData?.reportingManager?.id || '',
-    probationEndDate: initialData?.probationEndDate || '',
+    employeeCode: effectiveData?.employeeCode || '',
+    firstName: effectiveData?.firstName || '',
+    middleName: effectiveData?.middleName || '',
+    lastName: effectiveData?.lastName || '',
+    workEmail: effectiveData?.workEmail || '',
+    personalEmail: effectiveData?.personalEmail || '',
+    workPhone: effectiveData?.workPhone || '',
+    personalPhone: effectiveData?.personalPhone || '',
+    dateOfBirth: effectiveData?.dateOfBirth || '',
+    gender: effectiveData?.gender,
+    dateOfJoining: effectiveData?.dateOfJoining || '',
+    employmentType: effectiveData?.employmentType || 'FULL_TIME',
+    status: effectiveData?.status || 'ACTIVE',
+    aadhaar: effectiveData?.aadhaar || '',
+    pan: effectiveData?.pan || '',
+    passport: effectiveData?.passport || '',
+    addressLine1: effectiveData?.addressLine1 || '',
+    addressLine2: effectiveData?.addressLine2 || '',
+    city: effectiveData?.city || '',
+    state: effectiveData?.state || '',
+    postalCode: effectiveData?.postalCode || '',
+    country: effectiveData?.country || 'India',
+    departmentId: effectiveData?.department?.id || '',
+    designationId: effectiveData?.designation?.id || '',
+    reportingManagerId: effectiveData?.reportingManager?.id || '',
+    probationEndDate: effectiveData?.probationEndDate || '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Populate form when employee data is fetched (edit mode)
+  useEffect(() => {
+    if (employee && mode === 'edit') {
+      setFormData({
+        employeeCode: employee.employeeCode || '',
+        firstName: employee.firstName || '',
+        middleName: employee.middleName || '',
+        lastName: employee.lastName || '',
+        workEmail: employee.workEmail || '',
+        personalEmail: employee.personalEmail || '',
+        workPhone: employee.workPhone || '',
+        personalPhone: employee.personalPhone || '',
+        dateOfBirth: employee.dateOfBirth ? employee.dateOfBirth.split('T')[0] : '',
+        gender: employee.gender,
+        dateOfJoining: employee.dateOfJoining ? employee.dateOfJoining.split('T')[0] : '',
+        employmentType: employee.employmentType || 'FULL_TIME',
+        status: employee.status || 'ACTIVE',
+        aadhaar: employee.aadhaar || '',
+        pan: employee.pan || '',
+        passport: employee.passport || '',
+        addressLine1: employee.addressLine1 || '',
+        addressLine2: employee.addressLine2 || '',
+        city: employee.city || '',
+        state: employee.state || '',
+        postalCode: employee.postalCode || '',
+        country: employee.country || 'India',
+        departmentId: employee.department?.id || '',
+        designationId: employee.designation?.id || '',
+        reportingManagerId: employee.reportingManager?.id || '',
+        probationEndDate: employee.probationEndDate ? employee.probationEndDate.split('T')[0] : '',
+      });
+    }
+  }, [employee, mode]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -100,11 +136,16 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
     }
 
     try {
+      // Strip empty strings from optional fields before sending to API
+      const cleanedData = Object.fromEntries(
+        Object.entries(formData).filter(([_, value]) => value !== '' && value !== undefined && value !== null)
+      ) as Partial<CreateEmployeeData>;
+
       if (mode === 'create') {
-        await createEmployee(formData as CreateEmployeeData);
+        await createEmployee(cleanedData as CreateEmployeeData);
         router.push('/employees');
       } else if (mode === 'edit' && employeeId) {
-        await updateEmployee(employeeId, formData);
+        await updateEmployee(employeeId, cleanedData);
         router.push(`/employees/${employeeId}`);
       }
     } catch (error: any) {

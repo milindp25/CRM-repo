@@ -254,6 +254,15 @@ export class EmployeeService implements IEmployeeService {
   private encryptSensitiveFields(data: Partial<CreateEmployeeDto | UpdateEmployeeDto>): any {
     const result: any = { ...data };
 
+    // Remove relational and date fields that are handled separately in create/update
+    delete result.departmentId;
+    delete result.designationId;
+    delete result.reportingManagerId;
+    delete result.dateOfJoining;
+    delete result.dateOfBirth;
+    delete result.dateOfLeaving;
+    delete result.probationEndDate;
+
     // Remove plain text fields and add encrypted versions
     if (data.personalEmail) {
       result.personalEmailEncrypted = this.encrypt(data.personalEmail);

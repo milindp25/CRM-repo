@@ -130,6 +130,26 @@ export class AuthService implements IAuthService {
   }
 
   /**
+   * Get user profile by ID
+   */
+  async getProfile(userId: string) {
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      role: user.role,
+      companyId: user.companyId,
+      permissions: user.permissions,
+    };
+  }
+
+  /**
    * Update own profile (name/phone)
    */
   async updateProfile(userId: string, data: { firstName?: string; lastName?: string; phone?: string }) {

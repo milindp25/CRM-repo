@@ -81,7 +81,7 @@ export default function PayrollPage() {
 
   const fetchEmployees = async () => {
     try {
-      const response = await apiClient.getEmployees({ limit: 1000 });
+      const response = await apiClient.getEmployees({ limit: 100 });
       setEmployees(response.data);
     } catch (err) {
       console.error('Failed to fetch employees:', err);
