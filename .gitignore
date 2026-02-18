@@ -91,3 +91,25 @@ docker-compose.override.yml
 
 # Claude Code auto memory (local context only)
 .claude/
+
+# Test data and credentials (IMPORTANT: DO NOT COMMIT!)
+TEST-CREDENTIALS.md
+test-*.json
+test-*.js
+*test-supabase*.js
+
+# Temporary testing/documentation files (optional - can commit if needed)
+# Uncomment these lines to ignore testing documentation:
+*-TESTING.md
+*-CHECKLIST.md
+*-SUMMARY.md
+TEST-*.md
+TESTING-*.md
+
+# Temporary scripts and error files
+*.bat
+nul
+fix-*.bat
+
+# Build artifacts that shouldn't be committed
+*.tsbuildinfo

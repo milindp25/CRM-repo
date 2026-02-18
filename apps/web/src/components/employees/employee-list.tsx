@@ -143,31 +143,35 @@ export function EmployeeList() {
             <div className="bg-white px-6 py-4 border-t border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-700">
-                  Showing{' '}
-                  <span className="font-medium">
-                    {(pagination.page - 1) * pagination.limit + 1}
-                  </span>{' '}
-                  to{' '}
-                  <span className="font-medium">
-                    {Math.min(pagination.page * pagination.limit, pagination.total)}
-                  </span>{' '}
-                  of <span className="font-medium">{pagination.total}</span> employees
+                  {pagination && (
+                    <>
+                      Showing{' '}
+                      <span className="font-medium">
+                        {(pagination.currentPage - 1) * pagination.itemsPerPage + 1}
+                      </span>{' '}
+                      to{' '}
+                      <span className="font-medium">
+                        {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}
+                      </span>{' '}
+                      of <span className="font-medium">{pagination.totalItems}</span> employees
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={prevPage}
-                    disabled={!pagination.hasPrevPage || loading}
+                    disabled={!pagination?.hasPreviousPage || loading}
                     className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="h-5 w-5" />
                     Previous
                   </button>
                   <span className="px-4 py-2 text-sm text-gray-700">
-                    Page {pagination.page} of {pagination.totalPages}
+                    Page {pagination?.currentPage} of {pagination?.totalPages}
                   </span>
                   <button
                     onClick={nextPage}
-                    disabled={!pagination.hasNextPage || loading}
+                    disabled={!pagination?.hasNextPage || loading}
                     className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next

@@ -238,9 +238,9 @@ class ApiClient {
     const { token, skipAuth, ...fetchOptions } = options;
 
     // Build headers
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...fetchOptions.headers,
+      ...(fetchOptions.headers as Record<string, string>),
     };
 
     // Add authorization header
@@ -677,6 +677,81 @@ class ApiClient {
     });
   }
 
+  // ==================== Profile Endpoints ====================
+
+  async updateOwnProfile(data: { firstName?: string; lastName?: string; phone?: string }): Promise<any> {
+    return this.request('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return this.request('/auth/change-password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  // ==================== User Management Endpoints ====================
+
+  async getUsers(): Promise<CompanyUser[]> {
+    return this.request<CompanyUser[]>('/users');
+  }
+
+  async getUserById(id: string): Promise<CompanyUser> {
+    return this.request<CompanyUser>(`/users/${id}`);
+  }
+
+  async updateUserRole(id: string, role: string): Promise<CompanyUser> {
+    return this.request<CompanyUser>(`/users/${id}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async activateUser(id: string): Promise<CompanyUser> {
+    return this.request<CompanyUser>(`/users/${id}/activate`, {
+      method: 'PATCH',
+    });
+  }
+
+  async deactivateUser(id: string): Promise<CompanyUser> {
+    return this.request<CompanyUser>(`/users/${id}/deactivate`, {
+      method: 'PATCH',
+    });
+  }
+
+  // ==================== Company Endpoints ====================
+
+  async getCompany(): Promise<Company> {
+    return this.request<Company>('/company');
+  }
+
+  async updateCompany(data: UpdateCompanyData): Promise<Company> {
+    return this.request<Company>('/company', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ==================== Audit Log Endpoints ====================
+
+  async getAuditLogs(filters?: AuditLogFilters): Promise<AuditLogPaginationResponse> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+    }
+    const queryString = params.toString();
+    return this.request<AuditLogPaginationResponse>(
+      queryString ? `/audit-logs?${queryString}` : '/audit-logs',
+    );
+  }
+
   // ==================== Generic Request Methods ====================
 
   /**
@@ -1020,6 +1095,8 @@ export interface CreatePayrollData {
 export interface PayrollFilters {
   employeeId?: string;
   status?: 'DRAFT' | 'PROCESSED' | 'PAID' | 'HOLD';
+  month?: number;
+  year?: number;
   startDate?: string;
   endDate?: string;
   skip?: number;
@@ -1038,4 +1115,88 @@ export interface PayrollPaginationResponse {
   };
 }
 
-// Add these methods to the ApiClient class in the existing file
+// User Management Types
+export interface CompanyUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  role: 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'HR_ADMIN' | 'MANAGER' | 'EMPLOYEE';
+  isActive: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Company Types
+export interface Company {
+  id: string;
+  companyName: string;
+  companyCode: string;
+  industry?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
+  gstin?: string;
+  pan?: string;
+  subscriptionTier: string;
+  subscriptionStatus: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateCompanyData {
+  companyName?: string;
+  industry?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
+  gstin?: string;
+  pan?: string;
+}
+
+// Audit Log Types
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userEmail: string;
+  action: string;
+  resourceType: string;
+  resourceId?: string;
+  companyId: string;
+  success: boolean;
+  errorMessage?: string;
+  metadata?: Record<string, any>;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
+export interface AuditLogFilters {
+  userId?: string;
+  action?: string;
+  resourceType?: string;
+  skip?: number;
+  take?: number;
+}
+
+export interface AuditLogPaginationResponse {
+  data: AuditLog[];
+  total: number;
+  skip: number;
+  take: number;
+}

@@ -8,7 +8,7 @@
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Users, Calendar, Briefcase, DollarSign, Building2, Award } from 'lucide-react';
+import { Home, Users, Calendar, Briefcase, DollarSign, Building2, Award, BarChart2, ClipboardList, Shield, Settings, UserCircle, ScrollText } from 'lucide-react';
 
 interface NavItem {
   name: string;
@@ -23,7 +23,13 @@ const navigation: NavItem[] = [
   { name: 'Designations', href: '/designations', icon: Award },
   { name: 'Attendance', href: '/attendance', icon: Calendar },
   { name: 'Leave', href: '/leave', icon: Briefcase },
+  { name: 'Leave Balance', href: '/leave/balance', icon: ClipboardList },
   { name: 'Payroll', href: '/payroll', icon: DollarSign },
+  { name: 'Reports', href: '/reports', icon: BarChart2 },
+  { name: 'Users', href: '/users', icon: Shield },
+  { name: 'Audit Logs', href: '/audit-logs', icon: ScrollText },
+  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Profile', href: '/profile', icon: UserCircle },
 ];
 
 export default function DashboardLayout({

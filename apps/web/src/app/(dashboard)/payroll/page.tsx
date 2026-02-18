@@ -42,8 +42,8 @@ export default function PayrollPage() {
   const [filters, setFilters] = useState({
     employeeId: '',
     status: '',
-    startDate: '',
-    endDate: '',
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
   });
 
   // Calculated values
@@ -67,8 +67,8 @@ export default function PayrollPage() {
       const response = await apiClient.getPayroll({
         employeeId: filters.employeeId || undefined,
         status: filters.status as any || undefined,
-        startDate: filters.startDate || undefined,
-        endDate: filters.endDate || undefined,
+        month: filters.month,
+        year: filters.year,
       });
       setPayrollRecords(response.data);
     } catch (err: any) {
@@ -608,9 +608,31 @@ export default function PayrollPage() {
         <h3 className="font-medium mb-3">Filters</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Employee
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+            <select
+              value={filters.month}
+              onChange={(e) => setFilters({ ...filters, month: Number(e.target.value) })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
+                <option key={i + 1} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+            <select
+              value={filters.year}
+              onChange={(e) => setFilters({ ...filters, year: Number(e.target.value) })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
             <select
               value={filters.employeeId}
               onChange={(e) => setFilters({ ...filters, employeeId: e.target.value })}
@@ -625,9 +647,7 @@ export default function PayrollPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -639,28 +659,6 @@ export default function PayrollPage() {
               <option value="PAID">Paid</option>
               <option value="HOLD">Hold</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Start Date
-            </label>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              End Date
-            </label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
           </div>
         </div>
       </div>

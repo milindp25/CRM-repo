@@ -440,15 +440,13 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Probation Period (Months)
+                Probation End Date
               </label>
               <input
-                type="number"
-                value={formData.probationPeriodMonths}
-                onChange={(e) => handleChange('probationPeriodMonths', parseInt(e.target.value))}
+                type="date"
+                value={formData.probationEndDate || ''}
+                onChange={(e) => handleChange('probationEndDate', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                min={0}
-                max={24}
               />
             </div>
           </div>
