@@ -28,7 +28,8 @@ export class PayrollService {
     if (!key) {
       throw new Error('ENCRYPTION_KEY is not configured');
     }
-    this.encryptionKey = key;
+    // Use first 32 bytes of the key for AES-256
+    this.encryptionKey = key.substring(0, 64);
   }
 
   private encrypt(text: string): string {

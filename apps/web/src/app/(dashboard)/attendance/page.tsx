@@ -34,7 +34,7 @@ export default function AttendancePage() {
 
   const fetchEmployees = async () => {
     try {
-      const response = await apiClient.getEmployees({ limit: 1000, status: 'ACTIVE' });
+      const response = await apiClient.getEmployees({ limit: 100, status: 'ACTIVE' });
       setEmployees(response.data);
     } catch (err: any) {
       console.error('Failed to fetch employees:', err);

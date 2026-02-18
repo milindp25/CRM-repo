@@ -101,8 +101,8 @@ export class EmployeeRepository {
     const skip = ((page || 1) - 1) * (limit || 20);
     const take = limit || 20;
 
-    // Execute queries in parallel
-    const [data, total] = await Promise.all([
+    // Execute queries in a transaction to avoid PgBouncer prepared statement conflicts
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.employee.findMany({
         where,
         skip,

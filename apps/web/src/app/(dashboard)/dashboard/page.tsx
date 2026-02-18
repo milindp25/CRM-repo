@@ -45,7 +45,7 @@ export default function DashboardPage() {
       setError('');
 
       const [employeesRes, attendanceRes, leavesRes, payrollRes] = await Promise.allSettled([
-        apiClient.getEmployees({ limit: 1000 }),
+        apiClient.getEmployees({ limit: 100 }),
         apiClient.getAttendance({ startDate: today, endDate: today }),
         apiClient.getLeave({ status: 'PENDING' }),
         apiClient.getPayroll({ take: 5 }),
