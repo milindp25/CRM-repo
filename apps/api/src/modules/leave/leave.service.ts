@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LoggerService } from '../../common/services/logger.service';
+import { CacheService } from '../../common/services/cache.service';
 import { LeaveRepository } from './leave.repository';
 import {
   CreateLeaveDto,
@@ -18,6 +19,7 @@ export class LeaveService {
   constructor(
     private readonly repository: LeaveRepository,
     private readonly logger: LoggerService,
+    private readonly cache: CacheService,
   ) {}
 
   async create(
@@ -43,6 +45,9 @@ export class LeaveService {
 
     const leave = await this.repository.create(createData);
 
+    // Invalidate leave cache
+    this.cache.invalidateByPrefix('leave:');
+
     // Create audit log
     await this.repository.createAuditLog({
       userId,
@@ -67,23 +72,27 @@ export class LeaveService {
   ): Promise<LeavePaginationResponseDto> {
     this.logger.log('Finding all leave requests');
 
-    const { data, total } = await this.repository.findMany(companyId, filter);
+    const cacheKey = `leave:${companyId}:${JSON.stringify(filter)}`;
 
-    const page = filter.page || 1;
-    const limit = filter.limit || 20;
-    const totalPages = Math.ceil(total / limit);
+    return this.cache.getOrSet(cacheKey, async () => {
+      const { data, total } = await this.repository.findMany(companyId, filter);
 
-    return {
-      data: data.map((leave: any) => this.formatLeave(leave)),
-      meta: {
-        currentPage: page,
-        itemsPerPage: limit,
-        totalItems: total,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
-      },
-    };
+      const page = filter.page || 1;
+      const limit = filter.limit || 20;
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: data.map((leave: any) => this.formatLeave(leave)),
+        meta: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems: total,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+    }, 30_000);
   }
 
   async findOne(id: string, companyId: string): Promise<LeaveResponseDto> {
@@ -126,6 +135,9 @@ export class LeaveService {
 
     const updated = await this.repository.update(id, companyId, updateData);
 
+    // Invalidate leave cache
+    this.cache.invalidateByPrefix('leave:');
+
     // Create audit log
     await this.repository.createAuditLog({
       userId,
@@ -149,6 +161,9 @@ export class LeaveService {
     }
 
     await this.repository.delete(id, companyId);
+
+    // Invalidate leave cache
+    this.cache.invalidateByPrefix('leave:');
 
     // Create audit log
     await this.repository.createAuditLog({
@@ -189,6 +204,9 @@ export class LeaveService {
 
     const updated = await this.repository.update(id, companyId, updateData);
 
+    // Invalidate leave cache
+    this.cache.invalidateByPrefix('leave:');
+
     // Create audit log
     await this.repository.createAuditLog({
       userId,
@@ -222,6 +240,9 @@ export class LeaveService {
     };
 
     const updated = await this.repository.update(id, companyId, updateData);
+
+    // Invalidate leave cache
+    this.cache.invalidateByPrefix('leave:');
 
     // Create audit log
     await this.repository.createAuditLog({
@@ -257,6 +278,9 @@ export class LeaveService {
     };
 
     const updated = await this.repository.update(id, companyId, updateData);
+
+    // Invalidate leave cache
+    this.cache.invalidateByPrefix('leave:');
 
     // Create audit log
     await this.repository.createAuditLog({

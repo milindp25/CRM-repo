@@ -19,6 +19,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LoggerService } from './common/services/logger.service';
+import { CacheService } from './common/services/cache.service';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 /**
@@ -66,9 +67,11 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     AuditModule,
   ],
   controllers: [],
+  exports: [CacheService],
   providers: [
     // Common Services
     LoggerService,
+    CacheService,
 
     // Global Exception Filter
     {

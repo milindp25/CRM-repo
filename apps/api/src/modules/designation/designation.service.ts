@@ -2,12 +2,14 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { DesignationRepository } from './designation.repository';
 import { CreateDesignationDto, UpdateDesignationDto, DesignationFilterDto, DesignationResponseDto, DesignationPaginationResponseDto } from './dto';
 import { LoggerService } from '../../common/services/logger.service';
+import { CacheService } from '../../common/services/cache.service';
 
 @Injectable()
 export class DesignationService {
   constructor(
     private readonly repository: DesignationRepository,
     private readonly logger: LoggerService,
+    private readonly cache: CacheService,
   ) {}
 
   async create(companyId: string, dto: CreateDesignationDto): Promise<DesignationResponseDto> {
@@ -18,6 +20,7 @@ export class DesignationService {
       throw new ConflictException(`Designation code '${dto.code}' already exists`);
     }
 
+    this.cache.invalidateByPrefix(`desigs:${companyId}`);
     const designation = await this.repository.create({
       title: dto.title,
       code: dto.code,
@@ -33,11 +36,14 @@ export class DesignationService {
   }
 
   async findMany(companyId: string, filter: DesignationFilterDto): Promise<DesignationPaginationResponseDto> {
-    const result = await this.repository.findMany(companyId, filter);
-    return {
-      data: result.data.map((d) => this.formatDesignation(d)),
-      meta: result.meta,
-    };
+    const cacheKey = `desigs:${companyId}:${JSON.stringify(filter)}`;
+    return this.cache.getOrSet(cacheKey, async () => {
+      const result = await this.repository.findMany(companyId, filter);
+      return {
+        data: result.data.map((d) => this.formatDesignation(d)),
+        meta: result.meta,
+      };
+    }, 60_000);
   }
 
   async findById(id: string, companyId: string): Promise<DesignationResponseDto> {
@@ -61,6 +67,7 @@ export class DesignationService {
       }
     }
 
+    this.cache.invalidateByPrefix(`desigs:${companyId}`);
     const updated = await this.repository.update(id, companyId, {
       ...(dto.title && { title: dto.title }),
       ...(dto.code && { code: dto.code }),
@@ -84,6 +91,7 @@ export class DesignationService {
       throw new ConflictException(`Cannot delete designation with ${existing._count.employees} employees`);
     }
 
+    this.cache.invalidateByPrefix(`desigs:${companyId}`);
     await this.repository.softDelete(id, companyId);
   }
 

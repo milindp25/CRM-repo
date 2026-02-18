@@ -4,11 +4,12 @@ import { DesignationService } from './designation.service';
 import { DesignationRepository } from './designation.repository';
 import { DatabaseModule } from '../../database/database.module';
 import { LoggerService } from '../../common/services/logger.service';
+import { CacheService } from '../../common/services/cache.service';
 
 @Module({
   imports: [DatabaseModule],
   controllers: [DesignationController],
-  providers: [DesignationService, DesignationRepository, LoggerService],
+  providers: [DesignationService, DesignationRepository, LoggerService, CacheService],
   exports: [DesignationService],
 })
 export class DesignationModule {}
