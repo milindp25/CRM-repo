@@ -5,6 +5,7 @@ import { apiClient, Attendance, CreateAttendanceData, Employee } from '@/lib/api
 import { Plus, Calendar, Clock, Trash2, Edit2, MapPin } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { TableLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 export default function AttendancePage() {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
@@ -34,12 +35,48 @@ export default function AttendancePage() {
 
   // Fetch employees once on mount
   useEffect(() => {
-    fetchEmployees();
+    let cancelled = false;
+    const loadEmployees = async () => {
+      try {
+        const response = await apiClient.getEmployees({ limit: 100, status: 'ACTIVE' });
+        if (!cancelled) setEmployees(response.data);
+      } catch (err: any) {
+        if (!cancelled) console.error('Failed to fetch employees:', err);
+      }
+    };
+    loadEmployees();
+    return () => { cancelled = true; };
   }, []);
 
   // Fetch attendance data when filters or page changes
   useEffect(() => {
-    fetchAttendance();
+    let cancelled = false;
+    const loadAttendance = async () => {
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError(null);
+        }
+        const response = await apiClient.getAttendance({
+          page: currentPage,
+          limit: 20,
+          ...(employeeFilter && { employeeId: employeeFilter }),
+          ...(startDate && { startDate }),
+          ...(endDate && { endDate }),
+          ...(statusFilter && { status: statusFilter as any }),
+        });
+        if (!cancelled) {
+          setAttendance(response.data);
+          setTotalPages(response.meta.totalPages);
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Failed to fetch attendance records');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadAttendance();
+    return () => { cancelled = true; };
   }, [currentPage, employeeFilter, startDate, endDate, statusFilter]);
 
   const fetchEmployees = async () => {
@@ -151,12 +188,7 @@ export default function AttendancePage() {
 
       {/* Error message - only shown for initial page load / fetch failures */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800">{error}</p>
-          <button onClick={() => setError(null)} className="text-red-600 underline text-sm mt-1">
-            Dismiss
-          </button>
-        </div>
+        <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => fetchAttendance()} className="mb-6" />
       )}
 
       {/* Filters */}

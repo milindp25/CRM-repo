@@ -26,6 +26,7 @@ export class EmployeeRepository {
         id: excludeId ? { not: excludeId } : undefined,
         deletedAt: null,
       },
+      select: { id: true },
     });
   }
 
@@ -44,6 +45,7 @@ export class EmployeeRepository {
         id: excludeId ? { not: excludeId } : undefined,
         deletedAt: null,
       },
+      select: { id: true },
     });
   }
 

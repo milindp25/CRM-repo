@@ -12,14 +12,36 @@ export class AuthRepository {
   async findUserByEmail(email: string) {
     return this.prisma.user.findFirst({
       where: { email },
-      include: { company: true },
+      include: {
+        company: {
+          select: {
+            id: true,
+            companyCode: true,
+            companyName: true,
+            subscriptionTier: true,
+            subscriptionStatus: true,
+            isActive: true,
+          },
+        },
+      },
     });
   }
 
   async findUserById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-      include: { company: true },
+      include: {
+        company: {
+          select: {
+            id: true,
+            companyCode: true,
+            companyName: true,
+            subscriptionTier: true,
+            subscriptionStatus: true,
+            isActive: true,
+          },
+        },
+      },
     });
   }
 

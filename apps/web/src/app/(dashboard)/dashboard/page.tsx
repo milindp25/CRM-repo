@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiClient, type Employee, type Leave, type Attendance, type Payroll } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 interface DashboardStats {
   totalEmployees: number;
@@ -39,7 +40,72 @@ export default function DashboardPage() {
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
-    fetchDashboardData();
+    let cancelled = false;
+    const fetchData = async () => {
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError('');
+        }
+
+        const [employeesRes, attendanceRes, leavesRes, payrollRes] = await Promise.allSettled([
+          apiClient.getEmployees({ limit: 100 }),
+          apiClient.getAttendance({ startDate: today, endDate: today }),
+          apiClient.getLeave({ status: 'PENDING' }),
+          apiClient.getPayroll({ take: 5 }),
+        ]);
+
+        if (!cancelled) {
+          // Process employees
+          if (employeesRes.status === 'fulfilled') {
+            const employees = employeesRes.value.data;
+            setStats(prev => ({
+              ...prev,
+              totalEmployees: employees.length,
+              activeEmployees: employees.filter(e => e.status === 'ACTIVE').length,
+            }));
+          }
+
+          // Process attendance
+          if (attendanceRes.status === 'fulfilled') {
+            const attendance = attendanceRes.value.data;
+            setStats(prev => ({
+              ...prev,
+              presentToday: attendance.filter(a => a.status === 'PRESENT').length,
+              absentToday: attendance.filter(a => a.status === 'ABSENT').length,
+              wfhToday: attendance.filter(a => a.isWorkFromHome).length,
+            }));
+          }
+
+          // Process leaves
+          if (leavesRes.status === 'fulfilled') {
+            const leaves = leavesRes.value.data;
+            setPendingLeaves(leaves.slice(0, 5));
+            setStats(prev => ({
+              ...prev,
+              pendingLeaves: leavesRes.value.meta.totalItems || leaves.length,
+            }));
+          }
+
+          // Process payroll
+          if (payrollRes.status === 'fulfilled') {
+            const payrolls = payrollRes.value.data;
+            setRecentPayrolls(payrolls);
+            setStats(prev => ({
+              ...prev,
+              draftPayrolls: payrolls.filter(p => p.status === 'DRAFT').length,
+              processedPayrolls: payrolls.filter(p => p.status === 'PROCESSED').length,
+            }));
+          }
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Failed to load dashboard data');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchData();
+    return () => { cancelled = true; };
   }, []);
 
   const fetchDashboardData = async () => {
@@ -166,9 +232,7 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-          {error}
-        </div>
+        <ErrorBanner message={error} onDismiss={() => setError('')} onRetry={() => fetchDashboardData()} className="mb-6" />
       )}
 
       {/* Stats Grid */}

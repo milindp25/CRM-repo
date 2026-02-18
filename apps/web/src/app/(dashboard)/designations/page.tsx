@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient, Designation } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 import { Award, Plus, Edit, Trash2, Users, Loader2 } from 'lucide-react';
 
 export default function DesignationsPage() {
@@ -26,7 +27,20 @@ export default function DesignationsPage() {
   });
 
   useEffect(() => {
-    loadDesignations();
+    let cancelled = false;
+    const initLoad = async () => {
+      try {
+        if (!cancelled) setLoading(true);
+        const response = await apiClient.getDesignations({ limit: 100 });
+        if (!cancelled) setDesignations(response.data);
+      } catch (err: any) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    initLoad();
+    return () => { cancelled = true; };
   }, []);
 
   const loadDesignations = async () => {
@@ -127,9 +141,7 @@ export default function DesignationsPage() {
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          {error}
-        </div>
+        <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => loadDesignations()} className="mb-6" />
       )}
 
       {showForm && (

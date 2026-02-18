@@ -5,6 +5,7 @@ import { apiClient, Leave, CreateLeaveData, Employee } from '@/lib/api-client';
 import { Plus, Calendar, Clock, Trash2, Edit2, CheckCircle, XCircle, Ban } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { TableLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 export default function LeavePage() {
   const [leaves, setLeaves] = useState<Leave[]>([]);
@@ -38,12 +39,49 @@ export default function LeavePage() {
 
   // Fetch employees once on mount
   useEffect(() => {
-    fetchEmployees();
+    let cancelled = false;
+    const loadEmployees = async () => {
+      try {
+        const response = await apiClient.getEmployees({ limit: 100, status: 'ACTIVE' });
+        if (!cancelled) setEmployees(response.data);
+      } catch (err: any) {
+        if (!cancelled) console.error('Failed to fetch employees:', err);
+      }
+    };
+    loadEmployees();
+    return () => { cancelled = true; };
   }, []);
 
   // Fetch leaves when filters or page changes
   useEffect(() => {
-    fetchLeaves();
+    let cancelled = false;
+    const loadLeaves = async () => {
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError(null);
+        }
+        const response = await apiClient.getLeave({
+          page: currentPage,
+          limit: 20,
+          ...(employeeFilter && { employeeId: employeeFilter }),
+          ...(leaveTypeFilter && { leaveType: leaveTypeFilter }),
+          ...(statusFilter && { status: statusFilter as any }),
+          ...(startDate && { startDate }),
+          ...(endDate && { endDate }),
+        });
+        if (!cancelled) {
+          setLeaves(response.data);
+          setTotalPages(response.meta.totalPages);
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Failed to fetch leave requests');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadLeaves();
+    return () => { cancelled = true; };
   }, [currentPage, employeeFilter, leaveTypeFilter, statusFilter, startDate, endDate]);
 
   const fetchEmployees = async () => {
@@ -215,14 +253,13 @@ export default function LeavePage() {
         <p className="mt-2 text-gray-600">Manage employee leave requests</p>
       </div>
 
-      {/* Error message - only for initial page load failure */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800">{error}</p>
-          <button onClick={() => setError(null)} className="text-red-600 underline text-sm mt-1">
-            Dismiss
-          </button>
-        </div>
+        <ErrorBanner
+          message={error}
+          onDismiss={() => setError(null)}
+          onRetry={() => fetchLeaves()}
+          className="mb-6"
+        />
       )}
 
       {/* Filters */}

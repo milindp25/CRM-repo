@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { apiClient, type Payroll, type CreatePayrollData, type Employee } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
 import { TableLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 export default function PayrollPage() {
   const [payrollRecords, setPayrollRecords] = useState<Payroll[]>([]);
@@ -60,12 +61,46 @@ export default function PayrollPage() {
 
   // Fetch employees once on mount
   useEffect(() => {
-    fetchEmployees();
+    let cancelled = false;
+    const loadEmployees = async () => {
+      try {
+        const response = await apiClient.getEmployees({ limit: 100 });
+        if (!cancelled) setEmployees(response.data);
+      } catch (err) {
+        if (!cancelled) console.error('Failed to fetch employees:', err);
+      }
+    };
+    loadEmployees();
+    return () => { cancelled = true; };
   }, []);
 
   // Fetch payroll records when filters change
   useEffect(() => {
-    fetchPayrollRecords();
+    let cancelled = false;
+    const loadPayroll = async () => {
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError('');
+        }
+        const response = await apiClient.getPayroll({
+          employeeId: filters.employeeId || undefined,
+          status: filters.status as any || undefined,
+          month: filters.month,
+          year: filters.year,
+        });
+        if (!cancelled) setPayrollRecords(response.data);
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err.message || 'Failed to fetch payroll records');
+          console.error('Fetch error:', err);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadPayroll();
+    return () => { cancelled = true; };
   }, [filters]);
 
   const fetchPayrollRecords = async () => {
@@ -212,9 +247,7 @@ export default function PayrollPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md">
-          {error}
-        </div>
+        <ErrorBanner message={error} onDismiss={() => setError('')} onRetry={() => fetchPayrollRecords()} className="mb-6" />
       )}
 
       {showForm && (

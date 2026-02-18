@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient, Department } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 import { Building2, Plus, Edit, Trash2, Users, Loader2 } from 'lucide-react';
 
 export default function DepartmentsPage() {
@@ -19,7 +20,20 @@ export default function DepartmentsPage() {
   const [formData, setFormData] = useState({ name: '', code: '', description: '' });
 
   useEffect(() => {
-    loadDepartments();
+    let cancelled = false;
+    const initLoad = async () => {
+      try {
+        if (!cancelled) setLoading(true);
+        const response = await apiClient.getDepartments({ limit: 100 });
+        if (!cancelled) setDepartments(response.data);
+      } catch (err: any) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    initLoad();
+    return () => { cancelled = true; };
   }, []);
 
   const loadDepartments = async () => {
@@ -98,9 +112,7 @@ export default function DepartmentsPage() {
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          {error}
-        </div>
+        <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => loadDepartments()} className="mb-6" />
       )}
 
       {showForm && (

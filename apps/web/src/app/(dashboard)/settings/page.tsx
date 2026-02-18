@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { apiClient, type Company, type UpdateCompanyData } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 const LEAVE_ENTITLEMENTS = [
   { type: 'Casual Leave', days: 12, note: 'per year' },
@@ -40,7 +41,37 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    fetchCompany();
+    let cancelled = false;
+    const initFetch = async () => {
+      try {
+        if (!cancelled) setLoading(true);
+        const data = await apiClient.getCompany();
+        if (!cancelled) {
+          setCompany(data);
+          setFormData({
+            companyName: data.companyName || '',
+            industry: data.industry || '',
+            website: data.website || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            addressLine1: data.addressLine1 || '',
+            addressLine2: data.addressLine2 || '',
+            city: data.city || '',
+            state: data.state || '',
+            country: data.country || '',
+            postalCode: data.postalCode || '',
+            gstin: data.gstin || '',
+            pan: data.pan || '',
+          });
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Failed to load company info');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    initFetch();
+    return () => { cancelled = true; };
   }, []);
 
   const fetchCompany = async () => {
@@ -100,7 +131,7 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
+        <ErrorBanner message={error} onDismiss={() => setError('')} className="mb-6" />
       )}
 
       {/* Company Profile Form */}

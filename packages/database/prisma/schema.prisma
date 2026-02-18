@@ -68,6 +68,7 @@ model Company {
   payroll      Payroll[]
   auditLogs    AuditLog[]
   
+  @@index([createdAt])
   @@map("companies")
 }
 
@@ -114,6 +115,8 @@ model User {
   @@index([companyId])
   @@index([email])
   @@index([supabaseAuthId])
+  @@index([createdAt])
+  @@index([isActive])
   @@map("users")
 }
 
@@ -153,6 +156,7 @@ model Department {
   
   @@unique([companyId, code])
   @@index([companyId])
+  @@index([createdAt])
   @@map("departments")
 }
 
@@ -183,6 +187,7 @@ model Designation {
   
   @@unique([companyId, code])
   @@index([companyId])
+  @@index([createdAt])
   @@map("designations")
 }
 
@@ -267,6 +272,10 @@ model Employee {
   @@index([workEmail])
   @@index([departmentId])
   @@index([designationId])
+  @@index([reportingManagerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([deletedAt])
   @@map("employees")
 }
 
@@ -372,6 +381,7 @@ model Leave {
   @@index([employeeId])
   @@index([status])
   @@index([startDate])
+  @@index([createdAt])
   @@map("leaves")
 }
 
@@ -443,6 +453,8 @@ model Payroll {
   @@index([companyId])
   @@index([employeeId])
   @@index([status])
+  @@index([createdAt])
+  @@index([payPeriodYear, payPeriodMonth])
   @@map("payroll")
 }
 
