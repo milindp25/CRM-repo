@@ -56,27 +56,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Check if user has valid token and fetch profile
    */
   useEffect(() => {
+    let cancelled = false;
     const initAuth = async () => {
       const token = apiClient.getAccessToken();
 
       if (!token) {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
         return;
       }
 
       try {
         const profile = await apiClient.getProfile();
-        setUser(profile);
+        if (!cancelled) setUser(profile);
       } catch (err) {
         // Token invalid or expired
-        apiClient.clearTokens();
-        setUser(null);
+        if (!cancelled) {
+          apiClient.clearTokens();
+          setUser(null);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     initAuth();
+    return () => { cancelled = true; };
   }, []);
 
   /**

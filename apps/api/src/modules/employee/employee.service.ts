@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException, BadRequestException }
 import { ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { LoggerService } from '../../common/services/logger.service';
+import { CacheService } from '../../common/services/cache.service';
 import { EmployeeRepository } from './employee.repository';
 import { IEmployeeService } from './interfaces/employee.service.interface';
 import {
@@ -27,6 +28,7 @@ export class EmployeeService implements IEmployeeService {
     private readonly employeeRepository: EmployeeRepository,
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
+    private readonly cache: CacheService,
   ) {
     // Get encryption key from environment
     const key = this.configService.get<string>('ENCRYPTION_KEY');
@@ -67,6 +69,7 @@ export class EmployeeService implements IEmployeeService {
 
     // Create employee
     const employee = await this.employeeRepository.create(createData);
+    this.cache.invalidateByPrefix(`emps:${companyId}`);
 
     this.logger.log(`Employee created: ${employee.employeeCode} (${employee.workEmail})`, 'EmployeeService');
 
@@ -89,23 +92,26 @@ export class EmployeeService implements IEmployeeService {
    * Get all employees with filters and pagination
    */
   async findAll(companyId: string, filter: EmployeeFilterDto): Promise<EmployeePaginationResponseDto> {
-    const { data, total } = await this.employeeRepository.findMany(companyId, filter);
+    const cacheKey = `emps:${companyId}:${JSON.stringify(filter)}`;
+    return this.cache.getOrSet(cacheKey, async () => {
+      const { data, total } = await this.employeeRepository.findMany(companyId, filter);
 
-    const page = filter.page || 1;
-    const limit = filter.limit || 20;
-    const totalPages = Math.ceil(total / limit);
+      const page = filter.page || 1;
+      const limit = filter.limit || 20;
+      const totalPages = Math.ceil(total / limit);
 
-    return {
-      data: data.map(emp => this.mapToResponseDto(emp, false)),
-      meta: {
-        currentPage: page,
-        itemsPerPage: limit,
-        totalItems: total,
-        totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
-      },
-    };
+      return {
+        data: data.map(emp => this.mapToResponseDto(emp, false)),
+        meta: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems: total,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+    }, 30_000); // 30s cache for employee list
   }
 
   /**
@@ -168,6 +174,7 @@ export class EmployeeService implements IEmployeeService {
 
     // Update employee
     const employee = await this.employeeRepository.update(id, companyId, updateData);
+    this.cache.invalidateByPrefix(`emps:${companyId}`);
 
     this.logger.log(`Employee updated: ${employee.employeeCode}`, 'EmployeeService');
 
@@ -198,6 +205,7 @@ export class EmployeeService implements IEmployeeService {
 
     // Soft delete
     await this.employeeRepository.softDelete(id, companyId);
+    this.cache.invalidateByPrefix(`emps:${companyId}`);
 
     this.logger.log(`Employee deleted: ${existing.employeeCode}`, 'EmployeeService');
 

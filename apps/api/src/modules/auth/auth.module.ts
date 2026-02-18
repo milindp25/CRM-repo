@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LoggerService } from '../../common/services/logger.service';
+import { CacheService } from '../../common/services/cache.service';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { LoggerService } from '../../common/services/logger.service';
     AuthRepository,
     JwtStrategy,
     LoggerService,
+    CacheService,
   ],
   exports: [AuthService, JwtStrategy, PassportModule],
 })

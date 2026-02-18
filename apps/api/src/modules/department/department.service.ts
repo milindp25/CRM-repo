@@ -8,6 +8,7 @@ import {
   DepartmentPaginationResponseDto,
 } from './dto';
 import { LoggerService } from '../../common/services/logger.service';
+import { CacheService } from '../../common/services/cache.service';
 
 /**
  * Department Service
@@ -18,6 +19,7 @@ export class DepartmentService {
   constructor(
     private readonly repository: DepartmentRepository,
     private readonly logger: LoggerService,
+    private readonly cache: CacheService,
   ) {}
 
   /**
@@ -38,6 +40,7 @@ export class DepartmentService {
     }
 
     // Create department
+    this.cache.invalidateByPrefix(`depts:${companyId}`);
     const department = await this.repository.create({
       name: dto.name,
       code: dto.code,
@@ -63,12 +66,14 @@ export class DepartmentService {
     companyId: string,
     filter: DepartmentFilterDto,
   ): Promise<DepartmentPaginationResponseDto> {
-    const result = await this.repository.findMany(companyId, filter);
-
-    return {
-      data: result.data.map((dept) => this.formatDepartment(dept)),
-      meta: result.meta,
-    };
+    const cacheKey = `depts:${companyId}:${JSON.stringify(filter)}`;
+    return this.cache.getOrSet(cacheKey, async () => {
+      const result = await this.repository.findMany(companyId, filter);
+      return {
+        data: result.data.map((dept) => this.formatDepartment(dept)),
+        meta: result.meta,
+      };
+    }, 60_000);
   }
 
   /**
@@ -122,6 +127,7 @@ export class DepartmentService {
       // TODO: Add more sophisticated circular dependency check
     }
 
+    this.cache.invalidateByPrefix(`depts:${companyId}`);
     // Update department
     const updated = await this.repository.update(id, companyId, {
       ...(dto.name && { name: dto.name }),
@@ -164,6 +170,7 @@ export class DepartmentService {
       );
     }
 
+    this.cache.invalidateByPrefix(`depts:${companyId}`);
     // Soft delete
     await this.repository.softDelete(id, companyId);
 

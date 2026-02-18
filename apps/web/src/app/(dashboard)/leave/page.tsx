@@ -3,16 +3,22 @@
 import { useState, useEffect } from 'react';
 import { apiClient, Leave, CreateLeaveData, Employee } from '@/lib/api-client';
 import { Plus, Calendar, Clock, Trash2, Edit2, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
+import { TableLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 export default function LeavePage() {
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const toast = useToast();
 
   // Filters
   const [employeeFilter, setEmployeeFilter] = useState('');
@@ -31,9 +37,51 @@ export default function LeavePage() {
     reason: '',
   });
 
+  // Fetch employees once on mount
   useEffect(() => {
-    fetchEmployees();
-    fetchLeaves();
+    let cancelled = false;
+    const loadEmployees = async () => {
+      try {
+        const response = await apiClient.getEmployees({ limit: 100, status: 'ACTIVE' });
+        if (!cancelled) setEmployees(response.data);
+      } catch (err: any) {
+        if (!cancelled) console.error('Failed to fetch employees:', err);
+      }
+    };
+    loadEmployees();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Fetch leaves when filters or page changes
+  useEffect(() => {
+    let cancelled = false;
+    const loadLeaves = async () => {
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError(null);
+        }
+        const response = await apiClient.getLeave({
+          page: currentPage,
+          limit: 20,
+          ...(employeeFilter && { employeeId: employeeFilter }),
+          ...(leaveTypeFilter && { leaveType: leaveTypeFilter }),
+          ...(statusFilter && { status: statusFilter as any }),
+          ...(startDate && { startDate }),
+          ...(endDate && { endDate }),
+        });
+        if (!cancelled) {
+          setLeaves(response.data);
+          setTotalPages(response.meta.totalPages);
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Failed to fetch leave requests');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadLeaves();
+    return () => { cancelled = true; };
   }, [currentPage, employeeFilter, leaveTypeFilter, statusFilter, startDate, endDate]);
 
   const fetchEmployees = async () => {
@@ -79,15 +127,21 @@ export default function LeavePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       if (editingId) {
         await apiClient.updateLeave(editingId, formData);
+        toast.success('Leave request updated successfully');
       } else {
         await apiClient.createLeave(formData);
+        toast.success('Leave request submitted successfully');
       }
+      setError(null);
       resetForm();
       fetchLeaves();
     } catch (err: any) {
-      setError(err.message || 'Failed to save leave request');
+      toast.error('Failed to save leave request', err.message || undefined);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -112,18 +166,22 @@ export default function LeavePage() {
 
     try {
       await apiClient.deleteLeave(id);
+      toast.success('Leave request deleted successfully');
+      setError(null);
       fetchLeaves();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete leave request');
+      toast.error('Failed to delete leave request', err.message || undefined);
     }
   };
 
   const handleApprove = async (id: string) => {
     try {
       await apiClient.approveLeave(id);
+      toast.success('Leave request approved');
+      setError(null);
       fetchLeaves();
     } catch (err: any) {
-      setError(err.message || 'Failed to approve leave request');
+      toast.error('Failed to approve leave request', err.message || undefined);
     }
   };
 
@@ -131,9 +189,11 @@ export default function LeavePage() {
     const reason = prompt('Reason for rejection (optional):');
     try {
       await apiClient.rejectLeave(id, reason || undefined);
+      toast.success('Leave request rejected');
+      setError(null);
       fetchLeaves();
     } catch (err: any) {
-      setError(err.message || 'Failed to reject leave request');
+      toast.error('Failed to reject leave request', err.message || undefined);
     }
   };
 
@@ -141,9 +201,11 @@ export default function LeavePage() {
     const reason = prompt('Reason for cancellation (optional):');
     try {
       await apiClient.cancelLeave(id, reason || undefined);
+      toast.success('Leave request cancelled');
+      setError(null);
       fetchLeaves();
     } catch (err: any) {
-      setError(err.message || 'Failed to cancel leave request');
+      toast.error('Failed to cancel leave request', err.message || undefined);
     }
   };
 
@@ -191,14 +253,13 @@ export default function LeavePage() {
         <p className="mt-2 text-gray-600">Manage employee leave requests</p>
       </div>
 
-      {/* Error message */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800">{error}</p>
-          <button onClick={() => setError(null)} className="text-red-600 underline text-sm mt-1">
-            Dismiss
-          </button>
-        </div>
+        <ErrorBanner
+          message={error}
+          onDismiss={() => setError(null)}
+          onRetry={() => fetchLeaves()}
+          className="mb-6"
+        />
       )}
 
       {/* Filters */}
@@ -466,14 +527,16 @@ export default function LeavePage() {
             <div className="md:col-span-2 flex gap-2">
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={submitting}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingId ? 'Update' : 'Submit'}
+                {submitting ? 'Saving...' : editingId ? 'Update' : 'Submit'}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                disabled={submitting}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -485,7 +548,7 @@ export default function LeavePage() {
       {/* Leave requests table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading leave requests...</div>
+          <TableLoader rows={5} cols={6} />
         ) : leaves.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             No leave requests found. Click &quot;Apply for Leave&quot; to create one.

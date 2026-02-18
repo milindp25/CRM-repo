@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
@@ -19,6 +19,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LoggerService } from './common/services/logger.service';
+import { CacheService } from './common/services/cache.service';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 /**
@@ -66,9 +67,11 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     AuditModule,
   ],
   controllers: [],
+  exports: [CacheService],
   providers: [
     // Common Services
     LoggerService,
+    CacheService,
 
     // Global Exception Filter
     {
@@ -88,10 +91,6 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard, // Protect all routes by default unless @Public()
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard, // Rate limiting on all routes
     },
   ],
 })

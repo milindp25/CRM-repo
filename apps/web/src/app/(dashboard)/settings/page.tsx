@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, type Company, type UpdateCompanyData } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
+import { PageLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 const LEAVE_ENTITLEMENTS = [
   { type: 'Casual Leave', days: 12, note: 'per year' },
@@ -19,7 +22,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const toast = useToast();
 
   const [formData, setFormData] = useState<UpdateCompanyData>({
     companyName: '',
@@ -38,7 +41,37 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    fetchCompany();
+    let cancelled = false;
+    const initFetch = async () => {
+      try {
+        if (!cancelled) setLoading(true);
+        const data = await apiClient.getCompany();
+        if (!cancelled) {
+          setCompany(data);
+          setFormData({
+            companyName: data.companyName || '',
+            industry: data.industry || '',
+            website: data.website || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            addressLine1: data.addressLine1 || '',
+            addressLine2: data.addressLine2 || '',
+            city: data.city || '',
+            state: data.state || '',
+            country: data.country || '',
+            postalCode: data.postalCode || '',
+            gstin: data.gstin || '',
+            pan: data.pan || '',
+          });
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Failed to load company info');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    initFetch();
+    return () => { cancelled = true; };
   }, []);
 
   const fetchCompany = async () => {
@@ -72,13 +105,11 @@ export default function SettingsPage() {
     e.preventDefault();
     setSaving(true);
     setError('');
-    setSuccess('');
     try {
       await apiClient.updateCompany(formData);
-      setSuccess('Company profile updated successfully');
-      setTimeout(() => setSuccess(''), 4000);
+      toast.success('Settings saved', 'Company profile updated successfully');
     } catch (err: any) {
-      setError(err.message || 'Failed to update company profile');
+      toast.error('Update failed', err.message || 'Failed to update company profile');
     } finally {
       setSaving(false);
     }
@@ -89,11 +120,7 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center">
-        <div className="text-gray-500">Loading company info...</div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -104,10 +131,7 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>
+        <ErrorBanner message={error} onDismiss={() => setError('')} className="mb-6" />
       )}
 
       {/* Company Profile Form */}

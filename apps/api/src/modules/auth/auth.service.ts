@@ -7,6 +7,7 @@ import { IAuthService } from './interfaces/auth.service.interface';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { LoggerService } from '../../common/services/logger.service';
+import { CacheService } from '../../common/services/cache.service';
 
 /**
  * Auth Service (Business Logic Layer)
@@ -20,6 +21,7 @@ export class AuthService implements IAuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
+    private readonly cache: CacheService,
   ) {}
 
   /**
@@ -88,24 +90,29 @@ export class AuthService implements IAuthService {
       throw new UnauthorizedException('Account is inactive');
     }
 
-    // Update last login
-    await this.authRepository.updateLastLogin(user.id);
-
-    // Create audit log
-    await this.authRepository.createAuditLog({
-      userId: user.id,
-      userEmail: user.email,
-      action: 'USER_LOGIN',
-      resourceType: 'USER',
-      resourceId: user.id,
-      companyId: user.companyId,
-      success: true,
-    });
+    // Generate tokens first (fast, CPU-only) — return response ASAP
+    const response = this.generateAuthResponse(user);
 
     this.logger.log(`User logged in: ${dto.email}`, 'AuthService');
 
-    // Generate tokens
-    return this.generateAuthResponse(user);
+    // Fire-and-forget: update last login + audit log in parallel
+    // These are non-critical and should NOT block the login response
+    Promise.all([
+      this.authRepository.updateLastLogin(user.id),
+      this.authRepository.createAuditLog({
+        userId: user.id,
+        userEmail: user.email,
+        action: 'USER_LOGIN',
+        resourceType: 'USER',
+        resourceId: user.id,
+        companyId: user.companyId,
+        success: true,
+      }),
+    ]).catch((err) => {
+      this.logger.error(`Failed to update login metadata: ${err.message}`, 'AuthService');
+    });
+
+    return response;
   }
 
   /**
@@ -130,29 +137,32 @@ export class AuthService implements IAuthService {
   }
 
   /**
-   * Get user profile by ID
+   * Get user profile by ID (cached for 60s to avoid repeated DB roundtrips)
    */
   async getProfile(userId: string) {
-    const user = await this.authRepository.findUserById(userId);
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-    return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      role: user.role,
-      companyId: user.companyId,
-      permissions: user.permissions,
-    };
+    return this.cache.getOrSet(`profile:${userId}`, async () => {
+      const user = await this.authRepository.findUserById(userId);
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+      return {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        role: user.role,
+        companyId: user.companyId,
+        permissions: user.permissions,
+      };
+    }, 60_000);
   }
 
   /**
    * Update own profile (name/phone)
    */
   async updateProfile(userId: string, data: { firstName?: string; lastName?: string; phone?: string }) {
+    this.cache.invalidate(`profile:${userId}`);
     return this.authRepository.updateProfile(userId, data);
   }
 

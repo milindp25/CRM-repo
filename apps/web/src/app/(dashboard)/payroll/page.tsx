@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, type Payroll, type CreatePayrollData, type Employee } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
+import { TableLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 export default function PayrollPage() {
   const [payrollRecords, setPayrollRecords] = useState<Payroll[]>([]);
@@ -9,6 +12,7 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const toast = useToast();
 
   // Form state
   const [formData, setFormData] = useState<CreatePayrollData>({
@@ -55,9 +59,48 @@ export default function PayrollPage() {
 
   const netSalary = grossSalary - totalDeductions;
 
+  // Fetch employees once on mount
   useEffect(() => {
-    fetchPayrollRecords();
-    fetchEmployees();
+    let cancelled = false;
+    const loadEmployees = async () => {
+      try {
+        const response = await apiClient.getEmployees({ limit: 100 });
+        if (!cancelled) setEmployees(response.data);
+      } catch (err) {
+        if (!cancelled) console.error('Failed to fetch employees:', err);
+      }
+    };
+    loadEmployees();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Fetch payroll records when filters change
+  useEffect(() => {
+    let cancelled = false;
+    const loadPayroll = async () => {
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError('');
+        }
+        const response = await apiClient.getPayroll({
+          employeeId: filters.employeeId || undefined,
+          status: filters.status as any || undefined,
+          month: filters.month,
+          year: filters.year,
+        });
+        if (!cancelled) setPayrollRecords(response.data);
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err.message || 'Failed to fetch payroll records');
+          console.error('Fetch error:', err);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadPayroll();
+    return () => { cancelled = true; };
   }, [filters]);
 
   const fetchPayrollRecords = async () => {
@@ -92,8 +135,8 @@ export default function PayrollPage() {
     e.preventDefault();
     try {
       setLoading(true);
-      setError('');
       await apiClient.createPayroll(formData);
+      toast.success('Payroll Created', 'Payroll record has been created successfully.');
       setShowForm(false);
       // Reset form
       setFormData({
@@ -124,7 +167,7 @@ export default function PayrollPage() {
       });
       await fetchPayrollRecords();
     } catch (err: any) {
-      setError(err.message || 'Failed to create payroll');
+      toast.error('Create Failed', err.message || 'Failed to create payroll');
       console.error('Create error:', err);
     } finally {
       setLoading(false);
@@ -136,9 +179,10 @@ export default function PayrollPage() {
     try {
       setLoading(true);
       await apiClient.processPayroll(id);
+      toast.success('Payroll Processed', 'Payroll record has been processed successfully.');
       await fetchPayrollRecords();
     } catch (err: any) {
-      setError(err.message || 'Failed to process payroll');
+      toast.error('Process Failed', err.message || 'Failed to process payroll');
     } finally {
       setLoading(false);
     }
@@ -149,9 +193,10 @@ export default function PayrollPage() {
     try {
       setLoading(true);
       await apiClient.markPayrollAsPaid(id);
+      toast.success('Marked as Paid', 'Payroll record has been marked as paid.');
       await fetchPayrollRecords();
     } catch (err: any) {
-      setError(err.message || 'Failed to mark payroll as paid');
+      toast.error('Mark Paid Failed', err.message || 'Failed to mark payroll as paid');
     } finally {
       setLoading(false);
     }
@@ -162,9 +207,10 @@ export default function PayrollPage() {
     try {
       setLoading(true);
       await apiClient.deletePayroll(id);
+      toast.success('Payroll Deleted', 'Payroll record has been deleted.');
       await fetchPayrollRecords();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete payroll');
+      toast.error('Delete Failed', err.message || 'Failed to delete payroll');
     } finally {
       setLoading(false);
     }
@@ -201,9 +247,7 @@ export default function PayrollPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md">
-          {error}
-        </div>
+        <ErrorBanner message={error} onDismiss={() => setError('')} onRetry={() => fetchPayrollRecords()} className="mb-6" />
       )}
 
       {showForm && (
@@ -681,8 +725,8 @@ export default function PayrollPage() {
             <tbody className="divide-y divide-gray-200">
               {loading && !payrollRecords.length ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                    Loading...
+                  <td colSpan={7}>
+                    <TableLoader rows={5} cols={7} />
                   </td>
                 </tr>
               ) : payrollRecords.length === 0 ? (

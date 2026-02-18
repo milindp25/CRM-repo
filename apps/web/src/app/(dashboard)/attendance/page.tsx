@@ -3,16 +3,22 @@
 import { useState, useEffect } from 'react';
 import { apiClient, Attendance, CreateAttendanceData, Employee } from '@/lib/api-client';
 import { Plus, Calendar, Clock, Trash2, Edit2, MapPin } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
+import { TableLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 export default function AttendancePage() {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const toast = useToast();
 
   // Filters
   const [employeeFilter, setEmployeeFilter] = useState('');
@@ -27,9 +33,50 @@ export default function AttendancePage() {
     status: 'PRESENT',
   });
 
+  // Fetch employees once on mount
   useEffect(() => {
-    fetchEmployees();
-    fetchAttendance();
+    let cancelled = false;
+    const loadEmployees = async () => {
+      try {
+        const response = await apiClient.getEmployees({ limit: 100, status: 'ACTIVE' });
+        if (!cancelled) setEmployees(response.data);
+      } catch (err: any) {
+        if (!cancelled) console.error('Failed to fetch employees:', err);
+      }
+    };
+    loadEmployees();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Fetch attendance data when filters or page changes
+  useEffect(() => {
+    let cancelled = false;
+    const loadAttendance = async () => {
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError(null);
+        }
+        const response = await apiClient.getAttendance({
+          page: currentPage,
+          limit: 20,
+          ...(employeeFilter && { employeeId: employeeFilter }),
+          ...(startDate && { startDate }),
+          ...(endDate && { endDate }),
+          ...(statusFilter && { status: statusFilter as any }),
+        });
+        if (!cancelled) {
+          setAttendance(response.data);
+          setTotalPages(response.meta.totalPages);
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Failed to fetch attendance records');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadAttendance();
+    return () => { cancelled = true; };
   }, [currentPage, employeeFilter, startDate, endDate, statusFilter]);
 
   const fetchEmployees = async () => {
@@ -65,15 +112,21 @@ export default function AttendancePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       if (editingId) {
         await apiClient.updateAttendance(editingId, formData);
+        toast.success('Attendance Updated', 'Attendance record has been updated successfully.');
       } else {
         await apiClient.createAttendance(formData);
+        toast.success('Attendance Created', 'Attendance record has been created successfully.');
       }
+      setError(null);
       resetForm();
       fetchAttendance();
     } catch (err: any) {
-      setError(err.message || 'Failed to save attendance record');
+      toast.error('Failed to Save', err.message || 'Failed to save attendance record');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -96,9 +149,11 @@ export default function AttendancePage() {
 
     try {
       await apiClient.deleteAttendance(id);
+      setError(null);
+      toast.success('Attendance Deleted', 'Attendance record has been deleted successfully.');
       fetchAttendance();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete attendance record');
+      toast.error('Failed to Delete', err.message || 'Failed to delete attendance record');
     }
   };
 
@@ -131,14 +186,9 @@ export default function AttendancePage() {
         <p className="mt-2 text-gray-600">Manage employee attendance records</p>
       </div>
 
-      {/* Error message */}
+      {/* Error message - only shown for initial page load / fetch failures */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800">{error}</p>
-          <button onClick={() => setError(null)} className="text-red-600 underline text-sm mt-1">
-            Dismiss
-          </button>
-        </div>
+        <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => fetchAttendance()} className="mb-6" />
       )}
 
       {/* Filters */}
@@ -345,14 +395,16 @@ export default function AttendancePage() {
             <div className="md:col-span-3 flex gap-2">
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={submitting}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingId ? 'Update' : 'Save'}
+                {submitting ? 'Saving...' : editingId ? 'Update' : 'Save'}
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                disabled={submitting}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -364,7 +416,7 @@ export default function AttendancePage() {
       {/* Attendance table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading attendance records...</div>
+          <TableLoader rows={5} cols={7} />
         ) : attendance.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             No attendance records found. Click &quot;Mark Attendance&quot; to add one.
