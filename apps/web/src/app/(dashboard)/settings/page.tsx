@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, type Company, type UpdateCompanyData } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
+import { PageLoader } from '@/components/ui/page-loader';
 
 const LEAVE_ENTITLEMENTS = [
   { type: 'Casual Leave', days: 12, note: 'per year' },
@@ -19,7 +21,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const toast = useToast();
 
   const [formData, setFormData] = useState<UpdateCompanyData>({
     companyName: '',
@@ -72,13 +74,11 @@ export default function SettingsPage() {
     e.preventDefault();
     setSaving(true);
     setError('');
-    setSuccess('');
     try {
       await apiClient.updateCompany(formData);
-      setSuccess('Company profile updated successfully');
-      setTimeout(() => setSuccess(''), 4000);
+      toast.success('Settings saved', 'Company profile updated successfully');
     } catch (err: any) {
-      setError(err.message || 'Failed to update company profile');
+      toast.error('Update failed', err.message || 'Failed to update company profile');
     } finally {
       setSaving(false);
     }
@@ -89,11 +89,7 @@ export default function SettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center">
-        <div className="text-gray-500">Loading company info...</div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -105,9 +101,6 @@ export default function SettingsPage() {
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>
       )}
 
       {/* Company Profile Form */}

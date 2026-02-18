@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { apiClient, type Employee, type Leave, type Attendance, type Payroll } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
+import { PageLoader } from '@/components/ui/page-loader';
 
 interface DashboardStats {
   totalEmployees: number;
@@ -30,6 +32,7 @@ export default function DashboardPage() {
   const [recentPayrolls, setRecentPayrolls] = useState<Payroll[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const toast = useToast();
 
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().getMonth() + 1;
@@ -102,18 +105,20 @@ export default function DashboardPage() {
   const handleApproveLeave = async (id: string) => {
     try {
       await apiClient.approveLeave(id);
+      toast.success('Leave approved', 'The leave request has been approved');
       await fetchDashboardData();
     } catch (err: any) {
-      setError(err.message || 'Failed to approve leave');
+      toast.error('Approval failed', err.message || 'Failed to approve leave');
     }
   };
 
   const handleRejectLeave = async (id: string) => {
     try {
       await apiClient.rejectLeave(id);
+      toast.success('Leave rejected', 'The leave request has been rejected');
       await fetchDashboardData();
     } catch (err: any) {
-      setError(err.message || 'Failed to reject leave');
+      toast.error('Rejection failed', err.message || 'Failed to reject leave');
     }
   };
 
@@ -148,14 +153,7 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

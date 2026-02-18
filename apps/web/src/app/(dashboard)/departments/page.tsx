@@ -3,15 +3,19 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, Department } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
+import { PageLoader } from '@/components/ui/page-loader';
 import { Building2, Plus, Edit, Trash2, Users, Loader2 } from 'lucide-react';
 
 export default function DepartmentsPage() {
   const router = useRouter();
+  const toast = useToast();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '', description: '' });
 
   useEffect(() => {
@@ -33,17 +37,22 @@ export default function DepartmentsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       if (editingId) {
         await apiClient.updateDepartment(editingId, formData);
+        toast.success('Department updated', 'Department has been updated successfully.');
       } else {
         await apiClient.createDepartment(formData);
+        toast.success('Department created', 'New department has been created successfully.');
       }
       setShowForm(false);
       setEditingId(null);
       setFormData({ name: '', code: '', description: '' });
       loadDepartments();
     } catch (err: any) {
-      alert(err.message);
+      toast.error('Failed to save department', err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -57,18 +66,15 @@ export default function DepartmentsPage() {
     if (!confirm('Delete this department?')) return;
     try {
       await apiClient.deleteDepartment(id);
+      toast.success('Department deleted', 'Department has been deleted successfully.');
       loadDepartments();
     } catch (err: any) {
-      alert(err.message);
+      toast.error('Failed to delete department', err.message);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -139,14 +145,17 @@ export default function DepartmentsPage() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={submitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {editingId ? 'Update' : 'Create'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                disabled={submitting}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
