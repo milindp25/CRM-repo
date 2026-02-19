@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, type Company, type UpdateCompanyData } from '@/lib/api-client';
+import { RoleGate } from '@/components/common/role-gate';
+import { Permission } from '@hrplatform/shared';
 
 const LEAVE_ENTITLEMENTS = [
   { type: 'Casual Leave', days: 12, note: 'per year' },
@@ -97,11 +99,12 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Manage your company profile and configuration</p>
-      </div>
+    <RoleGate requiredPermissions={[Permission.MANAGE_COMPANY]}>
+      <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          <p className="text-gray-600 mt-1">Manage your company profile and configuration</p>
+        </div>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
@@ -274,6 +277,33 @@ export default function SettingsPage() {
         </form>
       </div>
 
+      {/* Advanced Settings Links */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Advanced Settings</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <a href="/settings/api-keys" className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+            <div className="text-2xl mb-2">🔑</div>
+            <h3 className="font-medium text-gray-900 group-hover:text-blue-700">API Keys</h3>
+            <p className="text-xs text-gray-500 mt-1">Manage API keys for integrations</p>
+          </a>
+          <a href="/settings/webhooks" className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+            <div className="text-2xl mb-2">🔗</div>
+            <h3 className="font-medium text-gray-900 group-hover:text-blue-700">Webhooks</h3>
+            <p className="text-xs text-gray-500 mt-1">Send events to external services</p>
+          </a>
+          <a href="/settings/custom-fields" className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+            <div className="text-2xl mb-2">📋</div>
+            <h3 className="font-medium text-gray-900 group-hover:text-blue-700">Custom Fields</h3>
+            <p className="text-xs text-gray-500 mt-1">Add custom data fields to entities</p>
+          </a>
+          <a href="/settings/sso" className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+            <div className="text-2xl mb-2">🔐</div>
+            <h3 className="font-medium text-gray-900 group-hover:text-blue-700">Single Sign-On</h3>
+            <p className="text-xs text-gray-500 mt-1">Configure SSO for your organization</p>
+          </a>
+        </div>
+      </div>
+
       {/* Leave Entitlements (informational) */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between mb-4">
@@ -295,5 +325,6 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+    </RoleGate>
   );
 }

@@ -1,10 +1,11 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { AuthRepository } from './auth.repository';
 import { IAuthService } from './interfaces/auth.service.interface';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto';
+import { UpdateSSOConfigDto, SSOConfigResponseDto, SSOProvider } from './dto/sso-config.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { LoggerService } from '../../common/services/logger.service';
 
@@ -161,6 +162,129 @@ export class AuthService implements IAuthService {
     this.logger.log(`User logged out: ${userId}`, 'AuthService');
   }
 
+  // ============================================================================
+  // SSO / Google OAuth Methods
+  // ============================================================================
+
+  /**
+   * Handle Google OAuth login callback
+   * Generates JWT tokens for the authenticated Google user
+   */
+  async googleLogin(user: any): Promise<AuthResponseDto> {
+    if (!user) {
+      throw new UnauthorizedException('Google authentication failed');
+    }
+
+    // Create audit log for SSO login
+    await this.authRepository.createAuditLog({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'USER_SSO_LOGIN',
+      resourceType: 'USER',
+      resourceId: user.id,
+      companyId: user.companyId,
+      success: true,
+    });
+
+    this.logger.log(`User logged in via Google SSO: ${user.email}`, 'AuthService');
+
+    return this.generateAuthResponse(user);
+  }
+
+  /**
+   * Get SSO configuration for a company
+   * Returns a sanitized response (secrets are masked)
+   */
+  async getSSOConfig(companyId: string): Promise<SSOConfigResponseDto> {
+    const config = (await this.authRepository.getSSOConfig(companyId)) as any;
+
+    if (!config) {
+      // Return default empty config
+      return {
+        provider: SSOProvider.GOOGLE,
+        enabled: false,
+        hasGoogleClientSecret: false,
+        allowedDomains: [],
+      };
+    }
+
+    // Mask the client ID (show first 8 chars + last 4 chars)
+    let maskedClientId: string | undefined;
+    if (config.googleClientId) {
+      const id = config.googleClientId;
+      if (id.length > 12) {
+        maskedClientId = `${id.substring(0, 8)}...${id.substring(id.length - 4)}`;
+      } else {
+        maskedClientId = `${id.substring(0, 4)}...`;
+      }
+    }
+
+    return {
+      provider: config.provider || SSOProvider.GOOGLE,
+      enabled: config.enabled || false,
+      googleClientId: maskedClientId,
+      hasGoogleClientSecret: !!config.googleClientSecret,
+      allowedDomains: config.allowedDomains || [],
+    };
+  }
+
+  /**
+   * Update SSO configuration for a company
+   */
+  async updateSSOConfig(
+    companyId: string,
+    dto: UpdateSSOConfigDto,
+  ): Promise<SSOConfigResponseDto> {
+    // Validate that required fields are present when enabling
+    if (dto.enabled && dto.provider === SSOProvider.GOOGLE) {
+      if (!dto.googleClientId || !dto.googleClientSecret) {
+        throw new BadRequestException(
+          'Google Client ID and Client Secret are required when enabling Google SSO',
+        );
+      }
+    }
+
+    // Build the config object to store
+    const config: Record<string, any> = {
+      provider: dto.provider,
+      enabled: dto.enabled,
+      allowedDomains: dto.allowedDomains || [],
+    };
+
+    if (dto.provider === SSOProvider.GOOGLE) {
+      // If updating with new credentials, use them; otherwise preserve existing
+      if (dto.googleClientId) {
+        config.googleClientId = dto.googleClientId;
+      }
+      if (dto.googleClientSecret) {
+        config.googleClientSecret = dto.googleClientSecret;
+      }
+
+      // If not providing new credentials, merge with existing config
+      if (!dto.googleClientId || !dto.googleClientSecret) {
+        const existingConfig = (await this.authRepository.getSSOConfig(companyId)) as any;
+        if (existingConfig) {
+          if (!dto.googleClientId && existingConfig.googleClientId) {
+            config.googleClientId = existingConfig.googleClientId;
+          }
+          if (!dto.googleClientSecret && existingConfig.googleClientSecret) {
+            config.googleClientSecret = existingConfig.googleClientSecret;
+          }
+        }
+      }
+    }
+
+    await this.authRepository.updateSSOConfig(companyId, config);
+
+    this.logger.log(
+      `SSO config updated for company ${companyId}: provider=${dto.provider}, enabled=${dto.enabled}`,
+      'AuthService',
+    );
+
+    // Return sanitized config
+    return this.getSSOConfig(companyId);
+  }
+
   /**
    * Private helper: Hash password
    * Single Responsibility: Only handles password hashing
@@ -210,7 +334,9 @@ export class AuthService implements IAuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        permissions: (user.permissions as string[]) || [],
         companyId: user.companyId,
+        companyName: user.company?.companyName,
       },
       accessToken,
       refreshToken,

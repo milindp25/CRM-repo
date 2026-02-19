@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '@hrplatform/shared';
 import { AttendanceService } from './attendance.service';
@@ -35,6 +36,7 @@ interface JwtPayload {
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller({ path: 'attendance', version: '1' })
+@RequireFeature('ATTENDANCE')
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 

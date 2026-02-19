@@ -108,4 +108,100 @@ export class AuthRepository {
   }) {
     return this.prisma.auditLog.create({ data });
   }
+
+  // ============================================================================
+  // SSO / Google OAuth Methods
+  // ============================================================================
+
+  /**
+   * Find a user by their Google ID
+   */
+  async findUserByGoogleId(googleId: string) {
+    return this.prisma.user.findUnique({
+      where: { googleId },
+      include: { company: true },
+    });
+  }
+
+  /**
+   * Create a new user from Google OAuth profile
+   */
+  async createGoogleUser(data: {
+    email: string;
+    googleId: string;
+    firstName: string;
+    lastName: string;
+    avatar?: string;
+    companyId: string;
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          googleId: data.googleId,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          avatar: data.avatar || null,
+          companyId: data.companyId,
+          role: 'EMPLOYEE',
+          permissions: [],
+          isActive: true,
+          emailVerified: true,
+          lastLoginAt: new Date(),
+        },
+        include: { company: true },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          userEmail: user.email,
+          action: 'USER_SSO_REGISTERED',
+          resourceType: 'USER',
+          resourceId: user.id,
+          companyId: data.companyId,
+          success: true,
+        },
+      });
+
+      return user;
+    });
+  }
+
+  /**
+   * Link a Google account to an existing user
+   */
+  async updateGoogleId(userId: string, googleId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        googleId,
+        emailVerified: true,
+        lastLoginAt: new Date(),
+      },
+      include: { company: true },
+    });
+  }
+
+  /**
+   * Get the SSO configuration for a company
+   */
+  async getSSOConfig(companyId: string) {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { ssoConfig: true },
+    });
+    return company?.ssoConfig;
+  }
+
+  /**
+   * Update the SSO configuration for a company
+   */
+  async updateSSOConfig(companyId: string, config: Record<string, any>) {
+    return this.prisma.company.update({
+      where: { id: companyId },
+      data: { ssoConfig: config },
+      select: { id: true, ssoConfig: true },
+    });
+  }
 }

@@ -7,19 +7,31 @@ import {
   HttpStatus,
   UseGuards,
   Get,
+  Req,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto, RefreshTokenDto, AuthResponseDto } from './dto';
+import { UpdateSSOConfigDto, SSOConfigResponseDto } from './dto/sso-config.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import type { JwtPayload } from './interfaces/jwt-payload.interface';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireFeature } from '../../common/decorators/feature.decorator';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { FeatureGuard } from '../../common/guards/feature.guard';
+import { UserRole } from '@hrplatform/shared';
+interface JwtPayload { userId: string; email: string; companyId: string; role: string; permissions: string[]; }
 
 /**
  * Auth Controller (HTTP Layer)
@@ -32,7 +44,10 @@ import type { JwtPayload } from './interfaces/jwt-payload.interface';
   version: '1',
 })
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -116,5 +131,79 @@ export class AuthController {
     @Body() body: { currentPassword: string; newPassword: string },
   ): Promise<void> {
     await this.authService.changePassword(userId, body.currentPassword, body.newPassword);
+  }
+
+  // ============================================================================
+  // SSO / Google OAuth Endpoints
+  // ============================================================================
+
+  @Public()
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Initiate Google OAuth SSO login flow' })
+  @ApiQuery({
+    name: 'companyId',
+    required: true,
+    description: 'Company ID to initiate SSO for',
+  })
+  @ApiResponse({ status: 302, description: 'Redirects to Google OAuth consent screen' })
+  async googleAuth() {
+    // Guard handles the redirect to Google
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Google OAuth callback - handles the redirect from Google' })
+  @ApiResponse({ status: 302, description: 'Redirects to frontend with JWT tokens' })
+  async googleAuthCallback(@Req() req: any, @Res() res: any) {
+    const authResponse = await this.authService.googleLogin(req.user);
+
+    // Redirect to frontend with tokens as query parameters
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
+
+    const redirectUrl = new URL(`${frontendUrl}/auth/sso/callback`);
+    redirectUrl.searchParams.set('accessToken', authResponse.accessToken);
+    redirectUrl.searchParams.set('refreshToken', authResponse.refreshToken);
+
+    return res.redirect(redirectUrl.toString());
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
+  @Roles(UserRole.COMPANY_ADMIN)
+  @RequireFeature('SSO')
+  @Get('sso/config')
+  @ApiOperation({ summary: 'Get SSO configuration for the company' })
+  @ApiResponse({
+    status: 200,
+    description: 'SSO configuration retrieved',
+    type: SSOConfigResponseDto,
+  })
+  async getSSOConfig(
+    @CurrentUser('companyId') companyId: string,
+  ): Promise<SSOConfigResponseDto> {
+    return this.authService.getSSOConfig(companyId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard, FeatureGuard)
+  @Roles(UserRole.COMPANY_ADMIN)
+  @RequireFeature('SSO')
+  @Patch('sso/config')
+  @ApiOperation({ summary: 'Update SSO configuration for the company' })
+  @ApiResponse({
+    status: 200,
+    description: 'SSO configuration updated',
+    type: SSOConfigResponseDto,
+  })
+  async updateSSOConfig(
+    @CurrentUser('companyId') companyId: string,
+    @Body() dto: UpdateSSOConfigDto,
+  ): Promise<SSOConfigResponseDto> {
+    return this.authService.updateSSOConfig(companyId, dto);
   }
 }

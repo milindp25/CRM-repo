@@ -48,6 +48,34 @@ export enum SubscriptionStatus {
   TRIAL = 'TRIAL',
   ACTIVE = 'ACTIVE',
   PAST_DUE = 'PAST_DUE',
+  SUSPENDED = 'SUSPENDED',
   CANCELLED = 'CANCELLED',
   EXPIRED = 'EXPIRED',
+}
+
+/**
+ * Add-on Status
+ */
+export enum AddonStatus {
+  ACTIVE = 'ACTIVE',
+  CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
+}
+
+/**
+ * Billing Cycle
+ */
+export enum BillingCycle {
+  MONTHLY = 'MONTHLY',
+  YEARLY = 'YEARLY',
+}
+
+/**
+ * Invoice Status
+ */
+export enum InvoiceStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  OVERDUE = 'OVERDUE',
+  CANCELLED = 'CANCELLED',
 }

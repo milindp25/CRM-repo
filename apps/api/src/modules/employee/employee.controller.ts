@@ -29,6 +29,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UserRole } from '@hrplatform/shared';
@@ -45,6 +46,7 @@ import { UserRole } from '@hrplatform/shared';
 })
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
+@RequireFeature('EMPLOYEES')
 export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
 
