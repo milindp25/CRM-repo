@@ -9,24 +9,19 @@ export class CompanyRepository {
     return this.prisma.company.findUnique({ where: { id } });
   }
 
-  async update(id: string, data: {
-    companyName?: string;
-    email?: string;
-    phone?: string;
-    website?: string;
-    addressLine1?: string;
-    addressLine2?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    postalCode?: string;
-    gstin?: string;
-    pan?: string;
-    cin?: string;
-    industry?: string;
-    employeeCount?: number;
-  }) {
-    return this.prisma.company.update({ where: { id }, data });
+  async update(id: string, data: Record<string, any>) {
+    // Only pick fields that exist in the Prisma Company model
+    const allowedFields = [
+      'companyName', 'email', 'phone', 'website',
+      'addressLine1', 'addressLine2', 'city', 'state', 'country', 'postalCode',
+    ];
+    const filteredData: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (data[key] !== undefined) {
+        filteredData[key] = data[key];
+      }
+    }
+    return this.prisma.company.update({ where: { id }, data: filteredData });
   }
 
   async updateOnboarding(id: string, step: number, completed: boolean) {

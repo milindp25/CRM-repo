@@ -3,15 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, Designation } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
+import { PageLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 import { Award, Plus, Edit, Trash2, Users, Loader2 } from 'lucide-react';
 
 export default function DesignationsPage() {
   const router = useRouter();
+  const toast = useToast();
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     code: '',
@@ -22,7 +27,20 @@ export default function DesignationsPage() {
   });
 
   useEffect(() => {
-    loadDesignations();
+    let cancelled = false;
+    const initLoad = async () => {
+      try {
+        if (!cancelled) setLoading(true);
+        const response = await apiClient.getDesignations({ limit: 100 });
+        if (!cancelled) setDesignations(response.data);
+      } catch (err: any) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    initLoad();
+    return () => { cancelled = true; };
   }, []);
 
   const loadDesignations = async () => {
@@ -40,6 +58,7 @@ export default function DesignationsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setSubmitting(true);
       const data = {
         ...formData,
         minSalary: formData.minSalary ? Number(formData.minSalary) : undefined,
@@ -47,15 +66,19 @@ export default function DesignationsPage() {
       };
       if (editingId) {
         await apiClient.updateDesignation(editingId, data);
+        toast.success('Designation updated', 'Designation has been updated successfully.');
       } else {
         await apiClient.createDesignation(data);
+        toast.success('Designation created', 'New designation has been created successfully.');
       }
       setShowForm(false);
       setEditingId(null);
       setFormData({ title: '', code: '', description: '', level: 1, minSalary: '', maxSalary: '' });
       loadDesignations();
     } catch (err: any) {
-      alert(err.message);
+      toast.error('Failed to save designation', err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -76,9 +99,10 @@ export default function DesignationsPage() {
     if (!confirm('Delete this designation?')) return;
     try {
       await apiClient.deleteDesignation(id);
+      toast.success('Designation deleted', 'Designation has been deleted successfully.');
       loadDesignations();
     } catch (err: any) {
-      alert(err.message);
+      toast.error('Failed to delete designation', err.message);
     }
   };
 
@@ -93,11 +117,7 @@ export default function DesignationsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -121,9 +141,7 @@ export default function DesignationsPage() {
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          {error}
-        </div>
+        <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => loadDesignations()} className="mb-6" />
       )}
 
       {showForm && (
@@ -201,14 +219,17 @@ export default function DesignationsPage() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={submitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {editingId ? 'Update' : 'Create'}
               </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                disabled={submitting}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>

@@ -2,13 +2,12 @@
 
 import { useState } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 export default function ProfilePage() {
   // Profile update state
   const [profileData, setProfileData] = useState({ firstName: '', lastName: '', phone: '' });
   const [profileSaving, setProfileSaving] = useState(false);
-  const [profileError, setProfileError] = useState('');
-  const [profileSuccess, setProfileSuccess] = useState('');
 
   // Password change state
   const [passwordData, setPasswordData] = useState({
@@ -17,24 +16,21 @@ export default function ProfilePage() {
     confirmPassword: '',
   });
   const [passwordSaving, setPasswordSaving] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  const toast = useToast();
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileSaving(true);
-    setProfileError('');
-    setProfileSuccess('');
     try {
       const payload: { firstName?: string; lastName?: string; phone?: string } = {};
       if (profileData.firstName.trim()) payload.firstName = profileData.firstName.trim();
       if (profileData.lastName.trim()) payload.lastName = profileData.lastName.trim();
       if (profileData.phone.trim()) payload.phone = profileData.phone.trim();
       await apiClient.updateOwnProfile(payload);
-      setProfileSuccess('Profile updated successfully');
-      setTimeout(() => setProfileSuccess(''), 4000);
+      toast.success('Profile updated');
     } catch (err: any) {
-      setProfileError(err.message || 'Failed to update profile');
+      toast.error('Update failed', err.message || 'Failed to update profile');
     } finally {
       setProfileSaving(false);
     }
@@ -42,26 +38,23 @@ export default function ProfilePage() {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPasswordError('');
-    setPasswordSuccess('');
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordError('New passwords do not match');
+      toast.warning('Validation error', 'New passwords do not match');
       return;
     }
     if (passwordData.newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters');
+      toast.warning('Validation error', 'New password must be at least 8 characters');
       return;
     }
 
     setPasswordSaving(true);
     try {
       await apiClient.changePassword(passwordData.currentPassword, passwordData.newPassword);
-      setPasswordSuccess('Password changed successfully');
+      toast.success('Password changed');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setTimeout(() => setPasswordSuccess(''), 4000);
     } catch (err: any) {
-      setPasswordError(err.message || 'Failed to change password');
+      toast.error('Password change failed', err.message || 'Failed to change password');
     } finally {
       setPasswordSaving(false);
     }
@@ -77,13 +70,6 @@ export default function ProfilePage() {
       {/* Update Profile */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Update Profile</h2>
-
-        {profileError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{profileError}</div>
-        )}
-        {profileSuccess && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{profileSuccess}</div>
-        )}
 
         <form onSubmit={handleProfileSubmit} className="space-y-4">
           <div>
@@ -129,13 +115,6 @@ export default function ProfilePage() {
       {/* Change Password */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h2>
-
-        {passwordError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{passwordError}</div>
-        )}
-        {passwordSuccess && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{passwordSuccess}</div>
-        )}
 
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
           <div>

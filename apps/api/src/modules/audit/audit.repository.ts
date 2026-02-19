@@ -18,7 +18,7 @@ export class AuditRepository {
     if (action) where.action = action;
     if (userId) where.userId = userId;
 
-    const [data, total] = await Promise.all([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.auditLog.findMany({
         where,
         skip,

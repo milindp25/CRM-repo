@@ -4,6 +4,7 @@ import { EmployeeService } from './employee.service';
 import { EmployeeRepository } from './employee.repository';
 import { DatabaseModule } from '../../database/database.module';
 import { LoggerService } from '../../common/services/logger.service';
+import { CacheService } from '../../common/services/cache.service';
 
 /**
  * Employee Module
@@ -15,7 +16,7 @@ import { LoggerService } from '../../common/services/logger.service';
     DatabaseModule, // Provides PrismaService
   ],
   controllers: [EmployeeController],
-  providers: [EmployeeService, EmployeeRepository, LoggerService],
+  providers: [EmployeeService, EmployeeRepository, LoggerService, CacheService],
   exports: [EmployeeService], // Export for use in other modules
 })
 export class EmployeeModule {}

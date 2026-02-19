@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { LoggerService } from '../../common/services/logger.service';
+import { CacheService } from '../../common/services/cache.service';
 import { PayrollRepository } from './payroll.repository';
 import {
   CreatePayrollDto,
@@ -23,12 +24,14 @@ export class PayrollService {
     private readonly repository: PayrollRepository,
     private readonly logger: LoggerService,
     private readonly configService: ConfigService,
+    private readonly cache: CacheService,
   ) {
     const key = this.configService.get<string>('ENCRYPTION_KEY');
     if (!key) {
       throw new Error('ENCRYPTION_KEY is not configured');
     }
-    this.encryptionKey = key;
+    // Use first 32 bytes of the key for AES-256
+    this.encryptionKey = key.substring(0, 64);
   }
 
   private encrypt(text: string): string {
@@ -107,6 +110,9 @@ export class PayrollService {
 
     const payroll = await this.repository.create(createData);
 
+    // Invalidate payroll cache
+    this.cache.invalidateByPrefix('payroll:');
+
     await this.repository.createAuditLog({
       userId,
       companyId,
@@ -125,48 +131,52 @@ export class PayrollService {
   ): Promise<PayrollPaginationResponseDto> {
     this.logger.log('Finding all payroll records');
 
-    const where: any = { companyId };
+    const cacheKey = `payroll:${companyId}:${JSON.stringify(filter)}`;
 
-    if (filter.employeeId) {
-      where.employeeId = filter.employeeId;
-    }
-    if (filter.status) {
-      where.status = filter.status;
-    }
-    if (filter.month) {
-      where.payPeriodMonth = filter.month;
-    }
-    if (filter.year) {
-      where.payPeriodYear = filter.year;
-    }
-    if (filter.startDate || filter.endDate) {
-      where.payDate = {};
-      if (filter.startDate) {
-        where.payDate.gte = filter.startDate;
+    return this.cache.getOrSet(cacheKey, async () => {
+      const where: any = { companyId };
+
+      if (filter.employeeId) {
+        where.employeeId = filter.employeeId;
       }
-      if (filter.endDate) {
-        where.payDate.lte = filter.endDate;
+      if (filter.status) {
+        where.status = filter.status;
       }
-    }
+      if (filter.month) {
+        where.payPeriodMonth = filter.month;
+      }
+      if (filter.year) {
+        where.payPeriodYear = filter.year;
+      }
+      if (filter.startDate || filter.endDate) {
+        where.payDate = {};
+        if (filter.startDate) {
+          where.payDate.gte = filter.startDate;
+        }
+        if (filter.endDate) {
+          where.payDate.lte = filter.endDate;
+        }
+      }
 
-    const data = await this.repository.findMany({
-      skip: filter.skip,
-      take: filter.take,
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
+      const data = await this.repository.findMany({
+        skip: filter.skip,
+        take: filter.take,
+        where,
+        orderBy: { createdAt: 'desc' },
+      });
 
-    return {
-      data: data.map((p: any) => this.formatPayroll(p)),
-      meta: {
-        currentPage: 1,
-        itemsPerPage: filter.take || 20,
-        totalItems: data.length,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPreviousPage: false,
-      },
-    };
+      return {
+        data: data.map((p: any) => this.formatPayroll(p)),
+        meta: {
+          currentPage: 1,
+          itemsPerPage: filter.take || 20,
+          totalItems: data.length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      };
+    }, 30_000);
   }
 
   async findOne(id: string, companyId: string): Promise<PayrollResponseDto> {
@@ -228,6 +238,9 @@ export class PayrollService {
 
     const updated = await this.repository.update(id, updateData);
 
+    // Invalidate payroll cache
+    this.cache.invalidateByPrefix('payroll:');
+
     await this.repository.createAuditLog({
       userId,
       companyId,
@@ -254,6 +267,9 @@ export class PayrollService {
     }
 
     await this.repository.delete(id);
+
+    // Invalidate payroll cache
+    this.cache.invalidateByPrefix('payroll:');
 
     await this.repository.createAuditLog({
       userId,
@@ -282,6 +298,9 @@ export class PayrollService {
     };
 
     const updated = await this.repository.update(id, updateData);
+
+    // Invalidate payroll cache
+    this.cache.invalidateByPrefix('payroll:');
 
     await this.repository.createAuditLog({
       userId,
@@ -313,6 +332,9 @@ export class PayrollService {
     };
 
     const updated = await this.repository.update(id, updateData);
+
+    // Invalidate payroll cache
+    this.cache.invalidateByPrefix('payroll:');
 
     await this.repository.createAuditLog({
       userId,

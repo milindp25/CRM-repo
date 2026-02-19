@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { apiClient, type Leave, type Payroll } from '@/lib/api-client';
+import { apiClient, type Employee, type Leave, type Attendance, type Payroll } from '@/lib/api-client';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
 import { CalendarWidget } from '@/components/dashboard/calendar-widget';
 import { OrgChart } from '@/components/dashboard/org-chart';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useToast } from '@/components/ui/toast';
+import { PageLoader } from '@/components/ui/page-loader';
+import { ErrorBanner } from '@/components/ui/error-banner';
 import { Building2, Activity } from 'lucide-react';
 
 interface DashboardStats {
@@ -36,11 +39,77 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { hasPermission } = usePermissions();
+  const toast = useToast();
 
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    fetchDashboardData();
+    let cancelled = false;
+    const fetchData = async () => {
+      try {
+        if (!cancelled) {
+          setLoading(true);
+          setError('');
+        }
+
+        const [employeesRes, attendanceRes, leavesRes, payrollRes] = await Promise.allSettled([
+          apiClient.getEmployees({ limit: 100 }),
+          apiClient.getAttendance({ startDate: today, endDate: today }),
+          apiClient.getLeave({ status: 'PENDING' }),
+          apiClient.getPayroll({ take: 5 }),
+        ]);
+
+        if (!cancelled) {
+          // Process employees
+          if (employeesRes.status === 'fulfilled') {
+            const employees = employeesRes.value.data;
+            setStats(prev => ({
+              ...prev,
+              totalEmployees: employees.length,
+              activeEmployees: employees.filter(e => e.status === 'ACTIVE').length,
+            }));
+          }
+
+          // Process attendance
+          if (attendanceRes.status === 'fulfilled') {
+            const attendance = attendanceRes.value.data;
+            setStats(prev => ({
+              ...prev,
+              presentToday: attendance.filter(a => a.status === 'PRESENT').length,
+              absentToday: attendance.filter(a => a.status === 'ABSENT').length,
+              wfhToday: attendance.filter(a => a.isWorkFromHome).length,
+            }));
+          }
+
+          // Process leaves
+          if (leavesRes.status === 'fulfilled') {
+            const leaves = leavesRes.value.data;
+            setPendingLeaves(leaves.slice(0, 5));
+            setStats(prev => ({
+              ...prev,
+              pendingLeaves: leavesRes.value.meta.totalItems || leaves.length,
+            }));
+          }
+
+          // Process payroll
+          if (payrollRes.status === 'fulfilled') {
+            const payrolls = payrollRes.value.data;
+            setRecentPayrolls(payrolls);
+            setStats(prev => ({
+              ...prev,
+              draftPayrolls: payrolls.filter(p => p.status === 'DRAFT').length,
+              processedPayrolls: payrolls.filter(p => p.status === 'PROCESSED').length,
+            }));
+          }
+        }
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Failed to load dashboard data');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchData();
+    return () => { cancelled = true; };
   }, []);
 
   const fetchDashboardData = async () => {
@@ -49,7 +118,7 @@ export default function DashboardPage() {
       setError('');
 
       const [employeesRes, attendanceRes, leavesRes, payrollRes] = await Promise.allSettled([
-        apiClient.getEmployees({ limit: 1000 }),
+        apiClient.getEmployees({ limit: 100 }),
         apiClient.getAttendance({ startDate: today, endDate: today }),
         apiClient.getLeave({ status: 'PENDING' }),
         apiClient.getPayroll({ take: 5 }),
@@ -102,18 +171,20 @@ export default function DashboardPage() {
   const handleApproveLeave = async (id: string) => {
     try {
       await apiClient.approveLeave(id);
+      toast.success('Leave approved', 'The leave request has been approved');
       await fetchDashboardData();
     } catch (err: any) {
-      setError(err.message || 'Failed to approve leave');
+      toast.error('Approval failed', err.message || 'Failed to approve leave');
     }
   };
 
   const handleRejectLeave = async (id: string) => {
     try {
       await apiClient.rejectLeave(id);
+      toast.success('Leave rejected', 'The leave request has been rejected');
       await fetchDashboardData();
     } catch (err: any) {
-      setError(err.message || 'Failed to reject leave');
+      toast.error('Rejection failed', err.message || 'Failed to reject leave');
     }
   };
 
@@ -148,14 +219,7 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -168,9 +232,7 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-md text-sm">
-          {error}
-        </div>
+        <ErrorBanner message={error} onDismiss={() => setError('')} onRetry={() => fetchDashboardData()} className="mb-6" />
       )}
 
       {/* Stats Grid */}

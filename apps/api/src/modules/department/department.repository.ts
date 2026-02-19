@@ -54,7 +54,7 @@ export class DepartmentRepository {
         },
         _count: {
           select: {
-            employees: true,
+            employees: { where: { deletedAt: null } },
           },
         },
       },
@@ -85,7 +85,7 @@ export class DepartmentRepository {
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.department.findMany({
         where,
         skip,
@@ -109,7 +109,7 @@ export class DepartmentRepository {
           },
           _count: {
             select: {
-              employees: true,
+              employees: { where: { deletedAt: null } },
             },
           },
         },
@@ -158,7 +158,7 @@ export class DepartmentRepository {
         },
         _count: {
           select: {
-            employees: true,
+            employees: { where: { deletedAt: null } },
           },
         },
       },
@@ -193,7 +193,7 @@ export class DepartmentRepository {
         },
         _count: {
           select: {
-            employees: true,
+            employees: { where: { deletedAt: null } },
           },
         },
       },
@@ -243,7 +243,7 @@ export class DepartmentRepository {
         },
         _count: {
           select: {
-            employees: true,
+            employees: { where: { deletedAt: null } },
           },
         },
       },

@@ -38,7 +38,7 @@ export class AttendanceRepository {
       }),
     };
 
-    const [data, total] = await Promise.all([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.attendance.findMany({
         where,
         skip: (page - 1) * limit,

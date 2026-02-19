@@ -104,7 +104,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
   async getProfile(@CurrentUser() user: JwtPayload) {
-    return user;
+    return this.authService.getProfile(user.userId);
   }
 
   @ApiBearerAuth()

@@ -14,21 +14,19 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
-    const { method, url, user } = request;
+    const { method, url } = request;
     const startTime = Date.now();
-
-    this.logger.log(
-      `Incoming ${method} ${url}`,
-      `HTTP ${user?.userId ? `User: ${user.userId}` : ''}`,
-    );
 
     return next.handle().pipe(
       tap(() => {
         const duration = Date.now() - startTime;
-        this.logger.log(
-          `Completed ${method} ${url} - ${duration}ms`,
-          'HTTP',
-        );
+        // Only log slow requests (>500ms) to reduce overhead
+        if (duration > 500) {
+          this.logger.log(
+            `SLOW ${method} ${url} - ${duration}ms`,
+            'HTTP',
+          );
+        }
       }),
     );
   }

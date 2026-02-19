@@ -39,7 +39,7 @@ export class LeaveRepository {
       }),
     };
 
-    const [data, total] = await Promise.all([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.leave.findMany({
         where,
         skip: (page - 1) * limit,

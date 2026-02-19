@@ -35,7 +35,7 @@ export default function ReportsPage() {
 
   // Load employees on mount
   useEffect(() => {
-    apiClient.getEmployees({ limit: 1000 }).then(r => setEmployees(r.data)).catch(() => {});
+    apiClient.getEmployees({ limit: 100 }).then(r => setEmployees(r.data)).catch(() => {});
   }, []);
 
   const generateReport = async () => {
