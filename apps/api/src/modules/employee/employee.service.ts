@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { LoggerService } from '../../common/services/logger.service';
@@ -13,6 +13,8 @@ import {
   EmployeePaginationResponseDto,
 } from './dto';
 import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../database/prisma.service';
+import { TIER_LIMITS, SubscriptionTier } from '@hrplatform/shared';
 
 /**
  * Employee Service (Business Logic Layer)
@@ -28,6 +30,7 @@ export class EmployeeService implements IEmployeeService {
     private readonly employeeRepository: EmployeeRepository,
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
+    private readonly prisma: PrismaService,
     private readonly cache: CacheService,
   ) {
     // Get encryption key from environment
@@ -43,6 +46,9 @@ export class EmployeeService implements IEmployeeService {
    * Create a new employee
    */
   async create(companyId: string, dto: CreateEmployeeDto): Promise<EmployeeResponseDto> {
+    // Check subscription employee limit
+    await this.checkEmployeeLimit(companyId);
+
     // Validate uniqueness
     await this.validateUniqueConstraints(companyId, dto);
 
@@ -220,6 +226,33 @@ export class EmployeeService implements IEmployeeService {
       success: true,
       metadata: { employeeCode: existing.employeeCode },
     });
+  }
+
+  /**
+   * Private: Check if company has reached employee limit for its subscription tier
+   */
+  private async checkEmployeeLimit(companyId: string): Promise<void> {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { subscriptionTier: true },
+    });
+
+    if (!company) return;
+
+    const tier = company.subscriptionTier as SubscriptionTier;
+    const limits = TIER_LIMITS[tier] ?? TIER_LIMITS[SubscriptionTier.FREE];
+
+    if (limits.maxEmployees === Infinity) return;
+
+    const currentCount = await this.prisma.employee.count({
+      where: { companyId, isActive: true, deletedAt: null },
+    });
+
+    if (currentCount >= limits.maxEmployees) {
+      throw new ForbiddenException(
+        `Employee limit reached (${limits.maxEmployees} for ${tier} plan). Please upgrade your subscription to add more employees.`,
+      );
+    }
   }
 
   /**

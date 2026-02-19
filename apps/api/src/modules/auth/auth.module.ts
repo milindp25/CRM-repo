@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
 import { LoggerService } from '../../common/services/logger.service';
 import { CacheService } from '../../common/services/cache.service';
 
@@ -27,6 +28,7 @@ import { CacheService } from '../../common/services/cache.service';
     AuthService,
     AuthRepository,
     JwtStrategy,
+    GoogleStrategy,
     LoggerService,
     CacheService,
   ],

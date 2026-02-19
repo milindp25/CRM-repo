@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, type Attendance, type Leave, type Payroll, type Employee } from '@/lib/api-client';
+import { RoleGate } from '@/components/common/role-gate';
+import { Permission } from '@hrplatform/shared';
 
 type ReportType = 'attendance' | 'leave' | 'payroll';
 
@@ -203,11 +205,12 @@ export default function ReportsPage() {
   const summary = generated ? getSummary() : null;
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-        <p className="text-gray-500 text-sm mt-1">Generate and export HR reports</p>
-      </div>
+    <RoleGate requiredPermissions={[Permission.VIEW_REPORTS, Permission.GENERATE_REPORTS]}>
+      <div className="p-6 max-w-[1400px] mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+          <p className="text-gray-500 text-sm mt-1">Generate and export HR reports</p>
+        </div>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
@@ -397,6 +400,7 @@ export default function ReportsPage() {
         </div>
       )}
     </div>
+    </RoleGate>
   );
 }
 

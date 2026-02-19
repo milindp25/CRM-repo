@@ -23,4 +23,14 @@ export class CompanyRepository {
     }
     return this.prisma.company.update({ where: { id }, data: filteredData });
   }
+
+  async updateOnboarding(id: string, step: number, completed: boolean) {
+    return this.prisma.company.update({
+      where: { id },
+      data: {
+        onboardingStep: step,
+        onboardingCompleted: completed,
+      },
+    });
+  }
 }

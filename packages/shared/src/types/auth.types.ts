@@ -20,7 +20,9 @@ export interface UserProfile {
   firstName: string;
   lastName: string;
   role: string;
+  permissions: string[];
   companyId: string;
+  companyName?: string;
 }
 
 /**

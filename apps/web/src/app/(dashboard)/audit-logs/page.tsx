@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, type AuditLog } from '@/lib/api-client';
+import { RoleGate } from '@/components/common/role-gate';
+import { Permission } from '@hrplatform/shared';
 
 const RESOURCE_TYPES = ['USER', 'EMPLOYEE', 'DEPARTMENT', 'DESIGNATION', 'ATTENDANCE', 'LEAVE', 'PAYROLL', 'COMPANY'];
 
@@ -71,11 +73,12 @@ export default function AuditLogsPage() {
   const currentPage = Math.floor(skip / TAKE) + 1;
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-        <p className="text-gray-600 mt-1">Track all actions performed in your company</p>
-      </div>
+    <RoleGate requiredPermissions={[Permission.VIEW_AUDIT_LOGS]}>
+      <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
+          <p className="text-gray-600 mt-1">Track all actions performed in your company</p>
+        </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -196,5 +199,6 @@ export default function AuditLogsPage() {
         )}
       </div>
     </div>
+    </RoleGate>
   );
 }

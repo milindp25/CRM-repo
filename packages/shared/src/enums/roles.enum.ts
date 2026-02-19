@@ -93,6 +93,42 @@ export enum Permission {
 
   // Audit Logs
   VIEW_AUDIT_LOGS = 'VIEW_AUDIT_LOGS',
+
+  // Performance Management
+  VIEW_PERFORMANCE = 'VIEW_PERFORMANCE',
+  MANAGE_PERFORMANCE = 'MANAGE_PERFORMANCE',
+  VIEW_OWN_PERFORMANCE = 'VIEW_OWN_PERFORMANCE',
+  SUBMIT_SELF_REVIEW = 'SUBMIT_SELF_REVIEW',
+
+  // Recruitment / ATS
+  VIEW_RECRUITMENT = 'VIEW_RECRUITMENT',
+  MANAGE_RECRUITMENT = 'MANAGE_RECRUITMENT',
+  CREATE_JOB_POSTINGS = 'CREATE_JOB_POSTINGS',
+  MANAGE_APPLICANTS = 'MANAGE_APPLICANTS',
+
+  // Training / LMS
+  VIEW_TRAINING = 'VIEW_TRAINING',
+  MANAGE_TRAINING = 'MANAGE_TRAINING',
+  ENROLL_TRAINING = 'ENROLL_TRAINING',
+
+  // Asset Management
+  VIEW_ASSETS = 'VIEW_ASSETS',
+  MANAGE_ASSETS = 'MANAGE_ASSETS',
+
+  // Expense Management
+  VIEW_EXPENSES = 'VIEW_EXPENSES',
+  MANAGE_EXPENSES = 'MANAGE_EXPENSES',
+  SUBMIT_EXPENSE = 'SUBMIT_EXPENSE',
+  APPROVE_EXPENSE = 'APPROVE_EXPENSE',
+
+  // Shift Management
+  VIEW_SHIFTS = 'VIEW_SHIFTS',
+  MANAGE_SHIFTS = 'MANAGE_SHIFTS',
+
+  // Policy Management
+  VIEW_POLICIES = 'VIEW_POLICIES',
+  MANAGE_POLICIES = 'MANAGE_POLICIES',
+  ACKNOWLEDGE_POLICY = 'ACKNOWLEDGE_POLICY',
 }
 
 /**
@@ -114,6 +150,13 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_REPORTS,
     Permission.GENERATE_REPORTS,
     Permission.VIEW_AUDIT_LOGS,
+    Permission.MANAGE_PERFORMANCE,
+    Permission.MANAGE_RECRUITMENT,
+    Permission.MANAGE_TRAINING,
+    Permission.MANAGE_ASSETS,
+    Permission.MANAGE_EXPENSES,
+    Permission.MANAGE_SHIFTS,
+    Permission.MANAGE_POLICIES,
   ],
 
   [UserRole.HR_ADMIN]: [
@@ -128,6 +171,13 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_DESIGNATIONS,
     Permission.VIEW_REPORTS,
     Permission.GENERATE_REPORTS,
+    Permission.MANAGE_PERFORMANCE,
+    Permission.MANAGE_RECRUITMENT,
+    Permission.MANAGE_TRAINING,
+    Permission.VIEW_ASSETS,
+    Permission.MANAGE_EXPENSES,
+    Permission.VIEW_SHIFTS,
+    Permission.MANAGE_POLICIES,
   ],
 
   [UserRole.MANAGER]: [
@@ -140,6 +190,14 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_DEPARTMENTS,
     Permission.VIEW_DESIGNATIONS,
     Permission.VIEW_REPORTS,
+    Permission.VIEW_PERFORMANCE,
+    Permission.VIEW_RECRUITMENT,
+    Permission.VIEW_TRAINING,
+    Permission.VIEW_ASSETS,
+    Permission.VIEW_EXPENSES,
+    Permission.APPROVE_EXPENSE,
+    Permission.VIEW_SHIFTS,
+    Permission.VIEW_POLICIES,
   ],
 
   [UserRole.EMPLOYEE]: [
@@ -151,5 +209,14 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_OWN_PAYROLL,
     Permission.VIEW_DEPARTMENTS,
     Permission.VIEW_DESIGNATIONS,
+    Permission.VIEW_OWN_PERFORMANCE,
+    Permission.SUBMIT_SELF_REVIEW,
+    Permission.ENROLL_TRAINING,
+    Permission.VIEW_TRAINING,
+    Permission.SUBMIT_EXPENSE,
+    Permission.VIEW_EXPENSES,
+    Permission.VIEW_SHIFTS,
+    Permission.VIEW_POLICIES,
+    Permission.ACKNOWLEDGE_POLICY,
   ],
 };

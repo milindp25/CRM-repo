@@ -16,6 +16,7 @@ import { PayrollService } from './payroll.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '@hrplatform/shared';
 
@@ -29,6 +30,7 @@ interface JwtPayload {
 @ApiTags('Payroll')
 @Controller({ path: 'payroll', version: '1' })
 @UseGuards(JwtAuthGuard, RolesGuard)
+@RequireFeature('PAYROLL')
 export class PayrollController {
   constructor(private readonly payrollService: PayrollService) {}
 

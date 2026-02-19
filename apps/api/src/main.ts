@@ -21,7 +21,7 @@ async function bootstrap() {
 
   // CORS Configuration
   const allowedOrigins = configService
-    .get<string>('ALLOWED_ORIGINS', 'http://localhost:3000')
+    .get<string>('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3001')
     .split(',');
 
   app.enableCors({

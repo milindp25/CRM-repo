@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { IsEnum, IsNumber, IsString, validateSync } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, validateSync } from 'class-validator';
 
 enum Environment {
   Development = 'development',
@@ -37,6 +37,45 @@ class EnvironmentVariables {
 
   @IsString()
   LOG_LEVEL: string = 'info';
+
+  // Email (SMTP) - Optional
+  @IsOptional()
+  @IsString()
+  SMTP_HOST?: string;
+
+  @IsOptional()
+  @IsNumber()
+  SMTP_PORT?: number;
+
+  @IsOptional()
+  @IsString()
+  SMTP_USER?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_PASS?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_FROM?: string;
+
+  // Frontend URL
+  @IsOptional()
+  @IsString()
+  FRONTEND_URL: string = 'http://localhost:3000';
+
+  // Google OAuth (SSO) - Optional
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  GOOGLE_CALLBACK_URL: string = 'http://localhost:4000/api/v1/auth/google/callback';
 }
 
 export function validate(config: Record<string, unknown>) {

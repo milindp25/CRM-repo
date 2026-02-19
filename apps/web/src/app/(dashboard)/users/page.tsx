@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, type CompanyUser } from '@/lib/api-client';
+import { RoleGate } from '@/components/common/role-gate';
+import { Permission } from '@hrplatform/shared';
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
@@ -111,11 +113,12 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-        <p className="text-gray-600 mt-1">Manage team members, roles, and access</p>
-      </div>
+    <RoleGate requiredPermissions={[Permission.VIEW_USERS, Permission.MANAGE_USERS]}>
+      <div className="p-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+          <p className="text-gray-600 mt-1">Manage team members, roles, and access</p>
+        </div>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
@@ -212,5 +215,6 @@ export default function UsersPage() {
         </div>
       </div>
     </div>
+    </RoleGate>
   );
 }

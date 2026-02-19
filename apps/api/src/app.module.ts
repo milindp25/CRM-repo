@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
@@ -14,6 +15,22 @@ import { PayrollModule } from './modules/payroll/payroll.module';
 import { UsersModule } from './modules/users/users.module';
 import { CompanyModule } from './modules/company/company.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { InvitationModule } from './modules/invitation/invitation.module';
+import { DocumentModule } from './modules/document/document.module';
+import { WorkflowModule } from './modules/workflow/workflow.module';
+import { ApiKeyModule } from './modules/api-key/api-key.module';
+import { CustomFieldModule } from './modules/custom-field/custom-field.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
+import { ImportExportModule } from './modules/import-export/import-export.module';
+import { AssetModule } from './modules/asset/asset.module';
+import { PerformanceModule } from './modules/performance/performance.module';
+import { RecruitmentModule } from './modules/recruitment/recruitment.module';
+import { TrainingModule } from './modules/training/training.module';
+import { ExpenseModule } from './modules/expense/expense.module';
+import { ShiftModule } from './modules/shift/shift.module';
+import { PolicyModule } from './modules/policy/policy.module';
+import { GatewayModule } from './common/gateways/gateway.module';
 import { validate } from './config/env.validation';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -21,10 +38,24 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LoggerService } from './common/services/logger.service';
 import { CacheService } from './common/services/cache.service';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { CompanyIsolationGuard } from './common/guards/company-isolation.guard';
+import { SubscriptionGuard } from './common/guards/subscription.guard';
+import { FeatureGuard } from './common/guards/feature.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 
 /**
  * Root Application Module
  * Configures global settings, imports feature modules
+ *
+ * Guard execution order (registered as APP_GUARD):
+ * 1. JwtAuthGuard       - Authenticate user (skip if @Public())
+ * 2. ThrottlerGuard     - Rate limiting
+ * 3. CompanyIsolation   - Multi-tenancy enforcement
+ * 4. SubscriptionGuard  - Check subscription is active
+ * 5. FeatureGuard       - Check feature is enabled for company
+ * 6. RolesGuard         - Check user role matches @Roles()
+ * 7. PermissionsGuard   - Check granular permissions via @RequirePermissions()
  */
 @Module({
   imports: [
@@ -50,6 +81,9 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
       },
     ]),
 
+    // Event System
+    EventEmitterModule.forRoot(),
+
     // Core Modules
     DatabaseModule,
 
@@ -65,6 +99,24 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     UsersModule,
     CompanyModule,
     AuditModule,
+    NotificationModule,
+    InvitationModule,
+    DocumentModule,
+    WorkflowModule,
+    ApiKeyModule,
+    CustomFieldModule,
+    WebhookModule,
+    ImportExportModule,
+    AssetModule,
+    PerformanceModule,
+    RecruitmentModule,
+    TrainingModule,
+    ExpenseModule,
+    ShiftModule,
+    PolicyModule,
+
+    // Real-time WebSocket Gateway
+    GatewayModule,
   ],
   controllers: [],
   exports: [CacheService],
@@ -87,10 +139,42 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
       provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor,
     },
-    // Global Guards
+
+    // Global Guards (order matters - executed in registration order)
+    // 1. Authentication
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard, // Protect all routes by default unless @Public()
+      useClass: JwtAuthGuard,
+    },
+    // 2. Rate Limiting
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    // 3. Multi-tenancy (company data isolation)
+    {
+      provide: APP_GUARD,
+      useClass: CompanyIsolationGuard,
+    },
+    // 4. Subscription status check
+    {
+      provide: APP_GUARD,
+      useClass: SubscriptionGuard,
+    },
+    // 5. Feature flag enforcement
+    {
+      provide: APP_GUARD,
+      useClass: FeatureGuard,
+    },
+    // 6. Role-based access control
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+    // 7. Granular permission checks
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
     },
   ],
 })

@@ -1,36 +1,15 @@
-/**
- * Dashboard Layout
- * Shared layout for all dashboard pages with navigation sidebar
- */
-
 'use client';
 
+import { useMemo, useCallback } from 'react';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
+import { SubscriptionBanner } from '@/components/common/subscription-banner';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Users, Calendar, Briefcase, DollarSign, Building2, Award, BarChart2, ClipboardList, Shield, Settings, UserCircle, ScrollText } from 'lucide-react';
-
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Employees', href: '/employees', icon: Users },
-  { name: 'Departments', href: '/departments', icon: Building2 },
-  { name: 'Designations', href: '/designations', icon: Award },
-  { name: 'Attendance', href: '/attendance', icon: Calendar },
-  { name: 'Leave', href: '/leave', icon: Briefcase },
-  { name: 'Leave Balance', href: '/leave/balance', icon: ClipboardList },
-  { name: 'Payroll', href: '/payroll', icon: DollarSign },
-  { name: 'Reports', href: '/reports', icon: BarChart2 },
-  { name: 'Users', href: '/users', icon: Shield },
-  { name: 'Audit Logs', href: '/audit-logs', icon: ScrollText },
-  { name: 'Settings', href: '/settings', icon: Settings },
-  { name: 'Profile', href: '/profile', icon: UserCircle },
-];
+import { navigation } from '@/lib/navigation';
+import { usePermissions } from '@/hooks/use-permissions';
+import { useFeatures } from '@/contexts/feature-context';
+import { useWebSocket } from '@/hooks/use-websocket';
+import type { Permission } from '@hrplatform/shared';
 
 export default function DashboardLayout({
   children,
@@ -38,6 +17,36 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { hasAnyPermission } = usePermissions();
+  const { hasFeature } = useFeatures();
+
+  // WebSocket connection for real-time updates
+  const handleNotification = useCallback((data: any) => {
+    // Notifications are handled by the notification bell component
+    // This is a placeholder for future real-time update handling
+  }, []);
+
+  const { connected: wsConnected } = useWebSocket({
+    onNotification: handleNotification,
+  });
+
+  const filteredNavigation = useMemo(() => {
+    return navigation.filter((item) => {
+      if (item.alwaysVisible) return true;
+
+      // Check role-based permissions
+      if (item.requiredPermissions && item.requiredPermissions.length > 0) {
+        if (!hasAnyPermission(item.requiredPermissions as Permission[])) return false;
+      }
+
+      // Check feature flag
+      if (item.requiredFeature) {
+        if (!hasFeature(item.requiredFeature)) return false;
+      }
+
+      return true;
+    });
+  }, [hasAnyPermission, hasFeature]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -47,15 +56,18 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
+      {/* Subscription Banner */}
+      <SubscriptionBanner />
+
       {/* Header */}
-      <DashboardHeader />
+      <DashboardHeader wsConnected={wsConnected} />
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r min-h-screen sticky top-0">
+        <aside className="w-64 bg-sidebar-bg border-r border-sidebar-border min-h-screen sticky top-0">
           <nav className="p-4 space-y-1" aria-label="Sidebar navigation">
-            {navigation.map((item) => {
+            {filteredNavigation.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
 
@@ -65,8 +77,8 @@ export default function DashboardLayout({
                   href={item.href}
                   className={`flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-colors ${
                     active
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'text-sidebar-active bg-sidebar-active-bg'
+                      : 'text-sidebar-text hover:bg-muted'
                   }`}
                   aria-current={active ? 'page' : undefined}
                 >
