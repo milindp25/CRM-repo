@@ -161,7 +161,7 @@ export class BillingRepository {
     totalAmount: number;
     employeeCount: number;
     userCount: number;
-    lineItems: any;
+    lineItems: Array<{ description: string; quantity: number; unitPrice: number; amount: number }>;
     dueDate: Date;
   }) {
     return this.prisma.billingInvoice.create({
@@ -184,8 +184,32 @@ export class BillingRepository {
     });
   }
 
+  async findInvoiceByPeriod(
+    companyBillingId: string,
+    periodStart: Date,
+    periodEnd: Date,
+  ) {
+    return this.prisma.billingInvoice.findFirst({
+      where: {
+        companyBillingId,
+        periodStart,
+        periodEnd,
+        status: { not: 'CANCELLED' },
+      },
+    });
+  }
+
+  async getInvoiceCountForPeriod(companyBillingId: string, periodStart: Date) {
+    return this.prisma.billingInvoice.count({
+      where: {
+        companyBillingId,
+        periodStart: { gte: periodStart },
+      },
+    });
+  }
+
   async updateInvoiceStatus(id: string, status: string) {
-    const data: any = { status };
+    const data: Record<string, unknown> = { status };
     if (status === 'PAID') {
       data.paidAt = new Date();
     }

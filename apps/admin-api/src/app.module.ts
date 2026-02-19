@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -9,29 +9,31 @@ import { AddonModule } from './addon/addon.module.js';
 import { BillingModule } from './billing/billing.module.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor.js';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware.js';
+import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import { RolesGuard } from './common/guards/roles.guard.js';
 
 /**
  * Admin API Application Module
  *
- * Simplified guard chain (3 guards vs tenant API's 7):
+ * Middleware chain:
+ * 1. CorrelationIdMiddleware - Assign/propagate x-correlation-id
+ * 2. RequestLoggingMiddleware - Log every HTTP request/response
+ *
+ * Guard chain (3 guards vs tenant API's 7):
  * 1. JwtAuthGuard    - Authenticate user
  * 2. ThrottlerGuard  - Rate limiting
  * 3. RolesGuard      - Enforce SUPER_ADMIN role
- *
- * No need for: CompanyIsolation, Subscription, Feature, Permissions guards
  */
 @Module({
   imports: [
-    // Environment Configuration
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
       envFilePath: ['.env.local', '.env'],
     }),
 
-    // Rate Limiting
     ThrottlerModule.forRoot([
       {
         name: 'default',
@@ -40,29 +42,24 @@ import { RolesGuard } from './common/guards/roles.guard.js';
       },
     ]),
 
-    // Core
     DatabaseModule,
     AuthModule,
 
-    // Feature Modules
     AdminModule,
     AddonModule,
     BillingModule,
   ],
   providers: [
-    // Global Exception Filter
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
 
-    // Global Interceptors
     {
       provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor,
     },
 
-    // Global Guards (simplified chain)
     // 1. Authentication
     {
       provide: APP_GUARD,
@@ -80,4 +77,10 @@ import { RolesGuard } from './common/guards/roles.guard.js';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(CorrelationIdMiddleware, RequestLoggingMiddleware)
+      .forRoutes('*');
+  }
+}
