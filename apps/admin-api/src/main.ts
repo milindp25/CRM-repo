@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
@@ -10,16 +10,18 @@ import { AppModule } from './app.module.js';
  * Separate NestJS instance for Super Admin operations
  */
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
+
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
   const configService = app.get(ConfigService);
 
-  // Security: Helmet for HTTP headers
+  // Security
   app.use(helmet());
 
-  // CORS Configuration - allow admin frontend
+  // CORS
   const allowedOrigins = configService
     .get<string>('ADMIN_ALLOWED_ORIGINS', 'http://localhost:3001')
     .split(',');
@@ -28,7 +30,7 @@ async function bootstrap() {
     origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id'],
   });
 
   // API Versioning
@@ -37,7 +39,7 @@ async function bootstrap() {
     defaultVersion: '1',
   });
 
-  // Global Validation Pipe
+  // Validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -49,7 +51,10 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger Documentation
+  // Graceful shutdown
+  app.enableShutdownHooks();
+
+  // Swagger
   const swaggerConfig = new DocumentBuilder()
     .setTitle('HR Platform Admin API')
     .setDescription('Super Admin API for platform management')
@@ -79,21 +84,29 @@ async function bootstrap() {
     },
   });
 
-  // Start the server
+  // Start
   const port = configService.get<number>('ADMIN_API_PORT', 4001);
   await app.listen(port);
 
-  console.log(`
-    ╔═══════════════════════════════════════════════════════════╗
-    ║                                                           ║
-    ║   🔧 HR Platform Admin API is running!                   ║
-    ║                                                           ║
-    ║   📍 Server:        http://localhost:${port}               ║
-    ║   📚 API Docs:      http://localhost:${port}/api/docs      ║
-    ║   🌍 Environment:   ${configService.get('NODE_ENV', 'development').toUpperCase().padEnd(28)} ║
-    ║                                                           ║
-    ╚═══════════════════════════════════════════════════════════╝
-  `);
+  logger.log(`Admin API running on http://localhost:${port}`);
+  logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
+  logger.log(`Environment: ${configService.get('NODE_ENV', 'development')}`);
+
+  // Graceful shutdown handlers
+  const signals = ['SIGTERM', 'SIGINT'];
+  for (const signal of signals) {
+    process.on(signal, async () => {
+      logger.log(`Received ${signal}, starting graceful shutdown...`);
+      try {
+        await app.close();
+        logger.log('Admin API shut down gracefully');
+        process.exit(0);
+      } catch (err) {
+        logger.error(`Error during shutdown: ${(err as Error).message}`);
+        process.exit(1);
+      }
+    });
+  }
 }
 
 bootstrap().catch((err) => {

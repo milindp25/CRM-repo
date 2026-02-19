@@ -4,10 +4,11 @@ import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { LoggerService } from './common/services/logger.service';
 
 /**
  * Bootstrap the NestJS application
- * Configures security, validation, versioning, and documentation
+ * Configures security, validation, versioning, graceful shutdown, and documentation
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -15,6 +16,7 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
+  const logger = app.get(LoggerService);
 
   // Security: Helmet for HTTP headers
   app.use(helmet());
@@ -28,7 +30,7 @@ async function bootstrap() {
     origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id'],
   });
 
   // API Versioning (v1, v2, etc.)
@@ -40,17 +42,17 @@ async function bootstrap() {
   // Global Validation Pipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strip properties that don't have decorators
-      forbidNonWhitelisted: true, // Throw error if non-whitelisted properties exist
-      transform: true, // Auto-transform payloads to DTO instances
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // Convert primitive types automatically
+        enableImplicitConversion: true,
       },
     }),
   );
 
-  // Note: Global filters, interceptors, and guards are configured in app.module.ts
-  // using APP_FILTER, APP_INTERCEPTOR, and APP_GUARD tokens for proper DI
+  // Graceful shutdown
+  app.enableShutdownHooks();
 
   // Swagger/OpenAPI Documentation
   const swaggerConfig = new DocumentBuilder()
@@ -80,7 +82,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {
-      persistAuthorization: true, // Keep auth token in Swagger UI
+      persistAuthorization: true,
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
     },
@@ -90,21 +92,28 @@ async function bootstrap() {
   const port = configService.get<number>('API_PORT', 4000);
   await app.listen(port);
 
-  console.log(`
-    ╔═══════════════════════════════════════════════════════════╗
-    ║                                                           ║
-    ║   🚀 HR Platform API is running!                         ║
-    ║                                                           ║
-    ║   📍 Server:        http://localhost:${port}               ║
-    ║   📚 API Docs:      http://localhost:${port}/api/docs      ║
-    ║   ❤️  Health:       http://localhost:${port}/v1/health     ║
-    ║   🌍 Environment:   ${configService.get('NODE_ENV', 'development').toUpperCase().padEnd(28)} ║
-    ║                                                           ║
-    ╚═══════════════════════════════════════════════════════════╝
-  `);
+  logger.log(`HR Platform API running on http://localhost:${port}`, 'Bootstrap');
+  logger.log(`Swagger docs at http://localhost:${port}/api/docs`, 'Bootstrap');
+  logger.log(`Environment: ${configService.get('NODE_ENV', 'development')}`, 'Bootstrap');
+
+  // Graceful shutdown handlers
+  const signals = ['SIGTERM', 'SIGINT'];
+  for (const signal of signals) {
+    process.on(signal, async () => {
+      logger.log(`Received ${signal}, starting graceful shutdown...`, 'Shutdown');
+      try {
+        await app.close();
+        logger.log('Application shut down gracefully', 'Shutdown');
+        process.exit(0);
+      } catch (err) {
+        logger.error(`Error during shutdown: ${(err as Error).message}`, (err as Error).stack, 'Shutdown');
+        process.exit(1);
+      }
+    });
+  }
 }
 
 bootstrap().catch((err) => {
-  console.error('❌ Failed to start application:', err);
+  console.error('Failed to start application:', err);
   process.exit(1);
 });

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -37,6 +37,8 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LoggerService } from './common/services/logger.service';
 import { CacheService } from './common/services/cache.service';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { CompanyIsolationGuard } from './common/guards/company-isolation.guard';
 import { SubscriptionGuard } from './common/guards/subscription.guard';
@@ -46,7 +48,10 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
 
 /**
  * Root Application Module
- * Configures global settings, imports feature modules
+ *
+ * Middleware chain (executed first, in order):
+ * 1. CorrelationIdMiddleware - Assign/propagate x-correlation-id
+ * 2. RequestLoggingMiddleware - Log every HTTP request/response with timing
  *
  * Guard execution order (registered as APP_GUARD):
  * 1. JwtAuthGuard       - Authenticate user (skip if @Public())
@@ -71,13 +76,13 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     ThrottlerModule.forRoot([
       {
         name: 'default',
-        ttl: 60000, // 1 minute
-        limit: 100, // 100 requests per minute
+        ttl: 60000,
+        limit: 100,
       },
       {
         name: 'auth',
-        ttl: 60000, // 1 minute
-        limit: 10, // 10 auth requests per minute
+        ttl: 60000,
+        limit: 10,
       },
     ]),
 
@@ -119,7 +124,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     GatewayModule,
   ],
   controllers: [],
-  exports: [CacheService],
+  exports: [CacheService, LoggerService],
   providers: [
     // Common Services
     LoggerService,
@@ -178,4 +183,10 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(CorrelationIdMiddleware, RequestLoggingMiddleware)
+      .forRoutes('*');
+  }
+}
