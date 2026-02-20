@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
 
 interface JwtPayload {
   userId: string;
@@ -12,8 +13,18 @@ interface JwtPayload {
 }
 
 /**
+ * Extract JWT from httpOnly cookie or Authorization header.
+ */
+function extractJwtFromCookieOrHeader(req: Request): string | null {
+  const cookieToken = (req as any).cookies?.access_token;
+  if (cookieToken) return cookieToken;
+
+  return ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+}
+
+/**
  * JWT Strategy for Admin API
- * Validates JWT tokens (same secret as tenant API)
+ * Validates JWT tokens from httpOnly cookie or Bearer header (same secret as tenant API)
  * Only validates - no login endpoint here
  */
 @Injectable()
@@ -25,7 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: extractJwtFromCookieOrHeader,
       ignoreExpiration: false,
       secretOrKey: jwtSecret,
     });

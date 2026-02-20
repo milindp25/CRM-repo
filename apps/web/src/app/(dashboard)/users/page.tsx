@@ -107,7 +107,7 @@ export default function UsersPage() {
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center">
-        <div className="text-gray-500">Loading users...</div>
+        <div className="text-muted-foreground">Loading users...</div>
       </div>
     );
   }
@@ -116,42 +116,42 @@ export default function UsersPage() {
     <RoleGate requiredPermissions={[Permission.VIEW_USERS, Permission.MANAGE_USERS]}>
       <div className="p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600 mt-1">Manage team members, roles, and access</p>
+          <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+          <p className="text-muted-foreground mt-1">Manage team members, roles, and access</p>
         </div>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-card rounded-lg shadow-md overflow-hidden">
         {users.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No users found</div>
+          <div className="p-8 text-center text-muted-foreground">No users found</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-muted border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Role</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Last Login</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user.id} className="hover:bg-muted">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-foreground">
                         {user.firstName} {user.lastName}
                       </div>
                       {user.phone && (
-                        <div className="text-xs text-gray-500">{user.phone}</div>
+                        <div className="text-xs text-muted-foreground">{user.phone}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{user.email}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${ROLE_COLORS[user.role] || 'bg-gray-100 text-gray-700'}`}>
                         {ROLE_LABELS[user.role] || user.role}
@@ -164,7 +164,7 @@ export default function UsersPage() {
                         {user.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{formatDate(user.lastLoginAt)}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(user.lastLoginAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {/* Role change dropdown */}
@@ -172,7 +172,7 @@ export default function UsersPage() {
                           value={user.role}
                           onChange={(e) => handleRoleChange(user.id, e.target.value)}
                           disabled={actionLoading === user.id + '-role'}
-                          className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                          className="text-sm border border-border rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                         >
                           {ASSIGNABLE_ROLES.map(role => (
                             <option key={role} value={role}>{ROLE_LABELS[role]}</option>
@@ -210,7 +210,7 @@ export default function UsersPage() {
           </div>
         )}
 
-        <div className="px-4 py-3 border-t text-sm text-gray-500">
+        <div className="px-4 py-3 border-t text-sm text-muted-foreground">
           {users.length} user{users.length !== 1 ? 's' : ''} in your company
         </div>
       </div>

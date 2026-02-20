@@ -66,7 +66,7 @@ export class AssetController {
   }
 
   @Get()
-  @RequirePermissions(Permission.VIEW_ASSETS)
+  @RequirePermissions(Permission.VIEW_ASSETS, Permission.MANAGE_ASSETS)
   @ApiOperation({ summary: 'List all assets (paginated, filterable)' })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by asset status' })
   @ApiQuery({ name: 'category', required: false, description: 'Filter by asset category' })

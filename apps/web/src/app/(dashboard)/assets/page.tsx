@@ -84,8 +84,8 @@ export default function AssetsPage() {
         <div className="p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Asset Management</h1>
-              <p className="text-gray-600 mt-1">Track and manage company assets</p>
+              <h1 className="text-2xl font-bold text-foreground">Asset Management</h1>
+              <p className="text-muted-foreground mt-1">Track and manage company assets</p>
             </div>
             <button onClick={() => setShowCreate(!showCreate)} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
               {showCreate ? 'Cancel' : '+ New Asset'}
@@ -96,42 +96,42 @@ export default function AssetsPage() {
           {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
 
           {showCreate && (
-            <form onSubmit={handleCreate} className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Add New Asset</h3>
+            <form onSubmit={handleCreate} className="bg-card rounded-lg shadow-md p-6 mb-6">
+              <h3 className="font-semibold text-foreground mb-4">Add New Asset</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                  <input type="text" required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="MacBook Pro 16" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Name *</label>
+                  <input type="text" required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" placeholder="MacBook Pro 16" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Asset Code *</label>
-                  <input type="text" required value={form.assetCode} onChange={e => setForm(p => ({ ...p, assetCode: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="AST-001" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Asset Code *</label>
+                  <input type="text" required value={form.assetCode} onChange={e => setForm(p => ({ ...p, assetCode: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" placeholder="AST-001" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                  <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <label className="block text-sm font-medium text-foreground mb-1">Category *</label>
+                  <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md">
                     {categories.map(c => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-                  <input type="text" value={form.brand} onChange={e => setForm(p => ({ ...p, brand: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Brand</label>
+                  <input type="text" value={form.brand} onChange={e => setForm(p => ({ ...p, brand: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
-                  <input type="text" value={form.model} onChange={e => setForm(p => ({ ...p, model: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Model</label>
+                  <input type="text" value={form.model} onChange={e => setForm(p => ({ ...p, model: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
-                  <input type="text" value={form.serialNumber} onChange={e => setForm(p => ({ ...p, serialNumber: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Serial Number</label>
+                  <input type="text" value={form.serialNumber} onChange={e => setForm(p => ({ ...p, serialNumber: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <input type="text" value={form.location} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Location</label>
+                  <input type="text" value={form.location} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <input type="text" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Description</label>
+                  <input type="text" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
               </div>
               <button type="submit" disabled={creating} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm">{creating ? 'Creating...' : 'Add Asset'}</button>
@@ -140,48 +140,48 @@ export default function AssetsPage() {
 
           {/* Filters */}
           <div className="flex gap-4 mb-4">
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 border border-border rounded-md text-sm">
               <option value="">All Statuses</option>
               <option value="AVAILABLE">Available</option>
               <option value="ASSIGNED">Assigned</option>
               <option value="UNDER_MAINTENANCE">Under Maintenance</option>
               <option value="RETIRED">Retired</option>
             </select>
-            <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-md text-sm">
+            <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="px-3 py-2 border border-border rounded-md text-sm">
               <option value="">All Categories</option>
               {categories.map(c => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
             </select>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-gray-500">Loading assets...</div>
+            <div className="text-center py-12 text-muted-foreground">Loading assets...</div>
           ) : assets.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow-md"><p className="text-gray-500">No assets found</p></div>
+            <div className="text-center py-12 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">No assets found</p></div>
           ) : (
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="bg-card rounded-lg shadow-md overflow-hidden">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Asset</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condition</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Asset</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Code</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Condition</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Location</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-border">
                   {assets.map(asset => (
-                    <tr key={asset.id} className="hover:bg-gray-50">
+                    <tr key={asset.id} className="hover:bg-muted">
                       <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{asset.name}</div>
-                        {asset.brand && <div className="text-xs text-gray-500">{asset.brand} {asset.model}</div>}
+                        <div className="text-sm font-medium text-foreground">{asset.name}</div>
+                        {asset.brand && <div className="text-xs text-muted-foreground">{asset.brand} {asset.model}</div>}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 font-mono">{asset.assetCode}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{asset.category.replace(/_/g, ' ')}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground font-mono">{asset.assetCode}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{asset.category.replace(/_/g, ' ')}</td>
                       <td className="px-6 py-4">{conditionBadge(asset.condition)}</td>
                       <td className="px-6 py-4">{statusBadge(asset.status)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{asset.location || '-'}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{asset.location || '-'}</td>
                     </tr>
                   ))}
                 </tbody>

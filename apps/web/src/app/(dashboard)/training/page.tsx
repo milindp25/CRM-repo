@@ -95,19 +95,19 @@ export default function TrainingPage() {
         <div className="p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Training & Learning</h1>
-              <p className="text-gray-600 mt-1">Courses, enrollments, and skill development</p>
+              <h1 className="text-2xl font-bold text-foreground">Training & Learning</h1>
+              <p className="text-muted-foreground mt-1">Courses, enrollments, and skill development</p>
             </div>
           </div>
 
           {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
           {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
 
-          <div className="flex space-x-4 mb-6 border-b border-gray-200">
-            <button onClick={() => setActiveTab('courses')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'courses' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex space-x-4 mb-6 border-b border-border">
+            <button onClick={() => setActiveTab('courses')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'courses' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}>
               All Courses
             </button>
-            <button onClick={() => setActiveTab('my-enrollments')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'my-enrollments' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+            <button onClick={() => setActiveTab('my-enrollments')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'my-enrollments' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}>
               My Enrollments
             </button>
           </div>
@@ -121,16 +121,16 @@ export default function TrainingPage() {
               </div>
 
               {showCreateCourse && (
-                <form onSubmit={handleCreateCourse} className="bg-white rounded-lg shadow-md p-6 mb-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Create Training Course</h3>
+                <form onSubmit={handleCreateCourse} className="bg-card rounded-lg shadow-md p-6 mb-6">
+                  <h3 className="font-semibold text-foreground mb-4">Create Training Course</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-                      <input type="text" required value={courseForm.title} onChange={e => setCourseForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                      <label className="block text-sm font-medium text-foreground mb-1">Title *</label>
+                      <input type="text" required value={courseForm.title} onChange={e => setCourseForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                      <select value={courseForm.category} onChange={e => setCourseForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                      <label className="block text-sm font-medium text-foreground mb-1">Category</label>
+                      <select value={courseForm.category} onChange={e => setCourseForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md">
                         <option value="TECHNICAL">Technical</option>
                         <option value="COMPLIANCE">Compliance</option>
                         <option value="SOFT_SKILLS">Soft Skills</option>
@@ -139,20 +139,20 @@ export default function TrainingPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Instructor</label>
-                      <input type="text" value={courseForm.instructor} onChange={e => setCourseForm(p => ({ ...p, instructor: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                      <label className="block text-sm font-medium text-foreground mb-1">Instructor</label>
+                      <input type="text" value={courseForm.instructor} onChange={e => setCourseForm(p => ({ ...p, instructor: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Duration (hours)</label>
-                      <input type="number" min="1" value={courseForm.duration} onChange={e => setCourseForm(p => ({ ...p, duration: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                      <label className="block text-sm font-medium text-foreground mb-1">Duration (hours)</label>
+                      <input type="number" min="1" value={courseForm.duration} onChange={e => setCourseForm(p => ({ ...p, duration: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                     </div>
                     <div className="flex items-center gap-2">
                       <input type="checkbox" id="mandatory" checked={courseForm.isMandatory} onChange={e => setCourseForm(p => ({ ...p, isMandatory: e.target.checked }))} className="rounded" />
-                      <label htmlFor="mandatory" className="text-sm text-gray-700">Mandatory course</label>
+                      <label htmlFor="mandatory" className="text-sm text-foreground">Mandatory course</label>
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                      <textarea value={courseForm.description} onChange={e => setCourseForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" rows={2} />
+                      <label className="block text-sm font-medium text-foreground mb-1">Description</label>
+                      <textarea value={courseForm.description} onChange={e => setCourseForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" rows={2} />
                     </div>
                   </div>
                   <button type="submit" disabled={creating} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm">{creating ? 'Creating...' : 'Create Course'}</button>
@@ -160,24 +160,24 @@ export default function TrainingPage() {
               )}
 
               {loading ? (
-                <div className="text-center py-12 text-gray-500">Loading courses...</div>
+                <div className="text-center py-12 text-muted-foreground">Loading courses...</div>
               ) : courses.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg shadow-md"><p className="text-gray-500">No courses available</p></div>
+                <div className="text-center py-12 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">No courses available</p></div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {courses.map(course => (
-                    <div key={course.id} className="bg-white rounded-lg shadow-md p-6">
+                    <div key={course.id} className="bg-card rounded-lg shadow-md p-6">
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-gray-900">{course.title}</h3>
+                        <h3 className="font-semibold text-foreground">{course.title}</h3>
                         {statusBadge(course.status)}
                       </div>
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{course.description || 'No description'}</p>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{course.description || 'No description'}</p>
                       <div className="flex flex-wrap gap-2 mb-3">
                         {course.category && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">{course.category}</span>}
                         {course.isMandatory && <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Mandatory</span>}
-                        {course.duration && <span className="text-xs text-gray-500">{course.duration}h</span>}
+                        {course.duration && <span className="text-xs text-muted-foreground">{course.duration}h</span>}
                       </div>
-                      {course.instructor && <p className="text-xs text-gray-500 mb-3">Instructor: {course.instructor}</p>}
+                      {course.instructor && <p className="text-xs text-muted-foreground mb-3">Instructor: {course.instructor}</p>}
                       <button onClick={() => handleEnroll(course.id)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">Enroll</button>
                     </div>
                   ))}
@@ -189,36 +189,36 @@ export default function TrainingPage() {
           {activeTab === 'my-enrollments' && (
             <div>
               {loading ? (
-                <div className="text-center py-12 text-gray-500">Loading enrollments...</div>
+                <div className="text-center py-12 text-muted-foreground">Loading enrollments...</div>
               ) : enrollments.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg shadow-md"><p className="text-gray-500">You are not enrolled in any courses</p></div>
+                <div className="text-center py-12 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">You are not enrolled in any courses</p></div>
               ) : (
-                <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                <div className="bg-card rounded-lg shadow-md overflow-hidden">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-muted">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Course</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Enrolled</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Course</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Progress</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Score</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Enrolled</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-border">
                       {enrollments.map(enrollment => (
-                        <tr key={enrollment.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{enrollment.courseId}</td>
+                        <tr key={enrollment.id} className="hover:bg-muted">
+                          <td className="px-6 py-4 text-sm font-medium text-foreground">{enrollment.courseId}</td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
-                              <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div className="w-24 bg-muted rounded-full h-2">
                                 <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${enrollment.progress}%` }} />
                               </div>
-                              <span className="text-xs text-gray-500">{enrollment.progress}%</span>
+                              <span className="text-xs text-muted-foreground">{enrollment.progress}%</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">{statusBadge(enrollment.status)}</td>
-                          <td className="px-6 py-4 text-sm text-gray-500">{enrollment.score != null ? `${enrollment.score}%` : '-'}</td>
-                          <td className="px-6 py-4 text-sm text-gray-500">{new Date(enrollment.enrolledAt).toLocaleDateString()}</td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">{enrollment.score != null ? `${enrollment.score}%` : '-'}</td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(enrollment.enrolledAt).toLocaleDateString()}</td>
                         </tr>
                       ))}
                     </tbody>

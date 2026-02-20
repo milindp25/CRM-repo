@@ -6,6 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { LoggerService } from '../services/logger.service';
 import { AppException } from '../exceptions';
 
@@ -58,6 +59,35 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message = (resp.message as string) || exception.message;
       }
       errorCode = this.statusToErrorCode(status);
+    } else if (exception instanceof Prisma.PrismaClientValidationError) {
+      // Prisma validation errors (e.g., invalid UUID passed to where clause)
+      status = HttpStatus.BAD_REQUEST;
+      message = 'Invalid request parameters';
+      errorCode = 'VALIDATION_ERROR';
+    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      // Prisma known errors (e.g., unique constraint violations, record not found)
+      if (exception.code === 'P2002') {
+        status = HttpStatus.CONFLICT;
+        message = 'Resource already exists';
+        errorCode = 'RESOURCE_CONFLICT';
+      } else if (exception.code === 'P2025') {
+        status = HttpStatus.NOT_FOUND;
+        message = 'Resource not found';
+        errorCode = 'RESOURCE_NOT_FOUND';
+      } else if (exception.code === 'P2003') {
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Invalid reference - related resource not found';
+        errorCode = 'VALIDATION_ERROR';
+      } else if (exception.code === 'P2023') {
+        // Inconsistent column data (e.g., non-UUID string passed as UUID)
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Invalid ID format';
+        errorCode = 'VALIDATION_ERROR';
+      } else {
+        status = HttpStatus.INTERNAL_SERVER_ERROR;
+        message = 'Database error occurred';
+        errorCode = 'INTERNAL_ERROR';
+      }
     } else {
       // Unhandled exceptions (programming errors)
       status = HttpStatus.INTERNAL_SERVER_ERROR;

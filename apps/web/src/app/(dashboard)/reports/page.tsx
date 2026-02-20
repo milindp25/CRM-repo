@@ -208,8 +208,8 @@ export default function ReportsPage() {
     <RoleGate requiredPermissions={[Permission.VIEW_REPORTS, Permission.GENERATE_REPORTS]}>
       <div className="p-6 max-w-[1400px] mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="text-gray-500 text-sm mt-1">Generate and export HR reports</p>
+          <h1 className="text-2xl font-bold text-foreground">Reports</h1>
+          <p className="text-muted-foreground text-sm mt-1">Generate and export HR reports</p>
         </div>
 
       {error && (
@@ -219,16 +219,16 @@ export default function ReportsPage() {
       )}
 
       {/* Report Configuration */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-        <h2 className="font-semibold text-gray-800 mb-4">Report Configuration</h2>
+      <div className="bg-card border border-border rounded-xl p-5 mb-6">
+        <h2 className="font-semibold text-foreground mb-4">Report Configuration</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Report Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Report Type</label>
             <select
               value={reportType}
               onChange={e => { setReportType(e.target.value as ReportType); setGenerated(false); }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-border rounded-md text-sm"
             >
               <option value="attendance">Attendance Report</option>
               <option value="leave">Leave Report</option>
@@ -238,11 +238,11 @@ export default function ReportsPage() {
 
           {/* Employee */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Employee</label>
             <select
               value={employeeId}
               onChange={e => setEmployeeId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="w-full px-3 py-2 border border-border rounded-md text-sm"
             >
               <option value="">All Employees</option>
               {employees.map(emp => (
@@ -257,32 +257,32 @@ export default function ReportsPage() {
           {reportType !== 'payroll' ? (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Start Date</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <label className="block text-sm font-medium text-foreground mb-1">End Date</label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm"
                 />
               </div>
             </>
           ) : (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Month</label>
                 <select
                   value={payMonth}
                   onChange={e => setPayMonth(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm"
                 >
                   {MONTH_NAMES.map((name, i) => (
                     <option key={i + 1} value={i + 1}>{name}</option>
@@ -290,11 +290,11 @@ export default function ReportsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Year</label>
                 <select
                   value={payYear}
                   onChange={e => setPayYear(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-border rounded-md text-sm"
                 >
                   {[2024, 2025, 2026].map(y => (
                     <option key={y} value={y}>{y}</option>
@@ -328,9 +328,9 @@ export default function ReportsPage() {
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {summary.map(item => (
-            <div key={item.label} className="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
-              <p className="text-2xl font-bold text-gray-900">{item.value}</p>
-              <p className="text-sm text-gray-500 mt-1">{item.label}</p>
+            <div key={item.label} className="bg-card border border-border rounded-xl p-4 text-center shadow-sm">
+              <p className="text-2xl font-bold text-foreground">{item.value}</p>
+              <p className="text-sm text-muted-foreground mt-1">{item.label}</p>
             </div>
           ))}
         </div>
@@ -338,9 +338,9 @@ export default function ReportsPage() {
 
       {/* Report Table */}
       {generated && (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
-            <p className="text-sm font-medium text-gray-700">
+        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+            <p className="text-sm font-medium text-foreground">
               {reportData.length} record{reportData.length !== 1 ? 's' : ''} found
             </p>
             {reportData.length > 0 && (
@@ -354,29 +354,29 @@ export default function ReportsPage() {
           </div>
 
           {reportData.length === 0 ? (
-            <div className="p-12 text-center text-gray-400 text-sm">
+            <div className="p-12 text-center text-muted-foreground text-sm">
               No records found for the selected filters.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-muted border-b border-border">
                   <tr>
                     {reportHeaders.map(header => (
                       <th
                         key={header}
-                        className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                        className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap"
                       >
                         {header}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border">
                   {reportData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
+                    <tr key={idx} className="hover:bg-muted">
                       {reportHeaders.map(header => (
-                        <td key={header} className="px-4 py-2 text-gray-700 whitespace-nowrap">
+                        <td key={header} className="px-4 py-2 text-foreground whitespace-nowrap">
                           {header === 'Status' ? (
                             <StatusBadge status={String(row[header])} />
                           ) : typeof row[header] === 'number' && (

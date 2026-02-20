@@ -47,46 +47,46 @@ function CompanyProfileStep({ onNext }: { onNext: () => void }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Company Email</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Company Email</label>
           <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="contact@company.com" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
           <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="+91 98765 43210" />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+        <label className="block text-sm font-medium text-foreground mb-1">Website</label>
         <input type="url" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })}
           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="https://company.com" />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+        <label className="block text-sm font-medium text-foreground mb-1">Address</label>
         <input type="text" value={form.addressLine1} onChange={(e) => setForm({ ...form, addressLine1: e.target.value })}
           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Street address" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+          <label className="block text-sm font-medium text-foreground mb-1">City</label>
           <input type="text" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+          <label className="block text-sm font-medium text-foreground mb-1">State</label>
           <input type="text" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Country</label>
           <input type="text" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Postal Code</label>
           <input type="text" value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
         </div>
@@ -122,24 +122,24 @@ function DepartmentStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-gray-500">Create your first department to organize your team. You can always add more later.</p>
+      <p className="text-sm text-muted-foreground">Create your first department to organize your team. You can always add more later.</p>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Department Name *</label>
+        <label className="block text-sm font-medium text-foreground mb-1">Department Name *</label>
         <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., Engineering" />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Department Code *</label>
+        <label className="block text-sm font-medium text-foreground mb-1">Department Code *</label>
         <input type="text" required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., ENG" />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <label className="block text-sm font-medium text-foreground mb-1">Description</label>
         <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
           className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows={2} />
       </div>
       <div className="flex justify-between pt-4">
-        <button type="button" onClick={onSkip} className="px-6 py-2 text-gray-600 hover:text-gray-900 font-medium">
+        <button type="button" onClick={onSkip} className="px-6 py-2 text-muted-foreground hover:text-foreground font-medium">
           Skip for now
         </button>
         <button type="submit" disabled={saving || !form.name || !form.code}
@@ -186,7 +186,7 @@ function InviteStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-sm text-gray-500">Invite your team members. They will receive an email with instructions to join.</p>
+      <p className="text-sm text-muted-foreground">Invite your team members. They will receive an email with instructions to join.</p>
       {invites.map((inv, i) => (
         <div key={i} className="flex gap-3 items-start">
           <div className="flex-1">
@@ -203,7 +203,7 @@ function InviteStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
             </select>
           </div>
           {invites.length > 1 && (
-            <button type="button" onClick={() => removeRow(i)} className="p-2 text-gray-400 hover:text-red-500">
+            <button type="button" onClick={() => removeRow(i)} className="p-2 text-muted-foreground hover:text-red-500">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -220,7 +220,7 @@ function InviteStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
         </div>
       )}
       <div className="flex justify-between pt-4">
-        <button type="button" onClick={onSkip} className="px-6 py-2 text-gray-600 hover:text-gray-900 font-medium">
+        <button type="button" onClick={onSkip} className="px-6 py-2 text-muted-foreground hover:text-foreground font-medium">
           Skip for now
         </button>
         <button type="submit" disabled={saving}
@@ -269,17 +269,17 @@ function ModulesStep({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-500">Choose which HR modules to enable. You can always change these later in Settings.</p>
+      <p className="text-sm text-muted-foreground">Choose which HR modules to enable. You can always change these later in Settings.</p>
       <div className="space-y-3">
         {Object.entries(moduleInfo).map(([key, info]) => (
           <label key={key} className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-colors ${
-            modules[key] ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-gray-300'
+            modules[key] ? 'border-blue-500 bg-blue-50/50' : 'border-border hover:border-border'
           }`}>
             <input type="checkbox" checked={modules[key]} onChange={() => toggle(key)}
               className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500" />
             <div>
-              <p className="font-medium text-gray-900">{info.label}</p>
-              <p className="text-sm text-gray-500">{info.description}</p>
+              <p className="font-medium text-foreground">{info.label}</p>
+              <p className="text-sm text-muted-foreground">{info.description}</p>
             </div>
           </label>
         ))}
@@ -347,8 +347,8 @@ export default function OnboardingPage() {
         <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <span className="text-white font-bold text-2xl">HR</span>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">Welcome to HRPlatform</h1>
-        <p className="text-gray-500 mt-2">Let&apos;s get your organization set up in just a few steps.</p>
+        <h1 className="text-3xl font-bold text-foreground">Welcome to HRPlatform</h1>
+        <p className="text-muted-foreground mt-2">Let&apos;s get your organization set up in just a few steps.</p>
       </div>
 
       {/* Progress Steps */}
@@ -361,7 +361,7 @@ export default function OnboardingPage() {
                   ? 'bg-green-500 text-white'
                   : i === currentStep
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-500'
+                    : 'bg-muted text-muted-foreground'
               }`}>
                 {i < currentStep ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -372,14 +372,14 @@ export default function OnboardingPage() {
                 )}
               </div>
               <span className={`text-xs mt-1 font-medium ${
-                i <= currentStep ? 'text-gray-900' : 'text-gray-400'
+                i <= currentStep ? 'text-foreground' : 'text-muted-foreground'
               }`}>
                 {step.title}
               </span>
             </div>
             {i < STEPS.length - 1 && (
               <div className={`w-16 h-0.5 mx-2 mt-[-16px] ${
-                i < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                i < currentStep ? 'bg-green-500' : 'bg-muted'
               }`} />
             )}
           </div>
@@ -387,9 +387,9 @@ export default function OnboardingPage() {
       </div>
 
       {/* Current Step */}
-      <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-900 mb-1">{STEPS[currentStep].title}</h2>
-        <p className="text-sm text-gray-500 mb-6">{STEPS[currentStep].description}</p>
+      <div className="bg-card rounded-xl border border-border p-8 shadow-sm">
+        <h2 className="text-xl font-semibold text-foreground mb-1">{STEPS[currentStep].title}</h2>
+        <p className="text-sm text-muted-foreground mb-6">{STEPS[currentStep].description}</p>
 
         {currentStep === 0 && <CompanyProfileStep onNext={() => goToStep(1)} />}
         {currentStep === 1 && <DepartmentStep onNext={() => goToStep(2)} onSkip={() => goToStep(2)} />}
@@ -399,7 +399,7 @@ export default function OnboardingPage() {
 
       {/* Skip All */}
       <div className="text-center mt-6">
-        <button onClick={handleComplete} className="text-sm text-gray-400 hover:text-gray-600">
+        <button onClick={handleComplete} className="text-sm text-muted-foreground hover:text-foreground">
           Skip setup and go to dashboard
         </button>
       </div>

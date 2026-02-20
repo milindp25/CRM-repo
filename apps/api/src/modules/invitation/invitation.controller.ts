@@ -31,6 +31,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CompanyId } from '../../common/decorators/company-id.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { Throttle } from '@nestjs/throttler';
 import { Permission } from '@hrplatform/shared';
 
 /**
@@ -71,6 +72,7 @@ export class InvitationController {
    * Accept invitation (public)
    */
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('accept')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({

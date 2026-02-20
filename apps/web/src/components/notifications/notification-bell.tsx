@@ -25,7 +25,7 @@ function getNotificationIcon(type: string): string {
     LEAVE_APPROVED: 'text-green-500',
     LEAVE_REJECTED: 'text-red-500',
     LEAVE_APPLIED: 'text-blue-500',
-    LEAVE_CANCELLED: 'text-gray-500',
+    LEAVE_CANCELLED: 'text-muted-foreground',
     ATTENDANCE_MARKED: 'text-indigo-500',
     PAYROLL_PROCESSED: 'text-emerald-500',
     PAYROLL_PAID: 'text-green-600',
@@ -35,7 +35,7 @@ function getNotificationIcon(type: string): string {
     WELCOME: 'text-blue-600',
     SYSTEM: 'text-gray-600',
   };
-  return iconMap[type] || 'text-gray-500';
+  return iconMap[type] || 'text-muted-foreground';
 }
 
 function NotificationItem({
@@ -53,7 +53,7 @@ function NotificationItem({
         if (!notification.isRead) onRead(notification.id);
         onClick(notification);
       }}
-      className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 ${
+      className={`w-full text-left px-4 py-3 hover:bg-muted transition-colors border-b border-border last:border-0 ${
         !notification.isRead ? 'bg-blue-50/50' : ''
       }`}
     >
@@ -62,10 +62,10 @@ function NotificationItem({
           notification.isRead ? 'bg-transparent' : 'bg-blue-500'
         }`} />
         <div className="flex-1 min-w-0">
-          <p className={`text-sm ${notification.isRead ? 'text-gray-600' : 'text-gray-900 font-medium'}`}>
+          <p className={`text-sm ${notification.isRead ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
             {notification.title}
           </p>
-          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
             {notification.message}
           </p>
           <p className={`text-xs mt-1 ${getNotificationIcon(notification.type)}`}>
@@ -122,7 +122,7 @@ export function NotificationBell() {
       {/* Bell Button */}
       <button
         onClick={handleToggle}
-        className="relative text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-2"
+        className="relative text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-2"
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,10 +142,10 @@ export function NotificationBell() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-96 bg-card rounded-xl shadow-xl border border-border z-50 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
@@ -160,10 +160,10 @@ export function NotificationBell() {
           <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 && !loading ? (
               <div className="px-4 py-8 text-center">
-                <svg className="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-12 h-12 mx-auto text-muted-foreground mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                <p className="text-sm text-gray-500">No notifications yet</p>
+                <p className="text-sm text-muted-foreground">No notifications yet</p>
               </div>
             ) : (
               <>
@@ -179,7 +179,7 @@ export function NotificationBell() {
                   <button
                     onClick={loadMore}
                     disabled={loading}
-                    className="w-full px-4 py-2 text-xs text-blue-600 hover:bg-gray-50 font-medium disabled:opacity-50"
+                    className="w-full px-4 py-2 text-xs text-blue-600 hover:bg-muted font-medium disabled:opacity-50"
                   >
                     {loading ? 'Loading...' : 'Load more'}
                   </button>
@@ -189,7 +189,7 @@ export function NotificationBell() {
             {loading && notifications.length === 0 && (
               <div className="px-4 py-8 text-center">
                 <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-sm text-gray-500 mt-2">Loading...</p>
+                <p className="text-sm text-muted-foreground mt-2">Loading...</p>
               </div>
             )}
           </div>

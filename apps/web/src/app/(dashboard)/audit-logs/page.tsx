@@ -76,29 +76,29 @@ export default function AuditLogsPage() {
     <RoleGate requiredPermissions={[Permission.VIEW_AUDIT_LOGS]}>
       <div className="p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-          <p className="text-gray-600 mt-1">Track all actions performed in your company</p>
+          <h1 className="text-2xl font-bold text-foreground">Audit Logs</h1>
+          <p className="text-muted-foreground mt-1">Track all actions performed in your company</p>
         </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+      <div className="bg-card rounded-lg shadow-md p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Action</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Action</label>
             <input
               type="text"
               value={filters.action}
               onChange={(e) => handleFilterChange('action', e.target.value)}
               placeholder="e.g. USER_LOGIN"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Resource Type</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Resource Type</label>
             <select
               value={filters.resourceType}
               onChange={(e) => handleFilterChange('resourceType', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">All Types</option>
               {RESOURCE_TYPES.map(rt => (
@@ -107,13 +107,13 @@ export default function AuditLogsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
+            <label className="block text-sm font-medium text-foreground mb-1">User ID</label>
             <input
               type="text"
               value={filters.userId}
               onChange={(e) => handleFilterChange('userId', e.target.value)}
               placeholder="Filter by user ID"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -124,36 +124,36 @@ export default function AuditLogsPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-card rounded-lg shadow-md overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading audit logs...</div>
+          <div className="p-8 text-center text-muted-foreground">Loading audit logs...</div>
         ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No audit logs found</div>
+          <div className="p-8 text-center text-muted-foreground">No audit logs found</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-muted border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Resource</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Resource ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Date & Time</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">User</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Action</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Resource</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Resource ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{formatDate(log.createdAt)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{log.userEmail}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatAction(log.action)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-mono">
+                  <tr key={log.id} className="hover:bg-muted">
+                    <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{formatDate(log.createdAt)}</td>
+                    <td className="px-4 py-3 text-sm text-foreground">{log.userEmail}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-foreground">{formatAction(log.action)}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                   <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-mono">
                         {log.resourceType}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 font-mono text-xs">
+                    <td className="px-4 py-3 text-sm text-muted-foreground font-mono text-xs">
                       {log.resourceId ? log.resourceId.substring(0, 8) + '...' : '-'}
                     </td>
                     <td className="px-4 py-3">
@@ -173,24 +173,24 @@ export default function AuditLogsPage() {
         {/* Pagination */}
         {!loading && total > 0 && (
           <div className="px-4 py-3 border-t flex items-center justify-between">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-foreground">
               Showing {skip + 1}–{Math.min(skip + TAKE, total)} of {total} logs
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setSkip(Math.max(0, skip - TAKE))}
                 disabled={skip === 0}
-                className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
-              <span className="px-3 py-1 text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
+              <span className="px-3 py-1 text-sm text-muted-foreground">
+             Page {currentPage} of {totalPages}
               </span>
               <button
                 onClick={() => setSkip(skip + TAKE)}
                 disabled={skip + TAKE >= total}
-                className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>

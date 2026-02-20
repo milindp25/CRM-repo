@@ -1,16 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { apiClient, type Employee, type Leave, type Attendance, type Payroll } from '@/lib/api-client';
-import { ActivityFeed } from '@/components/dashboard/activity-feed';
-import { CalendarWidget } from '@/components/dashboard/calendar-widget';
-import { OrgChart } from '@/components/dashboard/org-chart';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
-import { Building2, Activity } from 'lucide-react';
+import { Building2, Activity, Loader2 } from 'lucide-react';
+
+// Lazy load heavy dashboard widgets to reduce initial bundle
+const ActivityFeed = dynamic(
+  () => import('@/components/dashboard/activity-feed').then(mod => ({ default: mod.ActivityFeed })),
+  { loading: () => <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div> }
+);
+const CalendarWidget = dynamic(
+  () => import('@/components/dashboard/calendar-widget').then(mod => ({ default: mod.CalendarWidget })),
+  { loading: () => <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div> }
+);
+const OrgChart = dynamic(
+  () => import('@/components/dashboard/org-chart').then(mod => ({ default: mod.OrgChart })),
+  { loading: () => <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div> }
+);
 
 interface DashboardStats {
   totalEmployees: number;

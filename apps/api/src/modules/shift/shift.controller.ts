@@ -54,7 +54,7 @@ export class ShiftController {
   }
 
   @Get()
-  @RequirePermissions(Permission.VIEW_SHIFTS)
+  @RequirePermissions(Permission.VIEW_SHIFTS, Permission.MANAGE_SHIFTS)
   @ApiOperation({ summary: 'List shift definitions' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   @ApiQuery({ name: 'page', required: false, type: Number })
@@ -75,7 +75,7 @@ export class ShiftController {
   }
 
   @Get('assignments')
-  @RequirePermissions(Permission.VIEW_SHIFTS)
+  @RequirePermissions(Permission.VIEW_SHIFTS, Permission.MANAGE_SHIFTS)
   @ApiOperation({ summary: 'List shift assignments with filters' })
   @ApiQuery({ name: 'employeeId', required: false, type: String })
   @ApiQuery({ name: 'shiftId', required: false, type: String })

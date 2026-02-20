@@ -6,13 +6,14 @@ import { NotificationBell } from '@/components/notifications/notification-bell';
 import { ThemeToggle } from '@/components/common/theme-toggle';
 import { HelpButton, HelpPanel } from '@/components/common/help-panel';
 import { LanguageSwitcher } from '@/components/common/language-switcher';
-import { Wifi, WifiOff } from 'lucide-react';
+import { Wifi, WifiOff, Menu } from 'lucide-react';
 
 interface DashboardHeaderProps {
   wsConnected?: boolean;
+  onMenuToggle?: () => void;
 }
 
-export function DashboardHeader({ wsConnected }: DashboardHeaderProps) {
+export function DashboardHeader({ wsConnected, onMenuToggle }: DashboardHeaderProps) {
   const { user, logout, isAuthenticated } = useAuthContext();
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -50,14 +51,25 @@ export function DashboardHeader({ wsConnected }: DashboardHeaderProps) {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
+              {/* Mobile hamburger menu button */}
+              {onMenuToggle && (
+                <button
+                  onClick={onMenuToggle}
+                  className="p-2 rounded-lg text-foreground hover:bg-muted transition-colors lg:hidden"
+                  aria-label="Toggle sidebar menu"
+                >
+                  <Menu className="w-6 h-6" />
+                </button>
+              )}
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">HR</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="text-2xl font-bold text-foreground sm:block hidden">Dashboard</h1>
+                <p className="text-sm text-muted-foreground hidden sm:block">
                   Welcome back, {user.firstName}!
                 </p>
+                <h1 className="text-lg font-bold text-foreground sm:hidden">HRPlatform</h1>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -82,7 +94,7 @@ export function DashboardHeader({ wsConnected }: DashboardHeaderProps) {
 
               <div className="relative group ml-2">
                 <button className="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-ring rounded-lg p-1">
-                  <div className="text-right">
+                  <div className="text-right hidden sm:block">
                     <p className="text-sm font-medium text-foreground">
                       {user.firstName} {user.lastName}
                     </p>

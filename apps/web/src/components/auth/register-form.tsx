@@ -65,7 +65,7 @@ export function RegisterForm() {
         <div>
           <label
             htmlFor="firstName"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-foreground mb-2"
           >
             First Name
           </label>
@@ -77,7 +77,7 @@ export function RegisterForm() {
             required
             value={formData.firstName}
             onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
             placeholder="John"
             aria-required="true"
             disabled={loading}
@@ -87,7 +87,7 @@ export function RegisterForm() {
         <div>
           <label
             htmlFor="lastName"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-foreground mb-2"
           >
             Last Name
           </label>
@@ -99,7 +99,7 @@ export function RegisterForm() {
             required
             value={formData.lastName}
             onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
             placeholder="Doe"
             aria-required="true"
             disabled={loading}
@@ -110,7 +110,7 @@ export function RegisterForm() {
       <div>
         <label
           htmlFor="companyName"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-medium text-foreground mb-2"
         >
           Company Name
         </label>
@@ -122,7 +122,7 @@ export function RegisterForm() {
           required
           value={formData.companyName}
           onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
           placeholder="Acme Corporation"
           aria-required="true"
           disabled={loading}
@@ -132,7 +132,7 @@ export function RegisterForm() {
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-medium text-foreground mb-2"
         >
           Email Address
         </label>
@@ -144,7 +144,7 @@ export function RegisterForm() {
           required
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
           placeholder="you@company.com"
           aria-required="true"
           disabled={loading}
@@ -154,7 +154,7 @@ export function RegisterForm() {
       <div>
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-medium text-foreground mb-2"
         >
           Password
         </label>
@@ -166,13 +166,13 @@ export function RegisterForm() {
           required
           value={formData.password}
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
           placeholder="••••••••"
           aria-required="true"
           aria-describedby="password-requirements"
           disabled={loading}
         />
-        <p id="password-requirements" className="mt-1 text-xs text-gray-500">
+        <p id="password-requirements" className="mt-1 text-xs text-muted-foreground">
           Must be at least 8 characters long
         </p>
       </div>
@@ -212,7 +212,7 @@ export function RegisterForm() {
         )}
       </button>
 
-      <div className="text-center text-sm text-gray-600">
+      <div className="text-center text-sm text-muted-foreground">
         Already have an account?{' '}
         <Link
           href="/login"

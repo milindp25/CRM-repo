@@ -39,12 +39,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For protected routes, check if access_token cookie exists
-  // Note: The actual token validation is done by the NestJS API
-  // We only check cookie existence to decide client-side redirects
-  const hasAccessToken = request.cookies.has('access_token');
+  // Check for session: `has_session` flag cookie (set by frontend)
+  // or `access_token` httpOnly cookie (set by API)
+  const hasSession = request.cookies.has('has_session') || request.cookies.has('access_token');
 
-  if (!hasAccessToken) {
+  if (!hasSession) {
     // No token - redirect to login
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);

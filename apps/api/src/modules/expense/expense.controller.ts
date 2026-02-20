@@ -94,7 +94,7 @@ export class ExpenseController {
   }
 
   @Get('my')
-  @RequirePermissions(Permission.SUBMIT_EXPENSE, Permission.VIEW_EXPENSES)
+  @RequirePermissions(Permission.SUBMIT_EXPENSE, Permission.VIEW_EXPENSES, Permission.MANAGE_EXPENSES)
   @ApiOperation({ summary: 'Get my expense claims' })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by status' })
   @ApiQuery({ name: 'category', required: false, description: 'Filter by category' })

@@ -91,13 +91,13 @@ export default function ApiKeysPage() {
         <div className="p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                 <Link href="/settings" className="hover:text-blue-600">Settings</Link>
                 <span>/</span>
                 <span>API Keys</span>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">API Keys</h1>
-              <p className="text-gray-600 mt-1">Manage API keys for machine-to-machine integration</p>
+              <h1 className="text-2xl font-bold text-foreground">API Keys</h1>
+              <p className="text-muted-foreground mt-1">Manage API keys for machine-to-machine integration</p>
             </div>
             <button
               onClick={() => setShowCreate(true)}
@@ -117,7 +117,7 @@ export default function ApiKeysPage() {
               <h3 className="font-semibold text-green-800 mb-2">API Key Created Successfully</h3>
               <p className="text-sm text-green-700 mb-2">Copy your API key now. You won&apos;t be able to see it again.</p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 p-2 bg-white rounded border font-mono text-sm break-all">{newKey.key}</code>
+                <code className="flex-1 p-2 bg-card rounded border font-mono text-sm break-all">{newKey.key}</code>
                 <button
                   onClick={() => { navigator.clipboard.writeText(newKey.key); }}
                   className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm whitespace-nowrap"
@@ -133,21 +133,21 @@ export default function ApiKeysPage() {
 
           {/* Create Form Modal */}
           {showCreate && (
-            <div className="mb-6 bg-white rounded-lg shadow-md p-6 border">
+            <div className="mb-6 bg-card rounded-lg shadow-md p-6 border">
               <h2 className="text-lg font-semibold mb-4">Create New API Key</h2>
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Name *</label>
                   <input type="text" required value={name} onChange={e => setName(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg" placeholder="e.g. Production Integration" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Description</label>
                   <input type="text" value={description} onChange={e => setDescription(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg" placeholder="What is this key used for?" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Permissions</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Permissions</label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1">
                     {availablePermissions.map(perm => (
                       <label key={perm} className="flex items-center gap-2 text-sm">
@@ -159,7 +159,7 @@ export default function ApiKeysPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expires At (optional)</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Expires At (optional)</label>
                   <input type="date" value={expiresAt} onChange={e => setExpiresAt(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg" />
                 </div>
@@ -169,7 +169,7 @@ export default function ApiKeysPage() {
                     {creating ? 'Creating...' : 'Create Key'}
                   </button>
                   <button type="button" onClick={() => setShowCreate(false)}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                    className="px-4 py-2 border rounded-lg hover:bg-muted">Cancel</button>
                 </div>
               </form>
             </div>
@@ -177,28 +177,28 @@ export default function ApiKeysPage() {
 
           {/* API Keys List */}
           {loading ? (
-            <div className="text-center py-12 text-gray-500">Loading API keys...</div>
+            <div className="text-center py-12 text-muted-foreground">Loading API keys...</div>
           ) : apiKeys.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow-md">
+            <div className="text-center py-12 bg-card rounded-lg shadow-md">
               <div className="text-4xl mb-2">🔑</div>
-              <h3 className="text-lg font-medium text-gray-900">No API keys yet</h3>
-              <p className="text-gray-500 mt-1">Create your first API key for external integrations</p>
+              <h3 className="text-lg font-medium text-foreground">No API keys yet</h3>
+              <p className="text-muted-foreground mt-1">Create your first API key for external integrations</p>
             </div>
           ) : (
             <div className="space-y-3">
               {apiKeys.map(key => (
-                <div key={key.id} className="bg-white rounded-lg shadow-sm border p-4">
+                <div key={key.id} className="bg-card rounded-lg shadow-sm border p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-gray-900">{key.name}</h3>
+                        <h3 className="font-medium text-foreground">{key.name}</h3>
                         <span className={`px-2 py-0.5 text-xs rounded-full ${key.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {key.isActive ? 'Active' : 'Revoked'}
                         </span>
                       </div>
-                      {key.description && <p className="text-sm text-gray-500 mt-0.5">{key.description}</p>}
-                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                        <span>Prefix: <code className="bg-gray-100 px-1 rounded">{key.prefix}</code></span>
+                      {key.description && <p className="text-sm text-muted-foreground mt-0.5">{key.description}</p>}
+                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        <span>Prefix: <code className="bg-muted px-1 rounded">{key.prefix}</code></span>
                         <span>Permissions: {key.permissions.length}</span>
                         {key.lastUsedAt && <span>Last used: {new Date(key.lastUsedAt).toLocaleDateString()}</span>}
                         {key.expiresAt && <span>Expires: {new Date(key.expiresAt).toLocaleDateString()}</span>}

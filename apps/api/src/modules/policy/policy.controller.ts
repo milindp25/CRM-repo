@@ -69,7 +69,7 @@ export class PolicyController {
   }
 
   @Get()
-  @RequirePermissions(Permission.VIEW_POLICIES)
+  @RequirePermissions(Permission.VIEW_POLICIES, Permission.MANAGE_POLICIES)
   @ApiOperation({ summary: 'List policies with optional filters' })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by status (DRAFT, PUBLISHED, ARCHIVED)' })
   @ApiQuery({ name: 'category', required: false, description: 'Filter by category (HR, IT, FINANCE, COMPLIANCE, SAFETY, GENERAL)' })

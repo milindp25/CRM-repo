@@ -3,6 +3,8 @@ import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const cookieParser = require('cookie-parser');
 import { AppModule } from './app.module.js';
 
 /**
@@ -20,6 +22,9 @@ async function bootstrap() {
 
   // Security
   app.use(helmet());
+
+  // Cookie parser for httpOnly cookie auth
+  app.use(cookieParser());
 
   // CORS
   const allowedOrigins = configService

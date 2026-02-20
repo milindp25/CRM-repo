@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { UserRole, TIER_FEATURES, SubscriptionTier } from '@hrplatform/shared';
 import { PrismaService } from '../../database/prisma.service';
+import { CacheService } from '../services/cache.service';
 import { FEATURE_KEY } from '../decorators/feature.decorator';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class FeatureGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private prisma: PrismaService,
+    private cache: CacheService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -27,17 +29,41 @@ export class FeatureGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest();
+    const { user } = request;
+
+    // No user context - skip (public routes)
+    if (!user) {
+      return true;
+    }
 
     // Super admin bypasses feature checks
     if (user.role === UserRole.SUPER_ADMIN) {
       return true;
     }
 
-    const company = await this.prisma.company.findUnique({
-      where: { id: user.companyId },
-      select: { featuresEnabled: true, subscriptionTier: true },
-    });
+    // Reuse company context from SubscriptionGuard (stored on request)
+    // This eliminates a redundant DB query since SubscriptionGuard already fetched it
+    let company = request._companyContext;
+    if (!company) {
+      // Fallback: fetch from cache or DB (in case guard order changes)
+      const cacheKey = `guard:company:${user.companyId}`;
+      company = await this.cache.getOrSet(
+        cacheKey,
+        () =>
+          this.prisma.company.findUnique({
+            where: { id: user.companyId },
+            select: {
+              featuresEnabled: true,
+              subscriptionTier: true,
+              subscriptionStatus: true,
+              trialEndsAt: true,
+              isActive: true,
+            },
+          }),
+        15_000,
+      );
+    }
 
     if (!company) {
       throw new ForbiddenException('Company not found');
@@ -58,23 +84,31 @@ export class FeatureGuard implements CanActivate {
       return true;
     }
 
-    // Check 3: Active paid add-ons for the company
-    const activeAddon = await this.prisma.companyAddon.findFirst({
-      where: {
-        companyId: user.companyId,
-        status: 'ACTIVE',
-        featureAddon: {
-          feature: requiredFeature,
-          isActive: true,
-        },
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
+    // Check 3: Active paid add-ons (cached per company+feature, 30s TTL)
+    const addonCacheKey = `guard:addon:${user.companyId}:${requiredFeature}`;
+    const hasAddon = await this.cache.getOrSet(
+      addonCacheKey,
+      async () => {
+        const activeAddon = await this.prisma.companyAddon.findFirst({
+          where: {
+            companyId: user.companyId,
+            status: 'ACTIVE',
+            featureAddon: {
+              feature: requiredFeature,
+              isActive: true,
+            },
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: new Date() } },
+            ],
+          },
+        });
+        return !!activeAddon;
       },
-    });
+      30_000,
+    );
 
-    if (activeAddon) {
+    if (hasAddon) {
       return true;
     }
 

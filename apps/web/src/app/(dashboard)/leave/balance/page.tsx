@@ -131,7 +131,7 @@ export default function LeaveBalancePage() {
   };
 
   const getBalanceBadgeColor = (remaining: number, entitlement: number) => {
-    if (entitlement === 0) return 'text-gray-500';
+    if (entitlement === 0) return 'text-muted-foreground';
     const pct = (remaining / entitlement) * 100;
     if (pct <= 10) return 'text-red-600 font-bold';
     if (pct <= 30) return 'text-orange-600 font-semibold';
@@ -143,8 +143,8 @@ export default function LeaveBalancePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Leave Balance</h1>
-          <p className="text-gray-500 text-sm mt-1">Annual leave entitlement and usage tracking</p>
+          <h1 className="text-2xl font-bold text-foreground">Leave Balance</h1>
+          <p className="text-muted-foreground text-sm mt-1">Annual leave entitlement and usage tracking</p>
         </div>
         <Link
           href="/leave"
@@ -161,13 +161,13 @@ export default function LeaveBalancePage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 flex flex-wrap gap-4">
+      <div className="bg-card border border-border rounded-xl p-4 mb-6 flex flex-wrap gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Year</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Year</label>
           <select
             value={year}
             onChange={e => setYear(parseInt(e.target.value))}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+            className="px-3 py-1.5 border border-border rounded-md text-sm"
           >
             {[2024, 2025, 2026].map(y => (
               <option key={y} value={y}>{y}</option>
@@ -175,11 +175,11 @@ export default function LeaveBalancePage() {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Employee</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Employee</label>
           <select
             value={selectedEmployee}
             onChange={e => setSelectedEmployee(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm min-w-[200px]"
+            className="px-3 py-1.5 border border-border rounded-md text-sm min-w-[200px]"
           >
             <option value="">All Active Employees</option>
             {employees.map(emp => (
@@ -191,7 +191,7 @@ export default function LeaveBalancePage() {
         </div>
 
         {/* Legend */}
-        <div className="ml-auto flex items-end gap-4 text-xs text-gray-500">
+        <div className="ml-auto flex items-end gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-500 inline-block"></span> Healthy</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-orange-400 inline-block"></span> Low</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Critical</span>
@@ -217,27 +217,27 @@ export default function LeaveBalancePage() {
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
         </div>
       ) : balances.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center text-gray-400">
+        <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
           No employees found.
         </div>
       ) : (
         <div className="space-y-4">
           {balances.map(({ employee, balances: rows, totalUsed, totalEntitlement }) => (
-            <div key={employee.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <div key={employee.id} className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
               {/* Employee header row */}
-              <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center justify-between px-5 py-3 bg-muted border-b border-border">
                 <div>
-                  <span className="font-semibold text-gray-900 text-sm">
+                  <span className="font-semibold text-foreground text-sm">
                     {employee.firstName} {employee.lastName}
                   </span>
-                  <span className="ml-2 text-xs text-gray-500">{employee.employeeCode}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{employee.employeeCode}</span>
                   {employee.department && (
-                    <span className="ml-2 text-xs text-gray-400">· {employee.department.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">· {employee.department.name}</span>
                   )}
                 </div>
-                <div className="text-right text-xs text-gray-500">
-                  <span>Used: <strong className="text-gray-700">{totalUsed}d</strong></span>
-                  <span className="ml-3">Total: <strong className="text-gray-700">{totalEntitlement}d</strong></span>
+                <div className="text-right text-xs text-muted-foreground">
+                  <span>Used: <strong className="text-foreground">{totalUsed}d</strong></span>
+                  <span className="ml-3">Total: <strong className="text-foreground">{totalEntitlement}d</strong></span>
                   <span className="ml-3">Remaining: <strong className={getBalanceBadgeColor(totalEntitlement - totalUsed, totalEntitlement)}>
                     {totalEntitlement - totalUsed}d
                   </strong></span>
@@ -245,17 +245,17 @@ export default function LeaveBalancePage() {
               </div>
 
               {/* Leave type rows */}
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-border">
                 {rows.map(row => (
                   <div key={row.type} className="px-5 py-2.5 flex items-center gap-4">
-                    <div className="w-28 text-sm text-gray-700 flex-shrink-0">
+                    <div className="w-28 text-sm text-foreground flex-shrink-0">
                       {LEAVE_LABELS[row.type]}
                     </div>
 
                     {/* Progress bar */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
                           {row.entitlement > 0 && (
                             <>
                               <div
@@ -265,7 +265,7 @@ export default function LeaveBalancePage() {
                             </>
                           )}
                         </div>
-                        <span className="text-xs text-gray-400 w-20 flex-shrink-0">
+                        <span className="text-xs text-muted-foreground w-20 flex-shrink-0">
                           {row.used}d / {row.entitlement > 0 ? `${row.entitlement}d` : '–'}
                         </span>
                       </div>
@@ -278,7 +278,7 @@ export default function LeaveBalancePage() {
                           {row.pending}d pending
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-300">–</span>
+                        <span className="text-xs text-muted-foreground">–</span>
                       )}
                     </div>
 
@@ -289,7 +289,7 @@ export default function LeaveBalancePage() {
                           {row.remaining}d left
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-xs">accrued</span>
+                        <span className="text-muted-foreground text-xs">accrued</span>
                       )}
                     </div>
                   </div>

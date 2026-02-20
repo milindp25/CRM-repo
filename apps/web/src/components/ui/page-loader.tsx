@@ -20,10 +20,10 @@ export function PageLoader() {
     <div className="p-8">
       {/* Title skeleton */}
       <div className="mb-8">
-        <div className="relative overflow-hidden h-7 bg-gray-200/70 rounded-md w-56 mb-2">
+        <div className="relative overflow-hidden h-7 bg-muted/70 rounded-md w-56 mb-2">
           <ShimmerOverlay />
         </div>
-        <div className="relative overflow-hidden h-4 bg-gray-100 rounded-md w-72">
+        <div className="relative overflow-hidden h-4 bg-muted rounded-md w-72">
           <ShimmerOverlay />
         </div>
       </div>
@@ -31,11 +31,11 @@ export function PageLoader() {
       {/* Stats cards skeleton */}
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-            <div className="relative overflow-hidden h-3 bg-gray-100 rounded w-20 mb-3">
+          <div key={i} className="bg-card rounded-xl border border-border p-5 shadow-sm">
+            <div className="relative overflow-hidden h-3 bg-muted rounded w-20 mb-3">
               <ShimmerOverlay />
             </div>
-            <div className="relative overflow-hidden h-7 bg-gray-200/70 rounded w-16 mb-1">
+            <div className="relative overflow-hidden h-7 bg-muted/70 rounded w-16 mb-1">
               <ShimmerOverlay />
             </div>
           </div>
@@ -43,12 +43,12 @@ export function PageLoader() {
       </div>
 
       {/* Table skeleton */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+        <div className="px-6 py-4 border-b border-border bg-muted/50">
           <div className="flex gap-10">
             {[16, 24, 20, 16, 14].map((w, i) => (
-              <div key={i} className="relative overflow-hidden h-3 bg-gray-200/70 rounded" style={{ width: `${w * 4}px` }}>
+              <div key={i} className="relative overflow-hidden h-3 bg-muted/70 rounded" style={{ width: `${w * 4}px` }}>
                 <ShimmerOverlay />
               </div>
             ))}
@@ -56,10 +56,10 @@ export function PageLoader() {
         </div>
         {/* Rows */}
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="px-6 py-4 border-b border-gray-50">
+          <div key={i} className="px-6 py-4 border-b border-border">
             <div className="flex gap-10 items-center">
               {[20, 32, 24, 16, 16].map((w, j) => (
-                <div key={j} className="relative overflow-hidden h-4 bg-gray-100/80 rounded" style={{ width: `${w * 4}px` }}>
+                <div key={j} className="relative overflow-hidden h-4 bg-muted/80 rounded" style={{ width: `${w * 4}px` }}>
                   <ShimmerOverlay />
                 </div>
               ))}
@@ -79,10 +79,10 @@ export function TableLoader({ rows = 5, cols = 5 }: { rows?: number; cols?: numb
   return (
     <div>
       {[...Array(rows)].map((_, i) => (
-        <div key={i} className="px-6 py-4 border-b border-gray-50">
+        <div key={i} className="px-6 py-4 border-b border-border">
           <div className="flex gap-6 items-center">
             {[...Array(cols)].map((_, j) => (
-              <div key={j} className="relative overflow-hidden h-4 bg-gray-100/80 rounded flex-1">
+              <div key={j} className="relative overflow-hidden h-4 bg-muted/80 rounded flex-1">
                 <ShimmerOverlay />
               </div>
             ))}
