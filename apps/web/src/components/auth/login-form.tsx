@@ -55,7 +55,7 @@ export function LoginForm() {
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-medium text-foreground mb-2"
         >
           Email Address
         </label>
@@ -67,7 +67,7 @@ export function LoginForm() {
           required
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
           placeholder="you@company.com"
           aria-required="true"
           aria-describedby="email-error"
@@ -78,7 +78,7 @@ export function LoginForm() {
       <div>
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-medium text-foreground mb-2"
         >
           Password
         </label>
@@ -90,7 +90,7 @@ export function LoginForm() {
           required
           value={formData.password}
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
           placeholder="••••••••"
           aria-required="true"
           aria-describedby="password-error"
@@ -106,11 +106,11 @@ export function LoginForm() {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-border rounded"
           />
           <label
             htmlFor="remember-me"
-            className="ml-2 block text-sm text-gray-700"
+            className="ml-2 block text-sm text-foreground"
           >
             Remember me
           </label>
@@ -161,7 +161,7 @@ export function LoginForm() {
         )}
       </button>
 
-      <div className="text-center text-sm text-gray-600">
+      <div className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{' '}
         <Link
           href="/register"

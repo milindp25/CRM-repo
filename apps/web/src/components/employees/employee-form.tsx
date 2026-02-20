@@ -170,10 +170,10 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-foreground">
             {mode === 'create' ? 'New Employee' : 'Edit Employee'}
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-muted-foreground">
             {mode === 'create'
               ? 'Add a new employee to your organization'
               : 'Update employee information'}
@@ -182,7 +182,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
         >
           <X className="h-5 w-5" />
           Cancel
@@ -197,11 +197,11 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
 
       <div className="space-y-8">
         {/* Basic Information */}
-        <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Basic Information</h2>
+        <div className="bg-card shadow-md rounded-lg p-6 border border-border">
+          <h2 className="text-xl font-semibold text-foreground mb-6">Basic Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Employee Code <span className="text-red-500">*</span>
               </label>
               <input
@@ -209,7 +209,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 value={formData.employeeCode}
                 onChange={(e) => handleChange('employeeCode', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.employeeCode ? 'border-red-500' : 'border-gray-300'
+                  errors.employeeCode ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="EMP001"
               />
@@ -219,7 +219,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Work Email <span className="text-red-500">*</span>
               </label>
               <input
@@ -227,7 +227,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 value={formData.workEmail}
                 onChange={(e) => handleChange('workEmail', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.workEmail ? 'border-red-500' : 'border-gray-300'
+                  errors.workEmail ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="john.doe@company.com"
               />
@@ -237,7 +237,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 First Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -245,7 +245,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 value={formData.firstName}
                 onChange={(e) => handleChange('firstName', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.firstName ? 'border-red-500' : 'border-gray-300'
+                  errors.firstName ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="John"
               />
@@ -255,20 +255,20 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Middle Name
               </label>
               <input
                 type="text"
                 value={formData.middleName}
                 onChange={(e) => handleChange('middleName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Optional"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Last Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -276,7 +276,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 value={formData.lastName}
                 onChange={(e) => handleChange('lastName', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.lastName ? 'border-red-500' : 'border-gray-300'
+                  errors.lastName ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="Doe"
               />
@@ -286,25 +286,25 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Date of Birth
               </label>
               <input
                 type="date"
                 value={formData.dateOfBirth}
                 onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Gender
               </label>
               <select
                 value={formData.gender}
                 onChange={(e) => handleChange('gender', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select Gender</option>
                 <option value="MALE">Male</option>
@@ -316,11 +316,11 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
         </div>
 
         {/* Contact Information */}
-        <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Contact Information</h2>
+        <div className="bg-card shadow-md rounded-lg p-6 border border-border">
+          <h2 className="text-xl font-semibold text-foreground mb-6">Contact Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Personal Email
               </label>
               <input
@@ -328,7 +328,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 value={formData.personalEmail}
                 onChange={(e) => handleChange('personalEmail', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.personalEmail ? 'border-red-500' : 'border-gray-300'
+                  errors.personalEmail ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="john@gmail.com"
               />
@@ -338,27 +338,27 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Work Phone
               </label>
               <input
                 type="tel"
                 value={formData.workPhone}
                 onChange={(e) => handleChange('workPhone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="+91 1234567890"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Personal Phone
               </label>
               <input
                 type="tel"
                 value={formData.personalPhone}
                 onChange={(e) => handleChange('personalPhone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="+91 9876543210"
               />
             </div>
@@ -366,11 +366,11 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
         </div>
 
         {/* Government IDs */}
-        <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Government IDs</h2>
+        <div className="bg-card shadow-md rounded-lg p-6 border border-border">
+          <h2 className="text-xl font-semibold text-foreground mb-6">Government IDs</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Aadhaar Number
               </label>
               <input
@@ -378,7 +378,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 value={formData.aadhaar}
                 onChange={(e) => handleChange('aadhaar', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.aadhaar ? 'border-red-500' : 'border-gray-300'
+                  errors.aadhaar ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="123456789012"
                 maxLength={12}
@@ -389,7 +389,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 PAN Number
               </label>
               <input
@@ -397,7 +397,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 value={formData.pan}
                 onChange={(e) => handleChange('pan', e.target.value.toUpperCase())}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.pan ? 'border-red-500' : 'border-gray-300'
+                  errors.pan ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="ABCDE1234F"
                 maxLength={10}
@@ -406,14 +406,14 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Passport Number
               </label>
               <input
                 type="text"
                 value={formData.passport}
                 onChange={(e) => handleChange('passport', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Optional"
               />
             </div>
@@ -421,11 +421,11 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
         </div>
 
         {/* Employment Details */}
-        <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Employment Details</h2>
+        <div className="bg-card shadow-md rounded-lg p-6 border border-border">
+          <h2 className="text-xl font-semibold text-foreground mb-6">Employment Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Date of Joining <span className="text-red-500">*</span>
               </label>
               <input
@@ -433,7 +433,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 value={formData.dateOfJoining}
                 onChange={(e) => handleChange('dateOfJoining', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.dateOfJoining ? 'border-red-500' : 'border-gray-300'
+                  errors.dateOfJoining ? 'border-red-500' : 'border-border'
                 }`}
               />
               {errors.dateOfJoining && (
@@ -442,14 +442,14 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Employment Type <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.employmentType}
                 onChange={(e) => handleChange('employmentType', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.employmentType ? 'border-red-500' : 'border-gray-300'
+                  errors.employmentType ? 'border-red-500' : 'border-border'
                 }`}
               >
                 <option value="FULL_TIME">Full Time</option>
@@ -463,13 +463,13 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Status
               </label>
               <select
                 value={formData.status}
                 onChange={(e) => handleChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="ACTIVE">Active</option>
                 <option value="ON_NOTICE">On Notice</option>
@@ -480,95 +480,95 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Probation End Date
               </label>
               <input
                 type="date"
                 value={formData.probationEndDate || ''}
                 onChange={(e) => handleChange('probationEndDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
         </div>
 
         {/* Address */}
-        <div className="bg-white shadow-md rounded-lg p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Address</h2>
+        <div className="bg-card shadow-md rounded-lg p-6 border border-border">
+          <h2 className="text-xl font-semibold text-foreground mb-6">Address</h2>
           <div className="grid grid-cols-1 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Address Line 1
               </label>
               <input
                 type="text"
                 value={formData.addressLine1}
                 onChange={(e) => handleChange('addressLine1', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Street address"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Address Line 2
               </label>
               <input
                 type="text"
                 value={formData.addressLine2}
                 onChange={(e) => handleChange('addressLine2', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Apartment, suite, etc."
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   City
                 </label>
                 <input
                   type="text"
                   value={formData.city}
                   onChange={(e) => handleChange('city', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   State
                 </label>
                 <input
                   type="text"
                   value={formData.state}
                   onChange={(e) => handleChange('state', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Postal Code
                 </label>
                 <input
                   type="text"
                   value={formData.postalCode}
                   onChange={(e) => handleChange('postalCode', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Country
                 </label>
                 <input
                   type="text"
                   value={formData.country}
                   onChange={(e) => handleChange('country', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -580,7 +580,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-6 py-2.5 border border-border text-foreground rounded-lg hover:bg-muted transition-colors"
           >
             Cancel
           </button>

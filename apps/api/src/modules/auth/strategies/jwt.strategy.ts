@@ -2,11 +2,23 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 
 /**
+ * Extract JWT from httpOnly cookie or Authorization header.
+ * Cookie takes precedence (more secure), falls back to Bearer header for M2M clients.
+ */
+function extractJwtFromCookieOrHeader(req: Request): string | null {
+  const cookieToken = (req as any).cookies?.access_token;
+  if (cookieToken) return cookieToken;
+
+  return ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+}
+
+/**
  * JWT Strategy for Passport
- * Validates JWT tokens from Authorization: Bearer header
+ * Validates JWT tokens from httpOnly cookie or Authorization: Bearer header
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -17,7 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: extractJwtFromCookieOrHeader,
       ignoreExpiration: false,
       secretOrKey: jwtSecret,
     });

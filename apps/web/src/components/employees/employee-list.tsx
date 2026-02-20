@@ -55,8 +55,8 @@ export function EmployeeList() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Employees</h1>
-            <p className="mt-2 text-gray-600">Manage your workforce</p>
+            <h1 className="text-3xl font-bold text-foreground">Employees</h1>
+            <p className="mt-2 text-muted-foreground">Manage your workforce</p>
           </div>
           <button
             onClick={() => router.push('/employees/new')}
@@ -78,17 +78,17 @@ export function EmployeeList() {
       </div>
 
       {/* Table */}
-      <div className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
+      <div className="bg-card shadow-md rounded-lg overflow-hidden border border-border overflow-x-auto">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-            <span className="ml-3 text-gray-600">Loading employees...</span>
+            <span className="ml-3 text-muted-foreground">Loading employees...</span>
           </div>
         ) : employees.length === 0 ? (
           <div className="text-center py-20">
-            <UserPlus className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No employees found</h3>
-            <p className="mt-2 text-gray-600">
+            <UserPlus className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-medium text-foreground">No employees found</h3>
+            <p className="mt-2 text-muted-foreground">
               {filters.search || filters.status || filters.employmentType
                 ? 'Try adjusting your filters'
                 : 'Get started by adding your first employee'}
@@ -105,30 +105,30 @@ export function EmployeeList() {
           </div>
         ) : (
           <>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                     Employee Code
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap hidden md:table-cell">
                     Department
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">
                     Designation
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-card divide-y divide-border">
                 {employees.map((employee) => (
                   <EmployeeTableRow
                     key={employee.id}
@@ -140,9 +140,9 @@ export function EmployeeList() {
             </table>
 
             {/* Pagination */}
-            <div className="bg-white px-6 py-4 border-t border-gray-200">
+            <div className="bg-card px-6 py-4 border-t border-border">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-700">
+                <div className="text-sm text-foreground">
                   {pagination && (
                     <>
                       Showing{' '}
@@ -161,18 +161,18 @@ export function EmployeeList() {
                   <button
                     onClick={prevPage}
                     disabled={!pagination?.hasPreviousPage || loading}
-                    className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-1 px-4 py-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="h-5 w-5" />
                     Previous
                   </button>
-                  <span className="px-4 py-2 text-sm text-gray-700">
+                  <span className="px-4 py-2 text-sm text-foreground">
                     Page {pagination?.currentPage} of {pagination?.totalPages}
                   </span>
                   <button
                     onClick={nextPage}
                     disabled={!pagination?.hasNextPage || loading}
-                    className="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-1 px-4 py-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
                     <ChevronRight className="h-5 w-5" />

@@ -17,8 +17,8 @@ export function AccessDenied({
       <div className="flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-6">
         <ShieldOff className="w-8 h-8 text-red-600" />
       </div>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-2">{title}</h1>
-      <p className="text-gray-500 text-center max-w-md mb-6">{message}</p>
+      <h1 className="text-2xl font-semibold text-foreground mb-2">{title}</h1>
+      <p className="text-muted-foreground text-center max-w-md mb-6">{message}</p>
       <Link
         href="/dashboard"
         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"

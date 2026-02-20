@@ -67,7 +67,7 @@ export default function SSOSettingsPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading SSO configuration...</div>;
+    return <div className="p-8 text-center text-muted-foreground">Loading SSO configuration...</div>;
   }
 
   return (
@@ -75,35 +75,35 @@ export default function SSOSettingsPage() {
       <FeatureGate feature="SSO">
         <div className="p-8">
           <div className="mb-6">
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Link href="/settings" className="hover:text-blue-600">Settings</Link>
               <span>/</span><span>Single Sign-On</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Single Sign-On (SSO)</h1>
-            <p className="text-gray-600 mt-1">Configure SSO for your organization</p>
+            <h1 className="text-2xl font-bold text-foreground">Single Sign-On (SSO)</h1>
+            <p className="text-muted-foreground mt-1">Configure SSO for your organization</p>
           </div>
 
           {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
           {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-card rounded-lg shadow-md p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Enable/Disable */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                 <div>
-                  <h3 className="font-medium text-gray-900">Enable SSO</h3>
-                  <p className="text-sm text-gray-500">Allow users to sign in with their identity provider</p>
+                  <h3 className="font-medium text-foreground">Enable SSO</h3>
+                  <p className="text-sm text-muted-foreground">Allow users to sign in with their identity provider</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={form.enabled} onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))}
                     className="sr-only peer" />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
 
               {/* Provider */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Provider</label>
                 <select value={form.provider} onChange={e => setForm(f => ({ ...f, provider: e.target.value as 'google' | 'saml' }))}
                   className="w-full px-3 py-2 border rounded-lg">
                   <option value="google">Google OAuth</option>
@@ -125,14 +125,14 @@ export default function SSOSettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Google Client ID</label>
+                    <label className="block text-sm font-medium text-foreground mb-1">Google Client ID</label>
                     <input type="text" value={form.googleClientId}
                       onChange={e => setForm(f => ({ ...f, googleClientId: e.target.value }))}
                       className="w-full px-3 py-2 border rounded-lg" placeholder="xxxx.apps.googleusercontent.com" />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Google Client Secret</label>
+                    <label className="block text-sm font-medium text-foreground mb-1">Google Client Secret</label>
                     <input type="password" value={form.googleClientSecret}
                       onChange={e => setForm(f => ({ ...f, googleClientSecret: e.target.value }))}
                       className="w-full px-3 py-2 border rounded-lg" placeholder="GOCSPX-..." />
@@ -141,12 +141,12 @@ export default function SSOSettingsPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Allowed Email Domains</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Allowed Email Domains</label>
                 <input type="text" value={form.allowedDomains}
                   onChange={e => setForm(f => ({ ...f, allowedDomains: e.target.value }))}
                   className="w-full px-3 py-2 border rounded-lg"
                   placeholder="example.com, company.org (comma separated)" />
-                <p className="text-xs text-gray-500 mt-1">Only users with email addresses on these domains can sign in via SSO. Leave empty to allow all domains.</p>
+                <p className="text-xs text-muted-foreground mt-1">Only users with email addresses on these domains can sign in via SSO. Leave empty to allow all domains.</p>
               </div>
 
               <div>

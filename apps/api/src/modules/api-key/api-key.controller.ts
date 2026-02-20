@@ -20,6 +20,7 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@hrplatform/shared';
 import { ApiKeyService } from './api-key.service';
 import { CreateApiKeyDto } from './dto';
@@ -40,6 +41,7 @@ export class ApiKeyController {
   constructor(private readonly apiKeyService: ApiKeyService) {}
 
   @Post()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Roles(UserRole.COMPANY_ADMIN)
   @ApiOperation({
     summary: 'Create a new API key',

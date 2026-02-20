@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LoggerService } from '../../common/services/logger.service';
@@ -46,7 +47,20 @@ export class AssetService {
       company: { connect: { id: companyId } },
     };
 
-    const asset = await this.repository.create(createData);
+    let asset;
+    try {
+      asset = await this.repository.create(createData);
+    } catch (error: any) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Asset code "${dto.assetCode}" already exists in this company`,
+        );
+      }
+      throw error;
+    }
 
     await this.repository.createAuditLog({
       userId,

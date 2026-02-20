@@ -23,12 +23,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For protected routes, check if admin_access_token cookie exists
-  // Note: The actual token validation is done by the API
-  // We only check cookie existence to decide client-side redirects
-  const hasAccessToken = request.cookies.has('admin_access_token');
+  // Check for session: `admin_has_session` flag or `access_token` httpOnly cookie
+  const hasSession = request.cookies.has('admin_has_session')
+    || request.cookies.has('admin_access_token')
+    || request.cookies.has('access_token');
 
-  if (!hasAccessToken) {
+  if (!hasSession) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);

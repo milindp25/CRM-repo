@@ -63,42 +63,42 @@ export default function ProfilePage() {
   return (
     <div className="p-8 max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-        <p className="text-gray-600 mt-1">Update your personal information and password</p>
+        <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
+        <p className="text-muted-foreground mt-1">Update your personal information and password</p>
       </div>
 
       {/* Update Profile */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Update Profile</h2>
+      <div className="bg-card rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Update Profile</h2>
 
         <form onSubmit={handleProfileSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+            <label className="block text-sm font-medium text-foreground mb-1">First Name</label>
             <input
               type="text"
               value={profileData.firstName}
               onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter new first name"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Last Name</label>
             <input
               type="text"
               value={profileData.lastName}
               onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter new last name"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
             <input
               type="text"
               value={profileData.phone}
               onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter phone number"
             />
           </div>
@@ -113,40 +113,40 @@ export default function ProfilePage() {
       </div>
 
       {/* Change Password */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h2>
+      <div className="bg-card rounded-lg shadow-md p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Change Password</h2>
 
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Current Password</label>
             <input
               type="password"
               required
               value={passwordData.currentPassword}
               onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <label className="block text-sm font-medium text-foreground mb-1">New Password</label>
             <input
               type="password"
               required
               minLength={8}
               value={passwordData.newPassword}
               onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+            <p className="text-xs text-muted-foreground mt-1">Minimum 8 characters</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Confirm New Password</label>
             <input
               type="password"
               required
               value={passwordData.confirmPassword}
               onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <button

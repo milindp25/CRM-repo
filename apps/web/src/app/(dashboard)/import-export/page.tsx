@@ -80,21 +80,21 @@ export default function ImportExportPage() {
     <RoleGate requiredPermissions={[Permission.VIEW_EMPLOYEES, Permission.MANAGE_EMPLOYEES]}>
       <div className="p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Import & Export</h1>
-          <p className="text-gray-600 mt-1">Bulk import data from CSV files or export your data</p>
+          <h1 className="text-2xl font-bold text-foreground">Import & Export</h1>
+          <p className="text-muted-foreground mt-1">Bulk import data from CSV files or export your data</p>
         </div>
 
         {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
         {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+        <div className="flex gap-1 mb-6 bg-muted p-1 rounded-lg w-fit">
           <button onClick={() => setActiveTab('import')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'import' ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}>
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'import' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
             Import
           </button>
           <button onClick={() => setActiveTab('export')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'export' ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}>
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'export' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
             Export
           </button>
         </div>
@@ -102,12 +102,12 @@ export default function ImportExportPage() {
         {activeTab === 'import' && (
           <div className="space-y-6">
             {/* Import Instructions */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Import Employees</h2>
+            <div className="bg-card rounded-lg shadow-md p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Import Employees</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Instructions</h3>
-                  <ol className="text-sm text-gray-600 space-y-1 list-decimal ml-4">
+                  <h3 className="font-medium text-foreground mb-2">Instructions</h3>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal ml-4">
                     <li>Download the CSV template</li>
                     <li>Fill in employee data (one row per employee)</li>
                     <li>Required fields: employee_code, first_name, last_name, work_email, date_of_joining</li>
@@ -121,15 +121,15 @@ export default function ImportExportPage() {
                   </button>
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">Upload CSV</h3>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <h3 className="font-medium text-foreground mb-2">Upload CSV</h3>
+                  <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                     <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImport} className="hidden" id="csv-upload" />
                     <label htmlFor="csv-upload" className="cursor-pointer">
                       <div className="text-4xl mb-2">📄</div>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         {importing ? 'Importing...' : 'Click to upload or drag and drop'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">CSV files only</p>
+                      <p className="text-xs text-muted-foreground mt-1">CSV files only</p>
                     </label>
                   </div>
                 </div>
@@ -138,8 +138,8 @@ export default function ImportExportPage() {
 
             {/* Import Results */}
             {importResult && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Import Results</h2>
+              <div className="bg-card rounded-lg shadow-md p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Import Results</h2>
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   <div className="p-3 bg-blue-50 rounded-lg text-center">
                     <div className="text-2xl font-bold text-blue-700">{importResult.total}</div>
@@ -157,21 +157,21 @@ export default function ImportExportPage() {
 
                 {importResult.errors.length > 0 && (
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Errors ({importResult.errors.length})</h3>
+                    <h3 className="font-medium text-foreground mb-2">Errors ({importResult.errors.length})</h3>
                     <div className="max-h-60 overflow-y-auto border rounded-lg">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 sticky top-0">
+                        <thead className="bg-muted sticky top-0">
                           <tr>
-                            <th className="px-3 py-2 text-left font-medium text-gray-500">Row</th>
-                            <th className="px-3 py-2 text-left font-medium text-gray-500">Field</th>
-                            <th className="px-3 py-2 text-left font-medium text-gray-500">Error</th>
+                            <th className="px-3 py-2 text-left font-medium text-muted-foreground">Row</th>
+                            <th className="px-3 py-2 text-left font-medium text-muted-foreground">Field</th>
+                            <th className="px-3 py-2 text-left font-medium text-muted-foreground">Error</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
                           {importResult.errors.map((err, i) => (
                             <tr key={i} className="hover:bg-red-50">
-                              <td className="px-3 py-2 text-gray-700">{err.row}</td>
-                              <td className="px-3 py-2 font-mono text-gray-600">{err.field}</td>
+                              <td className="px-3 py-2 text-foreground">{err.row}</td>
+                              <td className="px-3 py-2 font-mono text-muted-foreground">{err.field}</td>
                               <td className="px-3 py-2 text-red-600">{err.message}</td>
                             </tr>
                           ))}
@@ -188,12 +188,12 @@ export default function ImportExportPage() {
         {activeTab === 'export' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {exportOptions.map(opt => (
-              <div key={opt.type} className="bg-white rounded-lg shadow-md p-6 flex items-start justify-between">
+              <div key={opt.type} className="bg-card rounded-lg shadow-md p-6 flex items-start justify-between">
                 <div className="flex items-start gap-3">
                   <div className="text-3xl">{opt.icon}</div>
                   <div>
-                    <h3 className="font-medium text-gray-900">{opt.label}</h3>
-                    <p className="text-sm text-gray-500 mt-0.5">{opt.description}</p>
+                    <h3 className="font-medium text-foreground">{opt.label}</h3>
+                    <p className="text-sm text-muted-foreground mt-0.5">{opt.description}</p>
                   </div>
                 </div>
                 <button

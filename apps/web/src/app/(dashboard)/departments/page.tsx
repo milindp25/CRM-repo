@@ -95,8 +95,8 @@ export default function DepartmentsPage() {
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Departments</h1>
-          <p className="mt-2 text-gray-600">Organize your company structure</p>
+          <h1 className="text-3xl font-bold text-foreground">Departments</h1>
+          <p className="mt-2 text-muted-foreground">Organize your company structure</p>
         </div>
         <button
           onClick={() => {
@@ -116,7 +116,7 @@ export default function DepartmentsPage() {
       )}
 
       {showForm && (
-        <div className="mb-6 bg-white border rounded-lg p-6">
+        <div className="mb-6 bg-card border rounded-lg p-6">
           <h3 className="text-lg font-semibold mb-4">
             {editingId ? 'Edit Department' : 'New Department'}
           </h3>
@@ -167,7 +167,7 @@ export default function DepartmentsPage() {
                 type="button"
                 onClick={() => setShowForm(false)}
                 disabled={submitting}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -176,38 +176,38 @@ export default function DepartmentsPage() {
         </div>
       )}
 
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="bg-card shadow-md rounded-lg overflow-hidden">
         <table className="min-w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Code
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Name
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Description
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                 Employees
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {departments.map((dept) => (
-              <tr key={dept.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-medium text-gray-900">{dept.code}</td>
+              <tr key={dept.id} className="hover:bg-muted">
+                <td className="px-6 py-4 font-medium text-foreground">{dept.code}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-gray-400" />
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
                     {dept.name}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-gray-600 max-w-md truncate">
+                <td className="px-6 py-4 text-muted-foreground max-w-md truncate">
                   {dept.description || '-'}
                 </td>
                 <td className="px-6 py-4">
@@ -235,7 +235,7 @@ export default function DepartmentsPage() {
           </tbody>
         </table>
         {departments.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             No departments found. Create your first one!
           </div>
         )}

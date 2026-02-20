@@ -235,8 +235,8 @@ export default function PayrollPage() {
     <div className="p-6 max-w-[1400px] mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payroll Processing</h1>
-          <p className="text-gray-600 mt-1">Manage employee salary and payroll records</p>
+          <h1 className="text-2xl font-bold text-foreground">Payroll Processing</h1>
+          <p className="text-muted-foreground mt-1">Manage employee salary and payroll records</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
@@ -251,7 +251,7 @@ export default function PayrollPage() {
       )}
 
       {showForm && (
-        <div className="mb-6 bg-white rounded-lg shadow-md p-6">
+        <div className="mb-6 bg-card rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">Create New Payroll</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Pay Period Section */}
@@ -259,13 +259,13 @@ export default function PayrollPage() {
               <h3 className="font-medium mb-3">Pay Period</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Month *
                   </label>
                   <select
                     value={formData.payPeriodMonth}
                     onChange={(e) => setFormData({ ...formData, payPeriodMonth: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     required
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
@@ -274,28 +274,28 @@ export default function PayrollPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Year *
                   </label>
                   <input
                     type="number"
                     value={formData.payPeriodYear}
                     onChange={(e) => setFormData({ ...formData, payPeriodYear: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="2020"
                     max="2100"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Pay Date
                   </label>
                   <input
                     type="date"
                     value={formData.payDate}
                     onChange={(e) => setFormData({ ...formData, payDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                   />
                 </div>
               </div>
@@ -305,13 +305,13 @@ export default function PayrollPage() {
             <div className="border-b pb-4">
               <h3 className="font-medium mb-3">Employee</h3>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Select Employee *
                 </label>
                 <select
                   value={formData.employeeId}
                   onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-border rounded-md"
                   required
                 >
                   <option value="">-- Select Employee --</option>
@@ -329,54 +329,54 @@ export default function PayrollPage() {
               <h3 className="font-medium mb-3">Salary Components</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Basic Salary * (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.basicSalary}
                     onChange={(e) => setFormData({ ...formData, basicSalary: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     HRA (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.hra}
                     onChange={(e) => setFormData({ ...formData, hra: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Special Allowance (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.specialAllowance}
                     onChange={(e) => setFormData({ ...formData, specialAllowance: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Other Allowances (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.otherAllowances}
                     onChange={(e) => setFormData({ ...formData, otherAllowances: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
@@ -394,92 +394,92 @@ export default function PayrollPage() {
               <h3 className="font-medium mb-3">Deductions</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     PF Employee (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.pfEmployee}
                     onChange={(e) => setFormData({ ...formData, pfEmployee: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     PF Employer (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.pfEmployer}
                     onChange={(e) => setFormData({ ...formData, pfEmployer: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     ESI Employee (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.esiEmployee}
                     onChange={(e) => setFormData({ ...formData, esiEmployee: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     ESI Employer (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.esiEmployer}
                     onChange={(e) => setFormData({ ...formData, esiEmployer: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     TDS (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.tds}
                     onChange={(e) => setFormData({ ...formData, tds: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     PT (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.pt}
                     onChange={(e) => setFormData({ ...formData, pt: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Other Deductions (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.otherDeductions}
                     onChange={(e) => setFormData({ ...formData, otherDeductions: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.01"
                   />
@@ -504,65 +504,65 @@ export default function PayrollPage() {
               <h3 className="font-medium mb-3">Attendance</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Days Worked *
                   </label>
                   <input
                     type="number"
                     value={formData.daysWorked}
                     onChange={(e) => setFormData({ ...formData, daysWorked: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Days in Month *
                   </label>
                   <input
                     type="number"
                     value={formData.daysInMonth}
                     onChange={(e) => setFormData({ ...formData, daysInMonth: parseInt(e.target.value) || 30 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="28"
                     max="31"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Leave Days
                   </label>
                   <input
                     type="number"
                     value={formData.leaveDays}
                     onChange={(e) => setFormData({ ...formData, leaveDays: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Absent Days
                   </label>
                   <input
                     type="number"
                     value={formData.absentDays}
                     onChange={(e) => setFormData({ ...formData, absentDays: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Overtime Hours
                   </label>
                   <input
                     type="number"
                     value={formData.overtimeHours}
                     onChange={(e) => setFormData({ ...formData, overtimeHours: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     min="0"
                     step="0.5"
                   />
@@ -575,38 +575,38 @@ export default function PayrollPage() {
               <h3 className="font-medium mb-3">Bank Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Bank Account Number
                   </label>
                   <input
                     type="text"
                     value={formData.bankAccount}
                     onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     placeholder="Account number"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     IFSC Code
                   </label>
                   <input
                     type="text"
                     value={formData.ifscCode}
                     onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     placeholder="IFSC code"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Bank Name
                   </label>
                   <input
                     type="text"
                     value={formData.bankName}
                     onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-border rounded-md"
                     placeholder="Bank name"
                   />
                 </div>
@@ -615,13 +615,13 @@ export default function PayrollPage() {
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Notes
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-border rounded-md"
                 rows={3}
                 placeholder="Any additional notes..."
               />
@@ -638,7 +638,7 @@ export default function PayrollPage() {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition"
+                className="px-6 py-2 bg-muted text-foreground rounded-md hover:bg-muted transition"
               >
                 Cancel
               </button>
@@ -648,15 +648,15 @@ export default function PayrollPage() {
       )}
 
       {/* Filters */}
-      <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+      <div className="mb-6 bg-card rounded-lg shadow-md p-4">
         <h3 className="font-medium mb-3">Filters</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Month</label>
             <select
               value={filters.month}
               onChange={(e) => setFilters({ ...filters, month: Number(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-border rounded-md"
             >
               {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
                 <option key={i + 1} value={i + 1}>{m}</option>
@@ -664,11 +664,11 @@ export default function PayrollPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Year</label>
             <select
               value={filters.year}
               onChange={(e) => setFilters({ ...filters, year: Number(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-border rounded-md"
             >
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
                 <option key={y} value={y}>{y}</option>
@@ -676,11 +676,11 @@ export default function PayrollPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Employee</label>
             <select
               value={filters.employeeId}
               onChange={(e) => setFilters({ ...filters, employeeId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-border rounded-md"
             >
               <option value="">All Employees</option>
               {employees.map(emp => (
@@ -691,11 +691,11 @@ export default function PayrollPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Status</label>
             <select
               value={filters.status}
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full px-3 py-2 border border-border rounded-md"
             >
               <option value="">All Statuses</option>
               <option value="DRAFT">Draft</option>
@@ -708,21 +708,21 @@ export default function PayrollPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-card rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-muted border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Gross Salary</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Deductions</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net Salary</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Employee</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Period</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Gross Salary</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Deductions</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Net Salary</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-border">
               {loading && !payrollRecords.length ? (
                 <tr>
                   <td colSpan={7}>
@@ -731,7 +731,7 @@ export default function PayrollPage() {
                 </tr>
               ) : payrollRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                     No payroll records found. Create one to get started.
                   </td>
                 </tr>
@@ -739,19 +739,19 @@ export default function PayrollPage() {
                 payrollRecords.map((record) => {
                   const totalDeductions = record.pfEmployee + record.esiEmployee + record.tds + record.pt + record.otherDeductions;
                   return (
-                    <tr key={record.id} className="hover:bg-gray-50">
+                    <tr key={record.id} className="hover:bg-muted">
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-foreground">
                           {record.employee?.firstName} {record.employee?.lastName}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           {record.employee?.employeeCode}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                      <td className="px-4 py-3 text-sm text-foreground">
                         {getMonthName(record.payPeriodMonth)} {record.payPeriodYear}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      <td className="px-4 py-3 text-sm text-foreground text-right font-medium">
                         ₹{record.grossSalary.toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-sm text-red-600 text-right">

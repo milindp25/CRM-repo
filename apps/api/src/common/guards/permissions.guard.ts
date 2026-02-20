@@ -19,6 +19,11 @@ export class PermissionsGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
+
+    if (!user) {
+      return false;
+    }
+
     const userRole = user.role as UserRole;
 
     // Get permissions for this role

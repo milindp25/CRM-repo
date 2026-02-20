@@ -108,8 +108,8 @@ export default function ExpensesPage() {
         <div className="p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Expense Management</h1>
-              <p className="text-gray-600 mt-1">Submit and manage expense claims</p>
+              <h1 className="text-2xl font-bold text-foreground">Expense Management</h1>
+              <p className="text-muted-foreground mt-1">Submit and manage expense claims</p>
             </div>
             <button onClick={() => setShowCreate(!showCreate)} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
               {showCreate ? 'Cancel' : '+ Submit Expense'}
@@ -120,72 +120,72 @@ export default function ExpensesPage() {
           {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
 
           {showCreate && (
-            <form onSubmit={handleCreate} className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Submit Expense Claim</h3>
+            <form onSubmit={handleCreate} className="bg-card rounded-lg shadow-md p-6 mb-6">
+              <h3 className="font-semibold text-foreground mb-4">Submit Expense Claim</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-                  <input type="text" required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Business trip to Mumbai" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Title *</label>
+                  <input type="text" required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" placeholder="Business trip to Mumbai" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                  <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <label className="block text-sm font-medium text-foreground mb-1">Category *</label>
+                  <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md">
                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (INR) *</label>
-                  <input type="number" required min="1" step="0.01" value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Amount (INR) *</label>
+                  <input type="number" required min="1" step="0.01" value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expense Date *</label>
-                  <input type="date" required value={form.expenseDate} onChange={e => setForm(p => ({ ...p, expenseDate: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Expense Date *</label>
+                  <input type="date" required value={form.expenseDate} onChange={e => setForm(p => ({ ...p, expenseDate: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <input type="text" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Description</label>
+                  <input type="text" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
               </div>
               <button type="submit" disabled={creating} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm">{creating ? 'Submitting...' : 'Submit Claim'}</button>
             </form>
           )}
 
-          <div className="flex space-x-4 mb-6 border-b border-gray-200">
-            <button onClick={() => setActiveTab('my')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'my' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex space-x-4 mb-6 border-b border-border">
+            <button onClick={() => setActiveTab('my')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'my' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}>
               My Expenses
             </button>
-            <button onClick={() => setActiveTab('all')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+            <button onClick={() => setActiveTab('all')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}>
               All Expenses
             </button>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-gray-500">Loading expenses...</div>
+            <div className="text-center py-12 text-muted-foreground">Loading expenses...</div>
           ) : expenses.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow-md"><p className="text-gray-500">No expense claims found</p></div>
+            <div className="text-center py-12 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">No expense claims found</p></div>
           ) : (
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="bg-card rounded-lg shadow-md overflow-hidden">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    {activeTab === 'all' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Title</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                    {activeTab === 'all' && <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Actions</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-border">
                   {expenses.map(expense => (
-                    <tr key={expense.id} className="hover:bg-gray-50">
+                    <tr key={expense.id} className="hover:bg-muted">
                       <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{expense.title}</div>
-                        {expense.description && <div className="text-xs text-gray-500">{expense.description}</div>}
+                        <div className="text-sm font-medium text-foreground">{expense.title}</div>
+                        {expense.description && <div className="text-xs text-muted-foreground">{expense.description}</div>}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{expense.category}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{expense.currency} {Number(expense.amount).toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{new Date(expense.expenseDate).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{expense.category}</td>
+                      <td className="px-6 py-4 text-sm font-medium text-foreground">{expense.currency} {Number(expense.amount).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(expense.expenseDate).toLocaleDateString()}</td>
                       <td className="px-6 py-4">{statusBadge(expense.status)}</td>
                       {activeTab === 'all' && (
                         <td className="px-6 py-4">

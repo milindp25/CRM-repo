@@ -93,8 +93,8 @@ export default function RecruitmentPage() {
         <div className="p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Recruitment</h1>
-              <p className="text-gray-600 mt-1">Job postings, applicants, and hiring pipeline</p>
+              <h1 className="text-2xl font-bold text-foreground">Recruitment</h1>
+              <p className="text-muted-foreground mt-1">Job postings, applicants, and hiring pipeline</p>
             </div>
             <button onClick={() => setShowCreateJob(!showCreateJob)} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
               {showCreateJob ? 'Cancel' : '+ New Job Posting'}
@@ -104,16 +104,16 @@ export default function RecruitmentPage() {
           {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
 
           {showCreateJob && (
-            <form onSubmit={handleCreateJob} className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Create Job Posting</h3>
+            <form onSubmit={handleCreateJob} className="bg-card rounded-lg shadow-md p-6 mb-6">
+              <h3 className="font-semibold text-foreground mb-4">Create Job Posting</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Job Title *</label>
-                  <input type="text" required value={jobForm.title} onChange={e => setJobForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Job Title *</label>
+                  <input type="text" required value={jobForm.title} onChange={e => setJobForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Job Type</label>
-                  <select value={jobForm.jobType} onChange={e => setJobForm(p => ({ ...p, jobType: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                  <label className="block text-sm font-medium text-foreground mb-1">Job Type</label>
+                  <select value={jobForm.jobType} onChange={e => setJobForm(p => ({ ...p, jobType: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md">
                     <option value="FULL_TIME">Full Time</option>
                     <option value="PART_TIME">Part Time</option>
                     <option value="CONTRACT">Contract</option>
@@ -122,20 +122,20 @@ export default function RecruitmentPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <input type="text" value={jobForm.location} onChange={e => setJobForm(p => ({ ...p, location: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Location</label>
+                  <input type="text" value={jobForm.location} onChange={e => setJobForm(p => ({ ...p, location: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Experience</label>
-                  <input type="text" value={jobForm.experience} onChange={e => setJobForm(p => ({ ...p, experience: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="e.g. 2-5 years" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Experience</label>
+                  <input type="text" value={jobForm.experience} onChange={e => setJobForm(p => ({ ...p, experience: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" placeholder="e.g. 2-5 years" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Openings</label>
-                  <input type="number" min="1" value={jobForm.openings} onChange={e => setJobForm(p => ({ ...p, openings: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                  <label className="block text-sm font-medium text-foreground mb-1">Openings</label>
+                  <input type="number" min="1" value={jobForm.openings} onChange={e => setJobForm(p => ({ ...p, openings: Number(e.target.value) }))} className="w-full px-3 py-2 border border-border rounded-md" />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-                  <textarea required value={jobForm.description} onChange={e => setJobForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md" rows={3} />
+                  <label className="block text-sm font-medium text-foreground mb-1">Description *</label>
+                  <textarea required value={jobForm.description} onChange={e => setJobForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" rows={3} />
                 </div>
               </div>
               <button type="submit" disabled={creating} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm">{creating ? 'Creating...' : 'Create Posting'}</button>
@@ -145,21 +145,21 @@ export default function RecruitmentPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Job Postings List */}
             <div className="lg:col-span-1">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Job Postings</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-3">Job Postings</h2>
               {loading ? (
-                <div className="text-center py-8 text-gray-500">Loading...</div>
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
               ) : jobs.length === 0 ? (
-                <div className="text-center py-8 bg-white rounded-lg shadow-md"><p className="text-gray-500">No job postings yet</p></div>
+                <div className="text-center py-8 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">No job postings yet</p></div>
               ) : (
                 <div className="space-y-2">
                   {jobs.map(job => (
-                    <div key={job.id} onClick={() => setSelectedJob(job)} className={`bg-white rounded-lg shadow-sm p-4 cursor-pointer border-2 transition ${selectedJob?.id === job.id ? 'border-blue-500' : 'border-transparent hover:border-gray-200'}`}>
+                    <div key={job.id} onClick={() => setSelectedJob(job)} className={`bg-card rounded-lg shadow-sm p-4 cursor-pointer border-2 transition ${selectedJob?.id === job.id ? 'border-blue-500' : 'border-transparent hover:border-border'}`}>
                       <div className="flex justify-between items-start mb-1">
-                        <h3 className="font-medium text-gray-900 text-sm">{job.title}</h3>
+                        <h3 className="font-medium text-foreground text-sm">{job.title}</h3>
                         {statusBadge(job.status)}
                       </div>
-                      <p className="text-xs text-gray-500">{job.location || 'No location'} &middot; {job.jobType.replace(/_/g, ' ')}</p>
-                      <p className="text-xs text-gray-500 mt-1">{job.filled}/{job.openings} filled</p>
+                      <p className="text-xs text-muted-foreground">{job.location || 'No location'} &middot; {job.jobType.replace(/_/g, ' ')}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{job.filled}/{job.openings} filled</p>
                       {job.status === 'DRAFT' && (
                         <button onClick={e => { e.stopPropagation(); handlePublish(job.id); }} className="mt-2 text-xs text-blue-600 hover:text-blue-800">Publish</button>
                       )}
@@ -171,32 +171,32 @@ export default function RecruitmentPage() {
 
             {/* Applicant Pipeline */}
             <div className="lg:col-span-2">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              <h2 className="text-lg font-semibold text-foreground mb-3">
                 {selectedJob ? `Applicants - ${selectedJob.title}` : 'Select a job to view applicants'}
               </h2>
               {selectedJob ? (
                 applicants.length === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-lg shadow-md"><p className="text-gray-500">No applicants yet for this position</p></div>
+                  <div className="text-center py-12 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">No applicants yet for this position</p></div>
                 ) : (
-                  <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
+                  <div className="bg-card rounded-lg shadow-md overflow-hidden">
+                    <table className="min-w-full divide-y divide-border">
+                      <thead className="bg-muted">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidate</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stage</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rating</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Applied</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Candidate</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Email</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Stage</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Rating</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Applied</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
+                      <tbody className="divide-y divide-border">
                         {applicants.map(app => (
-                          <tr key={app.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{app.firstName} {app.lastName}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{app.email}</td>
+                          <tr key={app.id} className="hover:bg-muted">
+                            <td className="px-4 py-3 text-sm font-medium text-foreground">{app.firstName} {app.lastName}</td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{app.email}</td>
                             <td className="px-4 py-3">{statusBadge(app.stage)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{app.rating ? `${app.rating}/5` : '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{new Date(app.createdAt).toLocaleDateString()}</td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{app.rating ? `${app.rating}/5` : '-'}</td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{new Date(app.createdAt).toLocaleDateString()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -204,7 +204,7 @@ export default function RecruitmentPage() {
                   </div>
                 )
               ) : (
-                <div className="text-center py-12 bg-white rounded-lg shadow-md"><p className="text-gray-500">Click on a job posting to view its applicants</p></div>
+                <div className="text-center py-12 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">Click on a job posting to view its applicants</p></div>
               )}
             </div>
           </div>

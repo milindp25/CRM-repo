@@ -129,8 +129,8 @@ export default function SettingsPage() {
     <RoleGate requiredPermissions={[Permission.MANAGE_COMPANY]}>
       <div className="p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600 mt-1">Manage your company profile and configuration</p>
+          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground mt-1">Manage your company profile and configuration</p>
         </div>
 
       {error && (
@@ -138,8 +138,8 @@ export default function SettingsPage() {
       )}
 
       {/* Company Profile Form */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Company Profile</h2>
+      <div className="bg-card rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Company Profile</h2>
 
         {company && (
           <div className="mb-4 flex gap-4">
@@ -153,137 +153,137 @@ export default function SettingsPage() {
             }`}>
               {company.subscriptionStatus}
             </span>
-            <span className="text-sm text-gray-500">Code: {company.companyCode}</span>
+            <span className="text-sm text-muted-foreground">Code: {company.companyCode}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Company Name *</label>
               <input
                 type="text"
                 required
                 value={formData.companyName}
                 onChange={(e) => handleChange('companyName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Industry</label>
               <input
                 type="text"
                 value={formData.industry}
                 onChange={(e) => handleChange('industry', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g. Technology, Finance, Healthcare"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Website</label>
               <input
                 type="url"
                 value={formData.website}
                 onChange={(e) => handleChange('website', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="https://example.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
               <input
                 type="text"
                 value={formData.phone}
                 onChange={(e) => handleChange('phone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">GSTIN</label>
+              <label className="block text-sm font-medium text-foreground mb-1">GSTIN</label>
               <input
                 type="text"
                 value={formData.gstin}
                 onChange={(e) => handleChange('gstin', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="22AAAAA0000A1Z5"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">PAN</label>
+              <label className="block text-sm font-medium text-foreground mb-1">PAN</label>
               <input
                 type="text"
                 value={formData.pan}
                 onChange={(e) => handleChange('pan', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="AAAAA0000A"
               />
             </div>
           </div>
 
           <div className="mt-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Address</h3>
+            <h3 className="text-sm font-medium text-foreground mb-3">Address</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Address Line 1</label>
                 <input
                   type="text"
                   value={formData.addressLine1}
                   onChange={(e) => handleChange('addressLine1', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Address Line 2</label>
                 <input
                   type="text"
                   value={formData.addressLine2}
                   onChange={(e) => handleChange('addressLine2', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <label className="block text-sm font-medium text-foreground mb-1">City</label>
                 <input
                   type="text"
                   value={formData.city}
                   onChange={(e) => handleChange('city', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                <label className="block text-sm font-medium text-foreground mb-1">State</label>
                 <input
                   type="text"
                   value={formData.state}
                   onChange={(e) => handleChange('state', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Country</label>
                 <input
                   type="text"
                   value={formData.country}
                   onChange={(e) => handleChange('country', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Postal Code</label>
                 <input
                   type="text"
                   value={formData.postalCode}
                   onChange={(e) => handleChange('postalCode', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -302,47 +302,47 @@ export default function SettingsPage() {
       </div>
 
       {/* Advanced Settings Links */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Advanced Settings</h2>
+      <div className="bg-card rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Advanced Settings</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <a href="/settings/api-keys" className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+          <a href="/settings/api-keys" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
             <div className="text-2xl mb-2">🔑</div>
-            <h3 className="font-medium text-gray-900 group-hover:text-blue-700">API Keys</h3>
-            <p className="text-xs text-gray-500 mt-1">Manage API keys for integrations</p>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700">API Keys</h3>
+            <p className="text-xs text-muted-foreground mt-1">Manage API keys for integrations</p>
           </a>
-          <a href="/settings/webhooks" className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+          <a href="/settings/webhooks" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
             <div className="text-2xl mb-2">🔗</div>
-            <h3 className="font-medium text-gray-900 group-hover:text-blue-700">Webhooks</h3>
-            <p className="text-xs text-gray-500 mt-1">Send events to external services</p>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700">Webhooks</h3>
+            <p className="text-xs text-muted-foreground mt-1">Send events to external services</p>
           </a>
-          <a href="/settings/custom-fields" className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+          <a href="/settings/custom-fields" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
             <div className="text-2xl mb-2">📋</div>
-            <h3 className="font-medium text-gray-900 group-hover:text-blue-700">Custom Fields</h3>
-            <p className="text-xs text-gray-500 mt-1">Add custom data fields to entities</p>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700">Custom Fields</h3>
+            <p className="text-xs text-muted-foreground mt-1">Add custom data fields to entities</p>
           </a>
-          <a href="/settings/sso" className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+          <a href="/settings/sso" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
             <div className="text-2xl mb-2">🔐</div>
-            <h3 className="font-medium text-gray-900 group-hover:text-blue-700">Single Sign-On</h3>
-            <p className="text-xs text-gray-500 mt-1">Configure SSO for your organization</p>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700">Single Sign-On</h3>
+            <p className="text-xs text-muted-foreground mt-1">Configure SSO for your organization</p>
           </a>
         </div>
       </div>
 
       {/* Leave Entitlements (informational) */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-card rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Leave Entitlements</h2>
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">System defaults · Configurable in next release</span>
+          <h2 className="text-lg font-semibold text-foreground">Leave Entitlements</h2>
+          <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded">System defaults · Configurable in next release</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {LEAVE_ENTITLEMENTS.map((le) => (
-            <div key={le.type} className="border border-gray-200 rounded-lg p-3">
-              <p className="text-sm font-medium text-gray-700">{le.type}</p>
+            <div key={le.type} className="border border-border rounded-lg p-3">
+              <p className="text-sm font-medium text-foreground">{le.type}</p>
               <p className="text-lg font-bold text-blue-600 mt-1">
                 {le.days > 0 ? `${le.days} days` : le.note}
               </p>
               {le.days > 0 && (
-                <p className="text-xs text-gray-500">{le.note}</p>
+                <p className="text-xs text-muted-foreground">{le.note}</p>
               )}
             </div>
           ))}

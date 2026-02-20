@@ -9,6 +9,7 @@ import {
   Get,
   Req,
   Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +19,9 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { Response } from 'express';
+// Note: Response used as `any` in decorated params to avoid TS1272
+// (isolatedModules + emitDecoratorMetadata). Cast to Response in private helpers.
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto, RefreshTokenDto, AuthResponseDto } from './dto';
 import { UpdateSSOConfigDto, SSOConfigResponseDto } from './dto/sso-config.dto';
@@ -30,6 +33,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { FeatureGuard } from '../../common/guards/feature.guard';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@hrplatform/shared';
 interface JwtPayload { userId: string; email: string; companyId: string; role: string; permissions: string[]; }
 
@@ -50,6 +54,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('register')
   @ApiOperation({ summary: 'Register a new user and company' })
   @ApiResponse({
@@ -58,11 +63,14 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 409, description: 'Email already exists' })
-  async register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
-    return this.authService.register(dto);
+  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: any): Promise<AuthResponseDto> {
+    const authResponse = await this.authService.register(dto);
+    this.setAuthCookies(res, authResponse.accessToken, authResponse.refreshToken);
+    return authResponse;
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
@@ -72,11 +80,14 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.login(dto);
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: any): Promise<AuthResponseDto> {
+    const authResponse = await this.authService.login(dto);
+    this.setAuthCookies(res, authResponse.accessToken, authResponse.refreshToken);
+    return authResponse;
   }
 
   @Public()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
@@ -85,8 +96,19 @@ export class AuthController {
     description: 'Token refreshed successfully',
     type: AuthResponseDto,
   })
-  async refreshToken(@Body() dto: RefreshTokenDto): Promise<AuthResponseDto> {
-    return this.authService.refreshToken(dto.refreshToken);
+  async refreshToken(
+    @Body() dto: RefreshTokenDto,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: any,
+  ): Promise<AuthResponseDto> {
+    // Try body first, fall back to httpOnly cookie
+    const token = dto.refreshToken || req.cookies?.refresh_token;
+    if (!token) {
+      throw new UnauthorizedException('No refresh token provided');
+    }
+    const authResponse = await this.authService.refreshToken(token);
+    this.setAuthCookies(res, authResponse.accessToken, authResponse.refreshToken);
+    return authResponse;
   }
 
   @ApiBearerAuth()
@@ -94,8 +116,34 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Logout user' })
-  async logout(@CurrentUser('userId') userId: string): Promise<void> {
+  async logout(@CurrentUser('userId') userId: string, @Res({ passthrough: true }) res: any): Promise<void> {
     await this.authService.logout(userId);
+    this.clearAuthCookies(res);
+  }
+
+  private setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+      path: '/',
+    });
+
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/v1/auth', // Only sent to auth endpoints
+    });
+  }
+
+  private clearAuthCookies(res: Response): void {
+    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie('refresh_token', { path: '/v1/auth' });
   }
 
   @ApiBearerAuth()
@@ -121,6 +169,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Patch('change-password')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Change own password' })

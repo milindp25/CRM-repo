@@ -26,10 +26,10 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
 const toastConfig: Record<ToastType, { icon: typeof CheckCircle; bg: string; border: string; iconColor: string; progressColor: string }> = {
-  success: { icon: CheckCircle, bg: 'bg-white', border: 'border-l-4 border-l-emerald-500', iconColor: 'text-emerald-500', progressColor: 'bg-emerald-500' },
-  error:   { icon: XCircle,     bg: 'bg-white', border: 'border-l-4 border-l-red-500',     iconColor: 'text-red-500',     progressColor: 'bg-red-500' },
-  warning: { icon: AlertTriangle, bg: 'bg-white', border: 'border-l-4 border-l-amber-500',   iconColor: 'text-amber-500',   progressColor: 'bg-amber-500' },
-  info:    { icon: Info,         bg: 'bg-white', border: 'border-l-4 border-l-blue-500',    iconColor: 'text-blue-500',    progressColor: 'bg-blue-500' },
+  success: { icon: CheckCircle, bg: 'bg-card', border: 'border-l-4 border-l-emerald-500', iconColor: 'text-emerald-500', progressColor: 'bg-emerald-500' },
+  error:   { icon: XCircle,     bg: 'bg-card', border: 'border-l-4 border-l-red-500',     iconColor: 'text-red-500',     progressColor: 'bg-red-500' },
+  warning: { icon: AlertTriangle, bg: 'bg-card', border: 'border-l-4 border-l-amber-500',   iconColor: 'text-amber-500',   progressColor: 'bg-amber-500' },
+  info:    { icon: Info,         bg: 'bg-card', border: 'border-l-4 border-l-blue-500',    iconColor: 'text-blue-500',    progressColor: 'bg-blue-500' },
 };
 
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) => void }) {
@@ -78,21 +78,21 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
         <Icon className="w-5 h-5" />
       </div>
       <div className="flex-1 min-w-0 pr-2">
-        <p className="text-sm font-semibold text-gray-900">{toast.title}</p>
+        <p className="text-sm font-semibold text-foreground">{toast.title}</p>
         {toast.message && (
-          <p className="mt-0.5 text-sm text-gray-500 leading-relaxed">{toast.message}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground leading-relaxed">{toast.message}</p>
         )}
       </div>
       <button
         onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
-        className="flex-shrink-0 p-0.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+        className="flex-shrink-0 p-0.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         aria-label="Dismiss"
       >
         <X className="w-4 h-4" />
       </button>
 
       {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-100">
+      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-muted">
         <div
           className={`h-full ${config.progressColor} transition-none`}
           style={{

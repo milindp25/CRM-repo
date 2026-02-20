@@ -27,6 +27,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole, Permission } from '@hrplatform/shared';
 
 interface JwtPayload {
@@ -70,6 +71,7 @@ export class ImportExportController {
    * Validates all rows and returns detailed error/success report.
    */
   @Post('import/employees')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
   @RequirePermissions(Permission.CREATE_EMPLOYEES)
   @RequireFeature('EMPLOYEES')

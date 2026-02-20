@@ -1,6 +1,6 @@
 // Tenant API - used only for authentication (login)
 const AUTH_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/v1';
 
 // Admin API - used for all admin operations
 const ADMIN_API_BASE_URL =
@@ -21,14 +21,16 @@ class AdminApiClient {
   private setToken(token: string): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem('admin_access_token', token);
-    document.cookie = `admin_access_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+    // Set session flag cookie for middleware (actual auth via httpOnly cookie)
+    document.cookie = `admin_has_session=1; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   }
 
   private removeToken(): void {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('admin_access_token');
-    document.cookie =
-      'admin_access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'admin_has_session=; path=/; max-age=0';
+    // Clear legacy cookie
+    document.cookie = 'admin_access_token=; path=/; max-age=0';
   }
 
   private async request<T>(
@@ -50,6 +52,7 @@ class AdminApiClient {
     const response = await fetch(`${baseUrl}${endpoint}`, {
       ...options,
       headers,
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -73,7 +76,9 @@ class AdminApiClient {
       throw new Error(errorData.message || 'An unexpected error occurred');
     }
 
-    return response.json();
+    const json = await response.json();
+    // Both tenant API and admin-api wrap responses in { data: ... }
+    return (json.data !== undefined ? json.data : json) as T;
   }
 
   // ── Auth (uses tenant API) ─────────────────────────────────────────

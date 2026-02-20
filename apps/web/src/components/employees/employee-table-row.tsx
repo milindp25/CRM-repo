@@ -71,7 +71,7 @@ export function EmployeeTableRow({ employee, onDelete }: EmployeeTableRowProps) 
   };
 
   return (
-    <tr className="hover:bg-gray-50 transition-colors">
+    <tr className="hover:bg-muted transition-colors">
       {/* Employee Code */}
       <td className="px-6 py-4 whitespace-nowrap">
         <button
@@ -91,31 +91,31 @@ export function EmployeeTableRow({ employee, onDelete }: EmployeeTableRowProps) 
             </div>
           </div>
           <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">
+            <div className="text-sm font-medium text-foreground">
               {employee.firstName} {employee.middleName ? employee.middleName + ' ' : ''}{employee.lastName}
             </div>
-            <div className="text-sm text-gray-500">{employee.workEmail}</div>
+            <div className="text-sm text-muted-foreground">{employee.workEmail}</div>
           </div>
         </div>
       </td>
 
-      {/* Department */}
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-gray-900">
+      {/* Department - hidden on small screens */}
+      <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+        <div className="text-sm text-foreground">
           {employee.department?.name || '-'}
         </div>
         {employee.department?.code && (
-          <div className="text-sm text-gray-500">{employee.department.code}</div>
+          <div className="text-sm text-muted-foreground">{employee.department.code}</div>
         )}
       </td>
 
-      {/* Designation */}
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-gray-900">
+      {/* Designation - hidden on small/medium screens */}
+      <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+        <div className="text-sm text-foreground">
           {employee.designation?.title || '-'}
         </div>
         {employee.designation?.level && (
-          <div className="text-sm text-gray-500">Level {employee.designation.level}</div>
+          <div className="text-sm text-muted-foreground">Level {employee.designation.level}</div>
         )}
       </td>
 
@@ -130,20 +130,20 @@ export function EmployeeTableRow({ employee, onDelete }: EmployeeTableRowProps) 
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
         <button
           onClick={() => setShowActions(!showActions)}
-          className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"
+          className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted"
         >
           <MoreVertical className="h-5 w-5" />
         </button>
 
         {showActions && (
-          <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+          <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-card ring-1 ring-black ring-opacity-5 z-10">
             <div className="py-1">
               <button
                 onClick={() => {
                   router.push(`/employees/${employee.id}`);
                   setShowActions(false);
                 }}
-                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-foreground hover:bg-muted"
               >
                 <Eye className="h-4 w-4" />
                 View Details
@@ -153,7 +153,7 @@ export function EmployeeTableRow({ employee, onDelete }: EmployeeTableRowProps) 
                   router.push(`/employees/${employee.id}/edit`);
                   setShowActions(false);
                 }}
-                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-foreground hover:bg-muted"
               >
                 <Edit className="h-4 w-4" />
                 Edit
