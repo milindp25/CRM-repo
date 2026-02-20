@@ -59,10 +59,10 @@ export default function AssetsPage() {
       AVAILABLE: 'bg-green-100 text-green-800',
       ASSIGNED: 'bg-blue-100 text-blue-800',
       UNDER_MAINTENANCE: 'bg-yellow-100 text-yellow-800',
-      RETIRED: 'bg-gray-100 text-gray-800',
+      RETIRED: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
       DISPOSED: 'bg-red-100 text-red-800',
     };
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>{status.replace(/_/g, ' ')}</span>;
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'}`}>{status.replace(/_/g, ' ')}</span>;
   };
 
   const conditionBadge = (condition: string) => {
@@ -73,7 +73,7 @@ export default function AssetsPage() {
       POOR: 'text-orange-600',
       DAMAGED: 'text-red-600',
     };
-    return <span className={`text-xs font-medium ${colors[condition] || 'text-gray-600'}`}>{condition}</span>;
+    return <span className={`text-xs font-medium ${colors[condition] || 'text-gray-600 dark:text-gray-400'}`}>{condition}</span>;
   };
 
   const categories = ['LAPTOP', 'PHONE', 'MONITOR', 'DESK', 'CHAIR', 'VEHICLE', 'SOFTWARE_LICENSE', 'OTHER'];

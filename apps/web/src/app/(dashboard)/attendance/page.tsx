@@ -173,10 +173,10 @@ export default function AttendancePage() {
       ABSENT: 'bg-red-100 text-red-800',
       LEAVE: 'bg-yellow-100 text-yellow-800',
       HALF_DAY: 'bg-blue-100 text-blue-800',
-      WEEKEND: 'bg-gray-100 text-gray-800',
+      WEEKEND: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
       HOLIDAY: 'bg-purple-100 text-purple-800',
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
   };
 
   return (

@@ -410,19 +410,19 @@ function StatusBadge({ status }: { status: string }) {
     ABSENT: 'bg-red-100 text-red-700',
     LEAVE: 'bg-yellow-100 text-yellow-700',
     HALF_DAY: 'bg-orange-100 text-orange-700',
-    WEEKEND: 'bg-gray-100 text-gray-500',
+    WEEKEND: 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400',
     HOLIDAY: 'bg-blue-100 text-blue-700',
     APPROVED: 'bg-green-100 text-green-700',
     PENDING: 'bg-yellow-100 text-yellow-700',
     REJECTED: 'bg-red-100 text-red-700',
-    CANCELLED: 'bg-gray-100 text-gray-500',
-    DRAFT: 'bg-gray-100 text-gray-700',
+    CANCELLED: 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400',
+    DRAFT: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
     PROCESSED: 'bg-blue-100 text-blue-700',
     PAID: 'bg-green-100 text-green-700',
     HOLD: 'bg-yellow-100 text-yellow-700',
   };
   return (
-    <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${colors[status] || 'bg-gray-100 text-gray-600'}`}>
+    <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${colors[status] || 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
       {status}
     </span>
   );

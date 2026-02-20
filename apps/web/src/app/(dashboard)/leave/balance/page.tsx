@@ -123,7 +123,7 @@ export default function LeaveBalancePage() {
   };
 
   const getUsageColor = (used: number, entitlement: number) => {
-    if (entitlement === 0) return 'bg-gray-200';
+    if (entitlement === 0) return 'bg-gray-200 dark:bg-gray-700';
     const pct = (used / entitlement) * 100;
     if (pct >= 90) return 'bg-red-500';
     if (pct >= 70) return 'bg-orange-400';
