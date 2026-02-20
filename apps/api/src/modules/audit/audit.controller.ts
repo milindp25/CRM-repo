@@ -4,6 +4,7 @@ import { AuditService } from './audit.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '@hrplatform/shared';
 
@@ -13,6 +14,7 @@ interface JwtPayload { userId: string; companyId: string; role: UserRole; }
 @ApiBearerAuth()
 @Controller({ path: 'audit-logs', version: '1' })
 @UseGuards(JwtAuthGuard, RolesGuard)
+@RequireFeature('AUDIT_LOGS')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 

@@ -24,6 +24,22 @@ export class CompanyRepository {
     return this.prisma.company.update({ where: { id }, data: filteredData });
   }
 
+  async findActiveAddonFeatures(companyId: string): Promise<string[]> {
+    const addons = await this.prisma.companyAddon.findMany({
+      where: {
+        companyId,
+        status: 'ACTIVE',
+        featureAddon: { isActive: true },
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } },
+        ],
+      },
+      include: { featureAddon: { select: { feature: true } } },
+    });
+    return addons.map(a => a.featureAddon.feature);
+  }
+
   async updateOnboarding(id: string, step: number, completed: boolean) {
     return this.prisma.company.update({
       where: { id },
