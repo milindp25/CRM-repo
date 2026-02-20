@@ -95,9 +95,9 @@ export default function ExpensesPage() {
       APPROVED: 'bg-green-100 text-green-800',
       REJECTED: 'bg-red-100 text-red-800',
       REIMBURSED: 'bg-blue-100 text-blue-800',
-      CANCELLED: 'bg-gray-100 text-gray-800',
+      CANCELLED: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
     };
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>{status}</span>;
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'}`}>{status}</span>;
   };
 
   const categories = ['TRAVEL', 'FOOD', 'ACCOMMODATION', 'EQUIPMENT', 'COMMUNICATION', 'TRAINING', 'OTHER'];

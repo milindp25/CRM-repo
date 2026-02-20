@@ -18,7 +18,7 @@ const ROLE_COLORS: Record<string, string> = {
   COMPANY_ADMIN: 'bg-purple-100 text-purple-800',
   HR_ADMIN: 'bg-blue-100 text-blue-800',
   MANAGER: 'bg-indigo-100 text-indigo-800',
-  EMPLOYEE: 'bg-gray-100 text-gray-700',
+  EMPLOYEE: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300',
 };
 
 const ASSIGNABLE_ROLES = ['COMPANY_ADMIN', 'HR_ADMIN', 'MANAGER', 'EMPLOYEE'];
@@ -153,7 +153,7 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{user.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${ROLE_COLORS[user.role] || 'bg-gray-100 text-gray-700'}`}>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${ROLE_COLORS[user.role] || 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>
                         {ROLE_LABELS[user.role] || user.role}
                       </span>
                     </td>

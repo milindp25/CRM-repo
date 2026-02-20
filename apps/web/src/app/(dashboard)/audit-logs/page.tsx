@@ -149,7 +149,7 @@ export default function AuditLogsPage() {
                     <td className="px-4 py-3 text-sm text-foreground">{log.userEmail}</td>
                     <td className="px-4 py-3 text-sm font-medium text-foreground">{formatAction(log.action)}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
-                   <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-mono">
+                   <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded text-xs font-mono">
                         {log.resourceType}
                       </span>
                     </td>
