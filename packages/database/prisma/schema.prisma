@@ -60,12 +60,29 @@ model Company {
   ssoConfig Json? @map("sso_config") @db.JsonB
   // Structure: { provider: 'google'|'saml', enabled: boolean, googleClientId?, googleClientSecret?, samlEntryPoint?, samlIssuer?, samlCert?, allowedDomains?: string[] }
 
+  // Payroll Configuration
+  payrollCountry    String?  @default("IN") @map("payroll_country") @db.VarChar(5) // IN or US
+  payFrequency      String?  @default("MONTHLY") @map("pay_frequency") @db.VarChar(20) // MONTHLY, SEMI_MONTHLY, BI_WEEKLY, WEEKLY
+  pfEnabled         Boolean  @default(false) @map("pf_enabled") // PF toggle (India)
+  esiEnabled        Boolean  @default(false) @map("esi_enabled") // ESI toggle (India)
+  emailPayslipEnabled Boolean @default(false) @map("email_payslip_enabled") // Auto-email payslip on PAID
+
+  // India Company Registrations - ENCRYPTED
+  companyPanEncrypted String? @map("company_pan_encrypted") @db.Text // India Company PAN (mandatory)
+  gstinEncrypted      String? @map("gstin_encrypted") @db.Text // India GSTIN
+  tanEncrypted        String? @map("tan_encrypted") @db.Text // India TAN (for TDS filing)
+  pfRegNo             String? @map("pf_reg_no") @db.VarChar(100) // India PF Registration No
+  esiRegNo            String? @map("esi_reg_no") @db.VarChar(100) // India ESI Registration No
+
+  // US Company Registration - ENCRYPTED
+  einEncrypted        String? @map("ein_encrypted") @db.Text // US EIN
+
   // Status
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
-  
+
   // Relations
   users        User[]
   employees    Employee[]
@@ -93,6 +110,10 @@ model Company {
   policies          Policy[]
   companyAddons     CompanyAddon[]
   companyBilling    CompanyBilling?
+  salaryStructures  SalaryStructure[]
+  payrollBatches    PayrollBatch[]
+  payrollYTDs       PayrollYTD[]
+  taxConfigurations TaxConfiguration[]
 
   @@index([createdAt])
   @@map("companies")
@@ -280,26 +301,37 @@ model Employee {
   
   // Employment type
   employmentType String @default("FULL_TIME") @map("employment_type") @db.VarChar(50) // FULL_TIME, PART_TIME, CONTRACT, INTERN
-  
+
+  // Tax & Payroll Details
+  taxRegime          String?  @map("tax_regime") @db.VarChar(10) // NEW or OLD (India)
+  filingStatus       String?  @map("filing_status") @db.VarChar(50) // US filing status (SINGLE, MFJ, MFS, HOH)
+  w4Allowances       Int?     @default(0) @map("w4_allowances") // US W-4 allowances
+  ssnEncrypted       String?  @map("ssn_encrypted") @db.Text // US SSN (encrypted)
+  uanEncrypted       String?  @map("uan_encrypted") @db.Text // India UAN for PF (encrypted)
+  salaryStructureId  String?  @map("salary_structure_id") @db.Uuid // FK to SalaryStructure
+  annualCtc          Decimal? @map("annual_ctc") @db.Decimal(15, 2) // Annual CTC for salary computation
+
   // Status
   status    String    @default("ACTIVE") @db.VarChar(50) // ACTIVE, ON_NOTICE, RESIGNED, TERMINATED, ON_LEAVE
   isActive  Boolean   @default(true) @map("is_active")
-  
+
   // Timestamps
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
-  
+
   // Relations
-  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  department  Department?  @relation(fields: [departmentId], references: [id])
-  designation Designation? @relation(fields: [designationId], references: [id])
-  user        User?
-  
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department      Department?      @relation(fields: [departmentId], references: [id])
+  designation     Designation?     @relation(fields: [designationId], references: [id])
+  salaryStructure SalaryStructure? @relation(fields: [salaryStructureId], references: [id])
+  user            User?
+
   attendance  Attendance[]
   leaves      Leave[]
   payroll     Payroll[]
   documents   Document[]
+  payrollYTDs PayrollYTD[]
 
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -428,23 +460,34 @@ model Payroll {
   id         String   @id @default(uuid()) @db.Uuid
   companyId  String   @map("company_id") @db.Uuid
   employeeId String   @map("employee_id") @db.Uuid
-  
+
   // Pay period
   payPeriodMonth Int    @map("pay_period_month") // 1-12
   payPeriodYear  Int    @map("pay_period_year")
   payDate        DateTime? @map("pay_date") @db.Date
-  
+
+  // Region context (snapshot at time of processing)
+  country       String   @default("IN") @db.VarChar(5) // IN or US
+  payFrequency  String   @default("MONTHLY") @map("pay_frequency") @db.VarChar(20) // MONTHLY, SEMI_MONTHLY, BI_WEEKLY, WEEKLY
+
+  // Bonus flag
+  isBonus       Boolean  @default(false) @map("is_bonus") // Bonus payouts: TDS/federal YES, PF/ESI/FICA NO
+  bonusAmount   Decimal? @map("bonus_amount") @db.Decimal(15, 2)
+
   // Salary components - ENCRYPTED in application
   basicSalaryEncrypted     String @map("basic_salary_encrypted") @db.Text
   hraEncrypted             String? @map("hra_encrypted") @db.Text
   specialAllowanceEncrypted String? @map("special_allowance_encrypted") @db.Text
   otherAllowancesEncrypted String? @map("other_allowances_encrypted") @db.Text
-  
+
   // Gross & Net - ENCRYPTED
   grossSalaryEncrypted String @map("gross_salary_encrypted") @db.Text
   netSalaryEncrypted   String @map("net_salary_encrypted") @db.Text
-  
-  // Deductions (stored as decimals for calculations)
+
+  // Earnings breakdown (JSON array of computed salary components)
+  earningsBreakdown Json? @map("earnings_breakdown") @db.JsonB // [{ name, amount, type, isTaxable }]
+
+  // India Deductions (stored as decimals for calculations)
   pfEmployee  Decimal @default(0) @map("pf_employee") @db.Decimal(15, 2)
   pfEmployer  Decimal @default(0) @map("pf_employer") @db.Decimal(15, 2)
   esiEmployee Decimal @default(0) @map("esi_employee") @db.Decimal(15, 2)
@@ -452,44 +495,206 @@ model Payroll {
   tds         Decimal @default(0) @db.Decimal(15, 2)
   pt          Decimal @default(0) @db.Decimal(15, 2) // Professional Tax
   otherDeductions Decimal @default(0) @map("other_deductions") @db.Decimal(15, 2)
-  
+
+  // US Deductions
+  ssEmployee       Decimal @default(0) @map("ss_employee") @db.Decimal(15, 2) // Social Security employee
+  ssEmployer       Decimal @default(0) @map("ss_employer") @db.Decimal(15, 2) // Social Security employer
+  medicareEmployee Decimal @default(0) @map("medicare_employee") @db.Decimal(15, 2)
+  medicareEmployer Decimal @default(0) @map("medicare_employer") @db.Decimal(15, 2)
+  federalTax       Decimal @default(0) @map("federal_tax") @db.Decimal(15, 2) // Federal withholding
+  stateTax         Decimal @default(0) @map("state_tax") @db.Decimal(15, 2) // State withholding
+
   // Attendance impact
   daysWorked    Int     @map("days_worked")
   daysInMonth   Int     @map("days_in_month")
   leaveDays     Int     @default(0) @map("leave_days")
   absentDays    Int     @default(0) @map("absent_days")
   overtimeHours Decimal @default(0) @map("overtime_hours") @db.Decimal(5, 2)
-  
+
   // Bank details - ENCRYPTED
   bankAccountEncrypted String? @map("bank_account_encrypted") @db.Text
   ifscCodeEncrypted    String? @map("ifsc_code_encrypted") @db.Text
   bankName             String? @map("bank_name") @db.VarChar(100)
-  
+  // US bank details - ENCRYPTED
+  routingNumberEncrypted String? @map("routing_number_encrypted") @db.Text
+
   // Status
   status    String   @default("DRAFT") @db.VarChar(50) // DRAFT, PROCESSED, PAID, HOLD
   paidAt    DateTime? @map("paid_at") @db.Timestamptz
-  
+
+  // Approval workflow
+  approvalStatus String? @map("approval_status") @db.VarChar(30) // PENDING_APPROVAL, APPROVED, REJECTED (null = no workflow)
+
+  // Batch processing
+  batchId String? @map("batch_id") @db.Uuid
+
+  // Salary structure snapshot
+  salaryStructureId String? @map("salary_structure_id") @db.Uuid
+  taxRegimeUsed     String? @map("tax_regime_used") @db.VarChar(10) // Snapshot: NEW or OLD (India)
+
+  // Tax computation breakdown (detailed JSON for payslip display)
+  computationBreakdown Json? @map("computation_breakdown") @db.JsonB
+
   // Payslip
   payslipPath String? @map("payslip_path") @db.Text
-  
+
   // Notes
   notes String? @db.Text
-  
+
   // Timestamps
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  
+
   // Relations
-  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  
+  company  Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  batch    PayrollBatch? @relation(fields: [batchId], references: [id])
+
   @@unique([companyId, employeeId, payPeriodMonth, payPeriodYear])
   @@index([companyId])
   @@index([employeeId])
   @@index([status])
   @@index([createdAt])
   @@index([payPeriodYear, payPeriodMonth])
+  @@index([batchId])
   @@map("payroll")
+}
+
+/// Salary structure templates — reusable component definitions
+model SalaryStructure {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  country     String   @default("IN") @db.VarChar(5) // IN or US
+
+  // Salary components as JSON array:
+  // [{ name: string, type: 'EARNING'|'DEDUCTION', calculationType: 'FIXED'|'PERCENTAGE_OF_BASIC'|'PERCENTAGE_OF_GROSS', value: number, isTaxable: boolean }]
+  components  Json     @db.JsonB
+
+  // Optional link to a designation (all employees with this designation use this structure)
+  designationId String? @map("designation_id") @db.Uuid
+
+  // Status
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@index([companyId])
+  @@index([designationId])
+  @@map("salary_structures")
+}
+
+/// Payroll batch — tracks a bulk payroll processing run
+model PayrollBatch {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+
+  // Period
+  month      Int      // 1-12
+  year       Int
+
+  // Processing status
+  status         String   @default("PENDING") @db.VarChar(50) // PENDING, PROCESSING, COMPLETED, FAILED, PARTIAL
+  totalCount     Int      @default(0) @map("total_count")
+  processedCount Int      @default(0) @map("processed_count")
+  failedCount    Int      @default(0) @map("failed_count")
+
+  // Error details (array of { employeeId, error })
+  errors         Json?    @db.JsonB
+
+  // Who initiated
+  initiatedBy    String   @map("initiated_by") @db.Uuid
+
+  // Timestamps
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payrolls Payroll[]
+
+  @@unique([companyId, month, year])
+  @@index([companyId])
+  @@index([status])
+  @@map("payroll_batches")
+}
+
+/// Year-to-date payroll totals per employee (critical for cumulative tax calculations)
+model PayrollYTD {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
+  fiscalYear  Int      @map("fiscal_year") // e.g., 2025 for FY 2025-26 (India) or CY 2025 (US)
+
+  // Cumulative totals - ENCRYPTED
+  grossEarningsEncrypted  String  @map("gross_earnings_encrypted") @db.Text
+  totalDeductionsEncrypted String @map("total_deductions_encrypted") @db.Text
+  taxPaidEncrypted        String  @map("tax_paid_encrypted") @db.Text
+
+  // India YTD
+  pfEmployeeYtd    Decimal @default(0) @map("pf_employee_ytd") @db.Decimal(15, 2)
+  pfEmployerYtd    Decimal @default(0) @map("pf_employer_ytd") @db.Decimal(15, 2)
+  esiEmployeeYtd   Decimal @default(0) @map("esi_employee_ytd") @db.Decimal(15, 2)
+  esiEmployerYtd   Decimal @default(0) @map("esi_employer_ytd") @db.Decimal(15, 2)
+  tdsYtd           Decimal @default(0) @map("tds_ytd") @db.Decimal(15, 2)
+  ptYtd            Decimal @default(0) @map("pt_ytd") @db.Decimal(15, 2)
+
+  // US YTD
+  ssEmployeeYtd    Decimal @default(0) @map("ss_employee_ytd") @db.Decimal(15, 2)
+  ssEmployerYtd    Decimal @default(0) @map("ss_employer_ytd") @db.Decimal(15, 2)
+  medicareYtd      Decimal @default(0) @map("medicare_ytd") @db.Decimal(15, 2)
+  federalTaxYtd    Decimal @default(0) @map("federal_tax_ytd") @db.Decimal(15, 2)
+  stateTaxYtd      Decimal @default(0) @map("state_tax_ytd") @db.Decimal(15, 2)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, employeeId, fiscalYear])
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([fiscalYear])
+  @@map("payroll_ytd")
+}
+
+/// Tax configuration — DB-driven tax rates, seeded at day-0, admin-updatable per fiscal year
+model TaxConfiguration {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String?  @map("company_id") @db.Uuid // null = global default, set = company override
+
+  // Configuration
+  country     String   @db.VarChar(5) // IN or US
+  configKey   String   @map("config_key") @db.VarChar(100) // e.g., 'IN_NEW_REGIME_BRACKETS', 'US_FICA_CONFIG'
+  configValue Json     @map("config_value") @db.JsonB // The actual rate data (slabs, percentages, etc.)
+  fiscalYear  Int      @map("fiscal_year") // 2025 for FY 2025-26 (India) or CY 2025 (US)
+
+  // Validity period
+  effectiveFrom DateTime  @map("effective_from") @db.Timestamptz
+  effectiveTo   DateTime  @map("effective_to") @db.Timestamptz
+
+  // Status
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([country, configKey, fiscalYear])
+  @@index([country])
+  @@index([fiscalYear])
+  @@index([companyId])
+  @@map("tax_configurations")
 }
 
 // ============================================================================

@@ -325,6 +325,11 @@ export default function SettingsPage() {
             <h3 className="font-medium text-foreground group-hover:text-blue-700">Single Sign-On</h3>
             <p className="text-xs text-muted-foreground mt-1">Configure SSO for your organization</p>
           </a>
+          <a href="/settings/payroll" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+            <div className="text-2xl mb-2">💰</div>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700">Payroll Settings</h3>
+            <p className="text-xs text-muted-foreground mt-1">Region, tax compliance, pay frequency</p>
+          </a>
         </div>
       </div>
 

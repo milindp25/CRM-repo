@@ -28,6 +28,8 @@ import type {
   ExpenseClaim, CreateExpenseClaimData,
   ShiftDefinition, CreateShiftDefinitionData, ShiftAssignment,
   Policy, CreatePolicyData, PolicyAcknowledgment,
+  SalaryStructure, CreateSalaryStructureData, UpdateSalaryStructureData, SalaryStructurePaginationResponse,
+  PayrollBatch, PayrollYTD, ReconciliationReport, PayrollCompanySettings,
 } from './api/types';
 
 // API Configuration
@@ -736,6 +738,184 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ paidAt, notes }),
     });
+  }
+
+  // ==================== Payroll Extended Endpoints ====================
+
+  // Salary Structure CRUD
+  async getSalaryStructures(filters?: { designationId?: string; isActive?: string; skip?: number; take?: number }): Promise<SalaryStructurePaginationResponse> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+    }
+    const queryString = params.toString();
+    return this.request<SalaryStructurePaginationResponse>(
+      queryString ? `/payroll/salary-structures?${queryString}` : '/payroll/salary-structures',
+    );
+  }
+
+  async getSalaryStructure(id: string): Promise<SalaryStructure> {
+    return this.request<SalaryStructure>(`/payroll/salary-structures/${id}`);
+  }
+
+  async createSalaryStructure(data: CreateSalaryStructureData): Promise<SalaryStructure> {
+    return this.request<SalaryStructure>('/payroll/salary-structures', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSalaryStructure(id: string, data: UpdateSalaryStructureData): Promise<SalaryStructure> {
+    return this.request<SalaryStructure>(`/payroll/salary-structures/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSalaryStructure(id: string): Promise<void> {
+    return this.request<void>(`/payroll/salary-structures/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Batch Payroll
+  async batchProcessPayroll(month: number, year: number): Promise<PayrollBatch> {
+    return this.request<PayrollBatch>('/payroll/batch', {
+      method: 'POST',
+      body: JSON.stringify({ month, year }),
+    });
+  }
+
+  async getPayrollBatches(): Promise<PayrollBatch[]> {
+    return this.request<PayrollBatch[]>('/payroll/batch/list');
+  }
+
+  async getPayrollBatch(id: string): Promise<PayrollBatch> {
+    return this.request<PayrollBatch>(`/payroll/batch/${id}`);
+  }
+
+  // Bonus
+  async processBonus(data: { employeeIds: string[]; bonusType: string; amount: number; month: number; year: number; notes?: string }): Promise<any> {
+    return this.request('/payroll/bonus', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Recalculate
+  async recalculatePayroll(id: string): Promise<any> {
+    return this.request(`/payroll/${id}/recalculate`, {
+      method: 'POST',
+    });
+  }
+
+  // YTD
+  async getPayrollYtd(employeeId: string, fiscalYear: number): Promise<PayrollYTD> {
+    return this.request<PayrollYTD>(`/payroll/ytd/${employeeId}/${fiscalYear}`);
+  }
+
+  // Reconciliation
+  async reconcilePayroll(month: number, year: number): Promise<ReconciliationReport> {
+    return this.request<ReconciliationReport>(`/payroll/reconcile?month=${month}&year=${year}`);
+  }
+
+  // Approval
+  async submitPayrollForApproval(batchId: string, notes?: string): Promise<any> {
+    return this.request(`/payroll/batch/${batchId}/submit-approval`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  async approvePayrollBatch(batchId: string): Promise<any> {
+    return this.request(`/payroll/batch/${batchId}/approve`, {
+      method: 'POST',
+    });
+  }
+
+  async rejectPayrollBatch(batchId: string, notes: string): Promise<any> {
+    return this.request(`/payroll/batch/${batchId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  }
+
+  // Employee self-service
+  async getMyLatestPaycheck(): Promise<any> {
+    return this.request('/payroll/my/latest');
+  }
+
+  async getMyPaycheckHistory(): Promise<any> {
+    return this.request('/payroll/my/history');
+  }
+
+  async getMyPayrollYtd(): Promise<any> {
+    return this.request('/payroll/my/ytd');
+  }
+
+  // PDF Downloads (return Blob for file download)
+  async downloadPayslipPdf(payrollId: string): Promise<Blob> {
+    const url = `${this.baseUrl}/payroll/${payrollId}/payslip`;
+    const authToken = this.accessToken;
+    const response = await fetch(url, {
+      headers: {
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new ApiError(response.status, 'Failed to download payslip');
+    }
+    return response.blob();
+  }
+
+  async downloadForm16(employeeId: string, fiscalYear: number): Promise<Blob> {
+    const url = `${this.baseUrl}/payroll/form16/${employeeId}/${fiscalYear}`;
+    const authToken = this.accessToken;
+    const response = await fetch(url, {
+      headers: {
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new ApiError(response.status, 'Failed to download Form 16');
+    }
+    return response.blob();
+  }
+
+  async downloadW2(employeeId: string, taxYear: number): Promise<Blob> {
+    const url = `${this.baseUrl}/payroll/w2/${employeeId}/${taxYear}`;
+    const authToken = this.accessToken;
+    const response = await fetch(url, {
+      headers: {
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new ApiError(response.status, 'Failed to download W-2');
+    }
+    return response.blob();
+  }
+
+  async downloadBankFile(batchId: string): Promise<Blob> {
+    const url = `${this.baseUrl}/payroll/batch/${batchId}/bank-file`;
+    const authToken = this.accessToken;
+    const response = await fetch(url, {
+      headers: {
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new ApiError(response.status, 'Failed to download bank file');
+    }
+    return response.blob();
   }
 
   // ==================== Profile Endpoints ====================

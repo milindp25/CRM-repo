@@ -22,6 +22,8 @@ import {
   Clock,
   FileText,
   Network,
+  Wallet,
+  FileBarChart,
 } from 'lucide-react';
 import { Permission } from '@hrplatform/shared';
 
@@ -91,6 +93,27 @@ export const navigation: NavItem[] = [
     href: '/payroll',
     icon: DollarSign,
     requiredPermissions: [Permission.VIEW_PAYROLL, Permission.VIEW_OWN_PAYROLL, Permission.MANAGE_PAYROLL],
+    requiredFeature: 'PAYROLL',
+  },
+  {
+    name: 'Salary Structures',
+    href: '/payroll/salary-structures',
+    icon: ClipboardList,
+    requiredPermissions: [Permission.MANAGE_PAYROLL],
+    requiredFeature: 'PAYROLL',
+  },
+  {
+    name: 'My Payslips',
+    href: '/payroll/my-payslips',
+    icon: Wallet,
+    requiredPermissions: [Permission.VIEW_OWN_PAYROLL],
+    requiredFeature: 'PAYROLL',
+  },
+  {
+    name: 'Compliance Reports',
+    href: '/payroll/reports',
+    icon: FileBarChart,
+    requiredPermissions: [Permission.MANAGE_PAYROLL, Permission.GENERATE_REPORTS],
     requiredFeature: 'PAYROLL',
   },
   {
