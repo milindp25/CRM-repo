@@ -370,6 +370,12 @@ model Employee {
   @@index([status])
   @@index([createdAt])
   @@index([deletedAt])
+  // Composite indexes for common query patterns
+  @@index([companyId, isActive, deletedAt])      // Employee list queries
+  @@index([companyId, departmentId, isActive])    // Headcount by department
+  @@index([companyId, dateOfJoining, dateOfLeaving]) // Analytics trends/attrition
+  @@index([companyId, status, deletedAt])         // Filtered employee lists
+  @@index([companyId, isActive, gender])          // Diversity metrics
   @@map("employees")
 }
 
@@ -428,6 +434,9 @@ model Attendance {
   @@index([companyId])
   @@index([employeeId])
   @@index([attendanceDate])
+  // Composite indexes for common query patterns
+  @@index([companyId, attendanceDate, status])    // Analytics attendance counts
+  @@index([companyId, employeeId, status])        // Employee attendance filter
   @@map("attendance")
 }
 
@@ -480,6 +489,10 @@ model Leave {
   @@index([status])
   @@index([startDate])
   @@index([createdAt])
+  // Composite indexes for common query patterns
+  @@index([companyId, status, createdAt])         // Leave list with status filter
+  @@index([companyId, employeeId, status])        // Employee leaves by status
+  @@index([companyId, employeeId, startDate])     // Employee leaves by date
   @@map("leaves")
 }
 
@@ -589,6 +602,9 @@ model Payroll {
   @@index([createdAt])
   @@index([payPeriodYear, payPeriodMonth])
   @@index([batchId])
+  // Composite indexes for common query patterns
+  @@index([companyId, isBonus, payPeriodYear, payPeriodMonth]) // Analytics payroll
+  @@index([companyId, employeeId, status])                     // Employee payroll history
   @@map("payroll")
 }
 
@@ -774,6 +790,9 @@ model AuditLog {
   @@index([action])
   @@index([resourceType])
   @@index([createdAt])
+  // Composite indexes for common query patterns
+  @@index([companyId, createdAt])                 // Audit log list (sorted by date)
+  @@index([companyId, resourceType, action])      // Filtered audit queries
   @@map("audit_logs")
 }
 
@@ -816,6 +835,8 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+  // Composite indexes for common query patterns
+  @@index([userId, companyId, isRead, createdAt]) // Notification list + unread count
   @@map("notifications")
 }
 
@@ -969,6 +990,9 @@ model WorkflowInstance {
   @@index([templateId])
   @@index([entityType, entityId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, status, createdAt])         // Workflow list with status
+  @@index([companyId, entityType, status])        // Entity-specific workflow lookup
   @@map("workflow_instances")
 }
 
@@ -1116,6 +1140,9 @@ model WebhookDelivery {
   @@index([status])
   @@index([eventType])
   @@index([createdAt])
+  // Composite indexes for common query patterns
+  @@index([status, nextRetryAt])                  // Retry queue lookup
+  @@index([endpointId, createdAt])                // Delivery history by endpoint
   @@map("webhook_deliveries")
 }
 
@@ -1263,6 +1290,9 @@ model PerformanceReview {
   @@index([cycleId])
   @@index([employeeId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, employeeId, status])        // Employee reviews by status
+  @@index([companyId, cycleId, status])           // Cycle reviews by status
   @@map("performance_reviews")
 }
 
@@ -1303,6 +1333,8 @@ model Goal {
   @@index([companyId])
   @@index([employeeId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, employeeId, status])        // Employee goals by status
   @@map("goals")
 }
 
@@ -1404,6 +1436,9 @@ model Applicant {
   @@index([jobPostingId])
   @@index([stage])
   @@index([email])
+  // Composite indexes for common query patterns
+  @@index([companyId, stage])                     // Analytics pipeline / applicant counts
+  @@index([jobPostingId, stage])                  // Job applicants by stage
   @@map("applicants")
 }
 
@@ -1519,6 +1554,10 @@ model TrainingEnrollment {
   @@index([courseId])
   @@index([employeeId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, status])                    // Analytics enrollment counts
+  @@index([courseId, status])                     // Course enrollment by status
+  @@index([employeeId, companyId, status])        // Employee enrollments by status
   @@map("training_enrollments")
 }
 
@@ -1642,6 +1681,10 @@ model ExpenseClaim {
   @@index([employeeId])
   @@index([status])
   @@index([expenseDate])
+  // Composite indexes for common query patterns
+  @@index([companyId, status, createdAt])         // Expense list with status filter
+  @@index([companyId, employeeId, status])        // Employee expenses by status
+  @@index([companyId, employeeId, expenseDate])   // Employee expenses by date
   @@map("expense_claims")
 }
 
@@ -1708,6 +1751,8 @@ model ShiftAssignment {
   @@index([companyId])
   @@index([employeeId])
   @@index([assignmentDate])
+  // Composite indexes for common query patterns
+  @@index([companyId, employeeId, assignmentDate]) // Employee shift lookup
   @@map("shift_assignments")
 }
 
@@ -1750,6 +1795,8 @@ model Policy {
   @@index([companyId])
   @@index([status])
   @@index([category])
+  // Composite indexes for common query patterns
+  @@index([companyId, status, isActive])          // Published policy list
   @@map("policies")
 }
 
@@ -1818,6 +1865,8 @@ model CompanyAddon {
   @@index([companyId])
   @@index([featureAddonId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, status, expiresAt])          // Active add-on lookup
   @@map("company_addons")
 }
 
@@ -1925,6 +1974,8 @@ model ApprovalDelegation {
   @@index([companyId])
   @@index([delegateId])
   @@index([isActive])
+  // Composite indexes for common query patterns
+  @@index([companyId, delegateId, isActive, startDate, endDate]) // Active delegation lookup
   @@map("approval_delegations")
 }
 
@@ -1972,6 +2023,8 @@ model OffboardingProcess {
   @@index([companyId])
   @@index([employeeId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, status, createdAt])         // Offboarding list with status
   @@map("offboarding_processes")
 }
 
@@ -2089,6 +2142,8 @@ model Announcement {
 
   @@index([companyId])
   @@index([isActive])
+  // Composite indexes for common query patterns
+  @@index([companyId, isActive, isPinned, createdAt]) // Announcement feed sorted
   @@map("announcements")
 }
 
@@ -2110,6 +2165,8 @@ model Kudos {
 
   @@index([companyId])
   @@index([recipientEmployeeId])
+  // Composite indexes for common query patterns
+  @@index([companyId, isPublic, createdAt])        // Public kudos feed
   @@map("kudos")
 }
 
@@ -2139,6 +2196,8 @@ model Survey {
 
   @@index([companyId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, status, createdAt])          // Survey list with status
   @@map("surveys")
 }
 
@@ -2183,6 +2242,8 @@ model Timesheet {
   @@index([companyId])
   @@index([employeeId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, status, employeeId])         // Timesheet list with status
   @@map("timesheets")
 }
 
@@ -2256,6 +2317,8 @@ model Contractor {
   @@unique([companyId, email])
   @@index([companyId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, status, createdAt])          // Contractor list with status
   @@map("contractors")
 }
 
@@ -2284,6 +2347,8 @@ model ContractorInvoice {
   @@index([companyId])
   @@index([contractorId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([companyId, contractorId, status])       // Contractor invoices by status
   @@map("contractor_invoices")
 }
 
