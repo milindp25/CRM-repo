@@ -129,6 +129,37 @@ export enum Permission {
   VIEW_POLICIES = 'VIEW_POLICIES',
   MANAGE_POLICIES = 'MANAGE_POLICIES',
   ACKNOWLEDGE_POLICY = 'ACKNOWLEDGE_POLICY',
+
+  // Offboarding
+  MANAGE_OFFBOARDING = 'MANAGE_OFFBOARDING',
+  VIEW_OFFBOARDING = 'VIEW_OFFBOARDING',
+
+  // Leave Policies / Accrual
+  MANAGE_LEAVE_POLICIES = 'MANAGE_LEAVE_POLICIES',
+  VIEW_LEAVE_BALANCES = 'VIEW_LEAVE_BALANCES',
+
+  // Surveys
+  MANAGE_SURVEYS = 'MANAGE_SURVEYS',
+  RESPOND_SURVEY = 'RESPOND_SURVEY',
+  VIEW_SURVEY_RESULTS = 'VIEW_SURVEY_RESULTS',
+
+  // Social / Directory
+  MANAGE_ANNOUNCEMENTS = 'MANAGE_ANNOUNCEMENTS',
+  SEND_KUDOS = 'SEND_KUDOS',
+  VIEW_DIRECTORY = 'VIEW_DIRECTORY',
+
+  // Timesheets
+  MANAGE_TIMESHEETS = 'MANAGE_TIMESHEETS',
+  APPROVE_TIMESHEETS = 'APPROVE_TIMESHEETS',
+  VIEW_OWN_TIMESHEETS = 'VIEW_OWN_TIMESHEETS',
+
+  // Contractors
+  MANAGE_CONTRACTORS = 'MANAGE_CONTRACTORS',
+  VIEW_CONTRACTORS = 'VIEW_CONTRACTORS',
+
+  // Analytics & Dashboard
+  VIEW_ANALYTICS = 'VIEW_ANALYTICS',
+  MANAGE_DASHBOARD_CONFIG = 'MANAGE_DASHBOARD_CONFIG',
 }
 
 /**
@@ -164,6 +195,22 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.MANAGE_SHIFTS,
     Permission.VIEW_POLICIES,
     Permission.MANAGE_POLICIES,
+    Permission.MANAGE_OFFBOARDING,
+    Permission.VIEW_OFFBOARDING,
+    Permission.MANAGE_LEAVE_POLICIES,
+    Permission.VIEW_LEAVE_BALANCES,
+    Permission.MANAGE_SURVEYS,
+    Permission.VIEW_SURVEY_RESULTS,
+    Permission.MANAGE_ANNOUNCEMENTS,
+    Permission.SEND_KUDOS,
+    Permission.VIEW_DIRECTORY,
+    Permission.MANAGE_TIMESHEETS,
+    Permission.APPROVE_TIMESHEETS,
+    Permission.VIEW_OWN_TIMESHEETS,
+    Permission.MANAGE_CONTRACTORS,
+    Permission.VIEW_CONTRACTORS,
+    Permission.VIEW_ANALYTICS,
+    Permission.MANAGE_DASHBOARD_CONFIG,
   ],
 
   [UserRole.HR_ADMIN]: [
@@ -190,6 +237,20 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_SHIFTS,
     Permission.VIEW_POLICIES,
     Permission.MANAGE_POLICIES,
+    Permission.MANAGE_OFFBOARDING,
+    Permission.VIEW_OFFBOARDING,
+    Permission.MANAGE_LEAVE_POLICIES,
+    Permission.VIEW_LEAVE_BALANCES,
+    Permission.MANAGE_SURVEYS,
+    Permission.VIEW_SURVEY_RESULTS,
+    Permission.MANAGE_ANNOUNCEMENTS,
+    Permission.SEND_KUDOS,
+    Permission.VIEW_DIRECTORY,
+    Permission.MANAGE_TIMESHEETS,
+    Permission.APPROVE_TIMESHEETS,
+    Permission.VIEW_OWN_TIMESHEETS,
+    Permission.VIEW_ANALYTICS,
+    Permission.MANAGE_DASHBOARD_CONFIG,
   ],
 
   [UserRole.MANAGER]: [
@@ -210,6 +271,15 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.APPROVE_EXPENSE,
     Permission.VIEW_SHIFTS,
     Permission.VIEW_POLICIES,
+    Permission.VIEW_OFFBOARDING,
+    Permission.VIEW_LEAVE_BALANCES,
+    Permission.APPROVE_TIMESHEETS,
+    Permission.VIEW_SURVEY_RESULTS,
+    Permission.RESPOND_SURVEY,
+    Permission.SEND_KUDOS,
+    Permission.VIEW_DIRECTORY,
+    Permission.VIEW_OWN_TIMESHEETS,
+    Permission.VIEW_ANALYTICS,
   ],
 
   [UserRole.EMPLOYEE]: [
@@ -230,5 +300,10 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_SHIFTS,
     Permission.VIEW_POLICIES,
     Permission.ACKNOWLEDGE_POLICY,
+    Permission.RESPOND_SURVEY,
+    Permission.SEND_KUDOS,
+    Permission.VIEW_DIRECTORY,
+    Permission.VIEW_OWN_TIMESHEETS,
+    Permission.MANAGE_DASHBOARD_CONFIG,
   ],
 };

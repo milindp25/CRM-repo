@@ -31,6 +31,7 @@ import {
   StartWorkflowDto,
   ResolveStepDto,
   WorkflowFilterDto,
+  CreateDelegationDto,
 } from './dto';
 
 interface JwtPayload {
@@ -247,6 +248,40 @@ export class WorkflowController {
       user.companyId,
       dto.comments,
     );
+  }
+
+  // ─── Delegation Endpoints ─────────────────────────────────────────────
+
+  @Post('delegations')
+  @ApiOperation({ summary: 'Create an approval delegation' })
+  @ApiResponse({ status: 201, description: 'Delegation created' })
+  async createDelegation(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateDelegationDto,
+  ) {
+    return this.workflowService.createDelegation(
+      user.companyId,
+      user.userId,
+      dto,
+    );
+  }
+
+  @Get('delegations')
+  @ApiOperation({ summary: 'List delegations for current user' })
+  @ApiResponse({ status: 200, description: 'Delegations retrieved' })
+  async getDelegations(@CurrentUser() user: JwtPayload) {
+    return this.workflowService.getDelegations(user.companyId, user.userId);
+  }
+
+  @Delete('delegations/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke a delegation' })
+  @ApiResponse({ status: 200, description: 'Delegation revoked' })
+  async revokeDelegation(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+  ) {
+    return this.workflowService.revokeDelegation(id, user.companyId, user.userId);
   }
 
   @Post('steps/:id/reject')

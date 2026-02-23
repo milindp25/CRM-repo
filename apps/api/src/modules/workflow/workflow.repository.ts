@@ -307,6 +307,45 @@ export class WorkflowRepository {
             initiator: instance.initiator,
           },
         });
+        continue;
+      }
+
+      // Check if user has active delegation from the actual approver
+      if (!canApprove) {
+        const delegations = await this.findActiveDelegationsForDelegate(userId, companyId);
+        for (const delegation of delegations) {
+          const scope = delegation.scope as any;
+          const scopeTypes = scope?.types as string[] | undefined;
+          // If scope is set, check if entity type is in scope
+          if (scopeTypes && scopeTypes.length > 0 && !scopeTypes.includes(instance.entityType)) {
+            continue;
+          }
+          const delegatorCanApprove =
+            (currentStep.approverType === 'USER' && currentStep.approverValue === delegation.delegatorId) ||
+            (currentStep.approverType === 'ROLE' && currentStep.approverValue === delegation.delegator.role) ||
+            (currentStep.approverType === 'MANAGER' && delegation.delegator.role === 'MANAGER');
+          if (delegatorCanApprove) {
+            pendingSteps.push({
+              ...currentStep,
+              delegatedFrom: {
+                id: delegation.delegator.id,
+                firstName: delegation.delegator.firstName,
+                lastName: delegation.delegator.lastName,
+              },
+              instance: {
+                id: instance.id,
+                companyId: instance.companyId,
+                entityType: instance.entityType,
+                entityId: instance.entityId,
+                status: instance.status,
+                currentStepOrder: instance.currentStepOrder,
+                template: instance.template,
+                initiator: instance.initiator,
+              },
+            });
+            break;
+          }
+        }
       }
     }
 
@@ -325,6 +364,88 @@ export class WorkflowRepository {
           },
         },
       },
+    });
+  }
+
+  // ─── Delegation Methods ──────────────────────────────────────────────
+
+  async createDelegation(data: {
+    companyId: string;
+    delegatorId: string;
+    delegateId: string;
+    startDate: Date;
+    endDate: Date;
+    reason?: string;
+    scope: any;
+  }) {
+    return this.prisma.approvalDelegation.create({
+      data: {
+        company: { connect: { id: data.companyId } },
+        delegator: { connect: { id: data.delegatorId } },
+        delegate: { connect: { id: data.delegateId } },
+        startDate: data.startDate,
+        endDate: data.endDate,
+        reason: data.reason ?? null,
+        scope: data.scope,
+        isActive: true,
+      },
+      include: {
+        delegator: { select: { id: true, firstName: true, lastName: true, email: true } },
+        delegate: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+  }
+
+  async findActiveDelegation(delegatorId: string, companyId: string) {
+    const now = new Date();
+    return this.prisma.approvalDelegation.findFirst({
+      where: {
+        companyId,
+        delegatorId,
+        isActive: true,
+        startDate: { lte: now },
+        endDate: { gte: now },
+      },
+      include: {
+        delegate: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+  }
+
+  async findActiveDelegationsForDelegate(delegateId: string, companyId: string) {
+    const now = new Date();
+    return this.prisma.approvalDelegation.findMany({
+      where: {
+        companyId,
+        delegateId,
+        isActive: true,
+        startDate: { lte: now },
+        endDate: { gte: now },
+      },
+      include: {
+        delegator: { select: { id: true, firstName: true, lastName: true, email: true, role: true } },
+      },
+    });
+  }
+
+  async findDelegations(companyId: string, userId: string) {
+    return this.prisma.approvalDelegation.findMany({
+      where: {
+        companyId,
+        OR: [{ delegatorId: userId }, { delegateId: userId }],
+      },
+      include: {
+        delegator: { select: { id: true, firstName: true, lastName: true, email: true } },
+        delegate: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async deleteDelegation(id: string, companyId: string) {
+    return this.prisma.approvalDelegation.update({
+      where: { id },
+      data: { isActive: false },
     });
   }
 

@@ -603,6 +603,56 @@ export class WorkflowService {
     );
   }
 
+  // ─── Delegation Management ───────────────────────────────────────────
+
+  async createDelegation(
+    companyId: string,
+    delegatorId: string,
+    dto: { delegateId: string; startDate: string; endDate: string; reason?: string; scope?: string[] },
+  ) {
+    this.logger.log(`Creating delegation from ${delegatorId} to ${dto.delegateId}`, 'WorkflowService');
+
+    if (delegatorId === dto.delegateId) {
+      throw new BadRequestException('Cannot delegate to yourself');
+    }
+
+    const delegation = await this.repository.createDelegation({
+      companyId,
+      delegatorId,
+      delegateId: dto.delegateId,
+      startDate: new Date(dto.startDate),
+      endDate: new Date(dto.endDate),
+      reason: dto.reason,
+      scope: dto.scope ? { types: dto.scope } : {},
+    });
+
+    this.eventEmitter.emit('delegation.created', {
+      companyId,
+      delegatorId,
+      delegateId: dto.delegateId,
+    });
+
+    return delegation;
+  }
+
+  async getDelegations(companyId: string, userId: string) {
+    return this.repository.findDelegations(companyId, userId);
+  }
+
+  async revokeDelegation(id: string, companyId: string, userId: string) {
+    await this.repository.deleteDelegation(id, companyId);
+
+    await this.repository.createAuditLog({
+      userId,
+      companyId,
+      action: 'REVOKE_DELEGATION',
+      resourceType: 'APPROVAL_DELEGATION',
+      resourceId: id,
+    });
+
+    return { message: 'Delegation revoked' };
+  }
+
   // ─── Authorization Helper ─────────────────────────────────────────────
 
   /**

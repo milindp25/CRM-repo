@@ -114,6 +114,19 @@ model Company {
   payrollBatches    PayrollBatch[]
   payrollYTDs       PayrollYTD[]
   taxConfigurations TaxConfiguration[]
+  approvalDelegations    ApprovalDelegation[]
+  offboardingChecklists  OffboardingChecklist[]
+  offboardingProcesses   OffboardingProcess[]
+  leavePolicies          LeavePolicy[]
+  leaveBalances          LeaveBalance[]
+  announcements          Announcement[]
+  kudos                  Kudos[]
+  surveys                Survey[]
+  timesheets             Timesheet[]
+  projects               Project[]
+  contractors            Contractor[]
+  contractorInvoices     ContractorInvoice[]
+  geofenceZones          GeofenceZone[]
 
   @@index([createdAt])
   @@map("companies")
@@ -164,6 +177,13 @@ model User {
   workflowsInitiated WorkflowInstance[] @relation("WorkflowInitiator")
   workflowStepsResolved WorkflowStep[] @relation("WorkflowStepResolver")
   apiKeysCreated     ApiKey[] @relation("ApiKeyCreator")
+  delegationsOut     ApprovalDelegation[] @relation("DelegationDelegator")
+  delegationsIn      ApprovalDelegation[] @relation("DelegationDelegate")
+  announcementsAuthored Announcement[]
+  kudosSent          Kudos[] @relation("KudosSender")
+  surveysCreated     Survey[]
+  surveyResponses    SurveyResponse[]
+  dashboardConfig    DashboardConfig?
 
   @@unique([companyId, email])
   @@index([companyId])
@@ -311,6 +331,10 @@ model Employee {
   salaryStructureId  String?  @map("salary_structure_id") @db.Uuid // FK to SalaryStructure
   annualCtc          Decimal? @map("annual_ctc") @db.Decimal(15, 2) // Annual CTC for salary computation
 
+  // Offboarding
+  noticePeriodDays   Int?     @map("notice_period_days")
+  terminationReason  String?  @map("termination_reason") @db.Text
+
   // Status
   status    String    @default("ACTIVE") @db.VarChar(50) // ACTIVE, ON_NOTICE, RESIGNED, TERMINATED, ON_LEAVE
   isActive  Boolean   @default(true) @map("is_active")
@@ -332,6 +356,10 @@ model Employee {
   payroll     Payroll[]
   documents   Document[]
   payrollYTDs PayrollYTD[]
+  offboardingProcesses OffboardingProcess[]
+  kudosReceived        Kudos[]
+  leaveBalances        LeaveBalance[]
+  timesheets           Timesheet[]
 
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -375,6 +403,10 @@ model Attendance {
   checkOutLatitude  Decimal? @map("check_out_latitude") @db.Decimal(10, 8)
   checkOutLongitude Decimal? @map("check_out_longitude") @db.Decimal(11, 8)
   
+  // IP & Verification (geofencing)
+  ipAddress          String?  @map("ip_address") @db.VarChar(45)
+  locationVerified   Boolean  @default(false) @map("location_verified")
+
   // Regularization
   isRegularized Boolean   @default(false) @map("is_regularized")
   regularizedBy String?   @map("regularized_by") @db.Uuid
@@ -1864,4 +1896,429 @@ model BillingInvoice {
   @@index([status])
   @@index([invoiceNumber])
   @@map("billing_invoices")
+}
+
+// ============================================================================
+// PHASE 6: COMPETITIVE FEATURE PACK
+// ============================================================================
+
+/// Approval Delegation - Allow managers to delegate approvals during OOO
+model ApprovalDelegation {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  delegatorId String   @map("delegator_id") @db.Uuid
+  delegateId  String   @map("delegate_id") @db.Uuid
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime @map("end_date") @db.Date
+  reason      String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  scope       Json     @default("{}") @db.JsonB // { types: ['LEAVE','EXPENSE',...] }
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  delegator User    @relation("DelegationDelegator", fields: [delegatorId], references: [id])
+  delegate  User    @relation("DelegationDelegate", fields: [delegateId], references: [id])
+
+  @@unique([delegatorId, startDate, endDate])
+  @@index([companyId])
+  @@index([delegateId])
+  @@index([isActive])
+  @@map("approval_delegations")
+}
+
+/// Offboarding Checklist - Template for offboarding tasks
+model OffboardingChecklist {
+  id        String  @id @default(uuid()) @db.Uuid
+  companyId String  @map("company_id") @db.Uuid
+  name      String  @db.VarChar(255)
+  items     Json    @db.JsonB // [{ title, assignedRole, order }]
+  isDefault Boolean @default(false) @map("is_default")
+  isActive  Boolean @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("offboarding_checklists")
+}
+
+/// Offboarding Process - Active offboarding for an employee
+model OffboardingProcess {
+  id                    String    @id @default(uuid()) @db.Uuid
+  companyId             String    @map("company_id") @db.Uuid
+  employeeId            String    @map("employee_id") @db.Uuid
+  initiatedBy           String    @map("initiated_by") @db.Uuid
+  separationType        String    @map("separation_type") @db.VarChar(50) // RESIGNATION, TERMINATION, etc.
+  lastWorkingDay        DateTime  @map("last_working_day") @db.Date
+  noticePeriodDays      Int?      @map("notice_period_days")
+  noticePeriodEndDate   DateTime? @map("notice_period_end_date") @db.Date
+  exitInterviewCompleted Boolean  @default(false) @map("exit_interview_completed")
+  exitInterviewNotes    Json?     @map("exit_interview_notes") @db.JsonB
+  finalSettlementStatus String?   @map("final_settlement_status") @db.VarChar(50)
+  status                String    @default("INITIATED") @db.VarChar(50) // INITIATED, IN_PROGRESS, COMPLETED, CANCELLED
+  completedAt           DateTime? @map("completed_at") @db.Timestamptz
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id])
+  tasks    OffboardingTask[]
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("offboarding_processes")
+}
+
+/// Offboarding Task - Individual task in an offboarding process
+model OffboardingTask {
+  id             String    @id @default(uuid()) @db.Uuid
+  processId      String    @map("process_id") @db.Uuid
+  title          String    @db.VarChar(255)
+  assignedRole   String?   @map("assigned_role") @db.VarChar(50)
+  assignedUserId String?   @map("assigned_user_id") @db.Uuid
+  status         String    @default("PENDING") @db.VarChar(50) // PENDING, COMPLETED, SKIPPED, BLOCKED
+  completedBy    String?   @map("completed_by") @db.Uuid
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz
+  notes          String?   @db.Text
+  sortOrder      Int       @default(0) @map("sort_order")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  process OffboardingProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+
+  @@index([processId])
+  @@index([status])
+  @@map("offboarding_tasks")
+}
+
+/// Leave Policy - Accrual rules per leave type
+model LeavePolicy {
+  id                    String   @id @default(uuid()) @db.Uuid
+  companyId             String   @map("company_id") @db.Uuid
+  leaveType             String   @map("leave_type") @db.VarChar(50) // CASUAL, SICK, EARNED, etc.
+  name                  String   @db.VarChar(255)
+  annualEntitlement     Decimal  @map("annual_entitlement") @db.Decimal(5, 1)
+  accrualType           String   @map("accrual_type") @db.VarChar(50) // ANNUAL_GRANT, MONTHLY_ACCRUAL, NO_ACCRUAL
+  carryoverLimit        Decimal  @default(0) @map("carryover_limit") @db.Decimal(5, 1)
+  carryoverExpiryMonths Int?     @map("carryover_expiry_months")
+  maxConsecutiveDays    Int?     @map("max_consecutive_days")
+  minServiceDaysRequired Int?    @map("min_service_days_required")
+  applicableGender      String?  @map("applicable_gender") @db.VarChar(20) // null = all
+  isActive              Boolean  @default(true) @map("is_active")
+  fiscalYearStart       Int      @default(1) @map("fiscal_year_start") // Month (1-12)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, leaveType])
+  @@index([companyId])
+  @@map("leave_policies")
+}
+
+/// Leave Balance - Per-employee per-type per-fiscal-year balance
+model LeaveBalance {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  employeeId  String   @map("employee_id") @db.Uuid
+  leaveType   String   @map("leave_type") @db.VarChar(50)
+  fiscalYear  Int      @map("fiscal_year") // e.g., 2025
+  entitled    Decimal  @default(0) @db.Decimal(5, 1)
+  accrued     Decimal  @default(0) @db.Decimal(5, 1)
+  used        Decimal  @default(0) @db.Decimal(5, 1)
+  carriedOver Decimal  @default(0) @map("carried_over") @db.Decimal(5, 1)
+  adjusted    Decimal  @default(0) @db.Decimal(5, 1)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id])
+  ledger   LeaveBalanceLedger[]
+
+  @@unique([companyId, employeeId, leaveType, fiscalYear])
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("leave_balances")
+}
+
+/// Leave Balance Ledger - Transaction history for balance changes
+model LeaveBalanceLedger {
+  id              String   @id @default(uuid()) @db.Uuid
+  balanceId       String   @map("balance_id") @db.Uuid
+  transactionType String   @map("transaction_type") @db.VarChar(50) // ACCRUAL, USAGE, CARRYOVER, ADJUSTMENT, EXPIRY, GRANT
+  amount          Decimal  @db.Decimal(5, 1)
+  runningBalance  Decimal  @map("running_balance") @db.Decimal(5, 1)
+  description     String?  @db.Text
+  referenceId     String?  @map("reference_id") @db.Uuid // e.g., Leave ID
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  balance LeaveBalance @relation(fields: [balanceId], references: [id], onDelete: Cascade)
+
+  @@index([balanceId])
+  @@map("leave_balance_ledger")
+}
+
+/// Announcement - Company-wide announcements
+model Announcement {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  authorId    String    @map("author_id") @db.Uuid
+  title       String    @db.VarChar(255)
+  content     String    @db.Text
+  priority    String    @default("NORMAL") @db.VarChar(50) // NORMAL, IMPORTANT, URGENT
+  isPinned    Boolean   @default(false) @map("is_pinned")
+  publishedAt DateTime? @map("published_at") @db.Timestamptz
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+
+  @@index([companyId])
+  @@index([isActive])
+  @@map("announcements")
+}
+
+/// Kudos - Peer recognition
+model Kudos {
+  id                 String   @id @default(uuid()) @db.Uuid
+  companyId          String   @map("company_id") @db.Uuid
+  senderId           String   @map("sender_id") @db.Uuid
+  recipientEmployeeId String  @map("recipient_employee_id") @db.Uuid
+  message            String   @db.Text
+  category           String   @db.VarChar(50) // TEAMWORK, INNOVATION, etc.
+  isPublic           Boolean  @default(true) @map("is_public")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sender    User     @relation("KudosSender", fields: [senderId], references: [id])
+  recipient Employee @relation(fields: [recipientEmployeeId], references: [id])
+
+  @@index([companyId])
+  @@index([recipientEmployeeId])
+  @@map("kudos")
+}
+
+/// Survey - Pulse surveys and engagement surveys
+model Survey {
+  id                String    @id @default(uuid()) @db.Uuid
+  companyId         String    @map("company_id") @db.Uuid
+  createdBy         String    @map("created_by") @db.Uuid
+  title             String    @db.VarChar(255)
+  description       String?   @db.Text
+  type              String    @db.VarChar(50) // PULSE, ENGAGEMENT, EXIT, CUSTOM
+  status            String    @default("DRAFT") @db.VarChar(50) // DRAFT, ACTIVE, CLOSED, ARCHIVED
+  isAnonymous       Boolean   @default(true) @map("is_anonymous")
+  questions         Json      @db.JsonB // [{ id, type, text, options?, required }]
+  scheduleType      String?   @map("schedule_type") @db.VarChar(50) // ONE_TIME, RECURRING
+  recurringInterval String?   @map("recurring_interval") @db.VarChar(50) // WEEKLY, MONTHLY, QUARTERLY
+  startDate         DateTime? @map("start_date") @db.Timestamptz
+  endDate           DateTime? @map("end_date") @db.Timestamptz
+  targetAudience    Json?     @map("target_audience") @db.JsonB // { departments?, roles?, all? }
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator   User             @relation(fields: [createdBy], references: [id])
+  responses SurveyResponse[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("surveys")
+}
+
+/// Survey Response - Individual responses to a survey
+model SurveyResponse {
+  id           String   @id @default(uuid()) @db.Uuid
+  surveyId     String   @map("survey_id") @db.Uuid
+  respondentId String   @map("respondent_id") @db.Uuid
+  answers      Json     @db.JsonB // [{ questionId, value }]
+  submittedAt  DateTime @default(now()) @map("submitted_at") @db.Timestamptz
+
+  // Relations
+  survey     Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  respondent User   @relation(fields: [respondentId], references: [id])
+
+  @@unique([surveyId, respondentId])
+  @@index([surveyId])
+  @@map("survey_responses")
+}
+
+/// Timesheet - Weekly timesheet for an employee
+model Timesheet {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  employeeId    String    @map("employee_id") @db.Uuid
+  weekStartDate DateTime  @map("week_start_date") @db.Date
+  status        String    @default("DRAFT") @db.VarChar(50) // DRAFT, SUBMITTED, APPROVED, REJECTED
+  submittedAt   DateTime? @map("submitted_at") @db.Timestamptz
+  approvedBy    String?   @map("approved_by") @db.Uuid
+  approvedAt    DateTime? @map("approved_at") @db.Timestamptz
+  totalHours    Decimal   @default(0) @map("total_hours") @db.Decimal(6, 2)
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company  Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee Employee    @relation(fields: [employeeId], references: [id])
+  entries  TimeEntry[]
+
+  @@unique([companyId, employeeId, weekStartDate])
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("timesheets")
+}
+
+/// Time Entry - Individual time entry within a timesheet
+model TimeEntry {
+  id              String   @id @default(uuid()) @db.Uuid
+  timesheetId     String   @map("timesheet_id") @db.Uuid
+  date            DateTime @db.Date
+  hours           Decimal  @db.Decimal(4, 2)
+  projectName     String?  @map("project_name") @db.VarChar(255)
+  taskDescription String?  @map("task_description") @db.Text
+  entryType       String   @default("REGULAR") @map("entry_type") @db.VarChar(50) // REGULAR, OVERTIME, BILLABLE, NON_BILLABLE
+  isBillable      Boolean  @default(false) @map("is_billable")
+  projectId       String?  @map("project_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  timesheet Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  project   Project?  @relation(fields: [projectId], references: [id])
+
+  @@index([timesheetId])
+  @@index([date])
+  @@map("time_entries")
+}
+
+/// Project - For time tracking categorization
+model Project {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  code        String   @db.VarChar(50)
+  clientName  String?  @map("client_name") @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  budgetHours Decimal? @map("budget_hours") @db.Decimal(8, 2)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  timeEntries TimeEntry[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("projects")
+}
+
+/// Contractor - External contractor/freelancer profiles
+model Contractor {
+  id           String    @id @default(uuid()) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  firstName    String    @map("first_name") @db.VarChar(100)
+  lastName     String    @map("last_name") @db.VarChar(100)
+  email        String    @db.VarChar(255)
+  phone        String?   @db.VarChar(20)
+  companyName  String?   @map("company_name") @db.VarChar(255)
+  contractType String    @map("contract_type") @db.VarChar(50) // FIXED_PRICE, HOURLY, MILESTONE
+  hourlyRate   Decimal?  @map("hourly_rate") @db.Decimal(10, 2)
+  startDate    DateTime  @map("start_date") @db.Date
+  endDate      DateTime? @map("end_date") @db.Date
+  status       String    @default("ACTIVE") @db.VarChar(50) // ACTIVE, INACTIVE, TERMINATED
+  taxId        String?   @map("tax_id") @db.VarChar(100)
+  bankDetails  Json?     @map("bank_details") @db.JsonB // Encrypted banking info
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company  Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoices ContractorInvoice[]
+
+  @@unique([companyId, email])
+  @@index([companyId])
+  @@index([status])
+  @@map("contractors")
+}
+
+/// Contractor Invoice - Invoices submitted by contractors
+model ContractorInvoice {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  contractorId  String    @map("contractor_id") @db.Uuid
+  invoiceNumber String    @map("invoice_number") @db.VarChar(50)
+  amount        Decimal   @db.Decimal(12, 2)
+  description   String?   @db.Text
+  periodStart   DateTime  @map("period_start") @db.Date
+  periodEnd     DateTime  @map("period_end") @db.Date
+  status        String    @default("PENDING") @db.VarChar(50) // PENDING, APPROVED, PAID, REJECTED
+  submittedAt   DateTime  @default(now()) @map("submitted_at") @db.Timestamptz
+  approvedBy    String?   @map("approved_by") @db.Uuid
+  paidAt        DateTime? @map("paid_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contractor Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId])
+  @@index([contractorId])
+  @@index([status])
+  @@map("contractor_invoices")
+}
+
+/// Geofence Zone - Location-based attendance zones
+model GeofenceZone {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  name            String   @db.VarChar(255)
+  latitude        Decimal  @db.Decimal(10, 8)
+  longitude       Decimal  @db.Decimal(11, 8)
+  radiusMeters    Int      @map("radius_meters")
+  isActive        Boolean  @default(true) @map("is_active")
+  allowedIpRanges Json?    @map("allowed_ip_ranges") @db.JsonB // ["192.168.1.0/24", ...]
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("geofence_zones")
+}
+
+/// Dashboard Config - Per-user dashboard layout
+model DashboardConfig {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  layout    Json     @db.JsonB // [{ widgetId, order, visible, size }]
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("dashboard_configs")
 }

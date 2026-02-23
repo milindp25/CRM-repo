@@ -4,3 +4,4 @@ export * from './start-workflow.dto';
 export * from './resolve-step.dto';
 export * from './template-filter.dto';
 export * from './workflow-filter.dto';
+export * from './create-delegation.dto';

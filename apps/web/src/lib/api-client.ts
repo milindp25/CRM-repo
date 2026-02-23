@@ -299,7 +299,7 @@ class ApiClient {
    * Make HTTP request to API
    * Automatically retries once on 401 by refreshing the access token.
    */
-  private async request<T = any>(
+  async request<T = any>(
     endpoint: string,
     options: RequestOptions = {},
     _isRetry: boolean = false,

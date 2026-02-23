@@ -305,30 +305,45 @@ export default function SettingsPage() {
       <div className="bg-card rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">Advanced Settings</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <a href="/settings/api-keys" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+          <a href="/settings/api-keys" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors group">
             <div className="text-2xl mb-2">🔑</div>
-            <h3 className="font-medium text-foreground group-hover:text-blue-700">API Keys</h3>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700 dark:group-hover:text-blue-400">API Keys</h3>
             <p className="text-xs text-muted-foreground mt-1">Manage API keys for integrations</p>
           </a>
-          <a href="/settings/webhooks" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+          <a href="/settings/webhooks" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors group">
             <div className="text-2xl mb-2">🔗</div>
-            <h3 className="font-medium text-foreground group-hover:text-blue-700">Webhooks</h3>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700 dark:group-hover:text-blue-400">Webhooks</h3>
             <p className="text-xs text-muted-foreground mt-1">Send events to external services</p>
           </a>
-          <a href="/settings/custom-fields" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+          <a href="/settings/custom-fields" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors group">
             <div className="text-2xl mb-2">📋</div>
-            <h3 className="font-medium text-foreground group-hover:text-blue-700">Custom Fields</h3>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700 dark:group-hover:text-blue-400">Custom Fields</h3>
             <p className="text-xs text-muted-foreground mt-1">Add custom data fields to entities</p>
           </a>
-          <a href="/settings/sso" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+          <a href="/settings/sso" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors group">
             <div className="text-2xl mb-2">🔐</div>
-            <h3 className="font-medium text-foreground group-hover:text-blue-700">Single Sign-On</h3>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700 dark:group-hover:text-blue-400">Single Sign-On</h3>
             <p className="text-xs text-muted-foreground mt-1">Configure SSO for your organization</p>
           </a>
-          <a href="/settings/payroll" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors group">
+          <a href="/settings/payroll" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors group">
             <div className="text-2xl mb-2">💰</div>
-            <h3 className="font-medium text-foreground group-hover:text-blue-700">Payroll Settings</h3>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700 dark:group-hover:text-blue-400">Payroll Settings</h3>
             <p className="text-xs text-muted-foreground mt-1">Region, tax compliance, pay frequency</p>
+          </a>
+          <a href="/settings/delegations" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors group">
+            <div className="text-2xl mb-2">🔄</div>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700 dark:group-hover:text-blue-400">Approval Delegations</h3>
+            <p className="text-xs text-muted-foreground mt-1">Delegate approvals during absence</p>
+          </a>
+          <a href="/settings/leave-policies" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors group">
+            <div className="text-2xl mb-2">📅</div>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700 dark:group-hover:text-blue-400">Leave Policies</h3>
+            <p className="text-xs text-muted-foreground mt-1">Accrual rules, carryover, entitlements</p>
+          </a>
+          <a href="/settings/geofence" className="border border-border rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors group">
+            <div className="text-2xl mb-2">📍</div>
+            <h3 className="font-medium text-foreground group-hover:text-blue-700 dark:group-hover:text-blue-400">Geofence Zones</h3>
+            <p className="text-xs text-muted-foreground mt-1">Location-based attendance verification</p>
           </a>
         </div>
       </div>
@@ -337,7 +352,7 @@ export default function SettingsPage() {
       <div className="bg-card rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">Leave Entitlements</h2>
-          <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded">System defaults · Configurable in next release</span>
+          <a href="/settings/leave-policies" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">Configure policies →</a>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {LEAVE_ENTITLEMENTS.map((le) => (

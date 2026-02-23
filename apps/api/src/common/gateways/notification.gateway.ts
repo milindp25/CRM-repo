@@ -348,4 +348,70 @@ export class NotificationGateway
       message: `Payroll batch for ${payload.month}/${payload.year} was rejected${payload.reason ? ' — ' + payload.reason : ''}`,
     });
   }
+
+  // ── Phase 6: Competitive Feature Event Listeners ─────────────────
+
+  @OnEvent('offboarding.started')
+  handleOffboardingStarted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'offboarding:started', payload);
+  }
+
+  @OnEvent('offboarding.completed')
+  handleOffboardingCompleted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'offboarding:completed', payload);
+  }
+
+  @OnEvent('announcement.published')
+  handleAnnouncementPublished(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'announcement:published', payload);
+  }
+
+  @OnEvent('kudos.sent')
+  handleKudosSent(payload: { companyId: string; userId?: string; [key: string]: any }) {
+    if (payload.userId) {
+      this.sendToUser(payload.userId, 'kudos:received', payload);
+    }
+    this.sendToCompany(payload.companyId, 'kudos:sent', payload);
+  }
+
+  @OnEvent('survey.activated')
+  handleSurveyActivated(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'survey:activated', payload);
+  }
+
+  @OnEvent('survey.response.submitted')
+  handleSurveyResponseSubmitted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'survey:response_submitted', payload);
+  }
+
+  @OnEvent('timesheet.submitted')
+  handleTimesheetSubmitted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'timesheet:submitted', payload);
+  }
+
+  @OnEvent('timesheet.approved')
+  handleTimesheetApproved(payload: { companyId: string; userId?: string; [key: string]: any }) {
+    if (payload.userId) {
+      this.sendToUser(payload.userId, 'timesheet:approved', payload);
+    }
+    this.sendToCompany(payload.companyId, 'timesheet:updated', payload);
+  }
+
+  @OnEvent('timesheet.rejected')
+  handleTimesheetRejected(payload: { companyId: string; userId?: string; [key: string]: any }) {
+    if (payload.userId) {
+      this.sendToUser(payload.userId, 'timesheet:rejected', payload);
+    }
+    this.sendToCompany(payload.companyId, 'timesheet:updated', payload);
+  }
+
+  @OnEvent('contractor.invoice.submitted')
+  handleContractorInvoiceSubmitted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'contractor:invoice_submitted', payload);
+  }
+
+  @OnEvent('contractor.invoice.approved')
+  handleContractorInvoiceApproved(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'contractor:invoice_approved', payload);
+  }
 }
