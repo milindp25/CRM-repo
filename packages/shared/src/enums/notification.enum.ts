@@ -15,6 +15,11 @@ export enum NotificationType {
   // Payroll
   PAYROLL_PROCESSED = 'PAYROLL_PROCESSED',
   PAYROLL_PAID = 'PAYROLL_PAID',
+  PAYROLL_BATCH_COMPLETED = 'PAYROLL_BATCH_COMPLETED',
+  PAYROLL_BONUS = 'PAYROLL_BONUS',
+  PAYROLL_APPROVAL_PENDING = 'PAYROLL_APPROVAL_PENDING',
+  PAYROLL_APPROVAL_APPROVED = 'PAYROLL_APPROVAL_APPROVED',
+  PAYROLL_APPROVAL_REJECTED = 'PAYROLL_APPROVAL_REJECTED',
 
   // Invitation
   INVITATION_RECEIVED = 'INVITATION_RECEIVED',
@@ -61,6 +66,36 @@ export enum NotificationType {
   WELCOME = 'WELCOME',
   PASSWORD_CHANGED = 'PASSWORD_CHANGED',
   PROFILE_UPDATED = 'PROFILE_UPDATED',
+
+  // Offboarding
+  OFFBOARDING_STARTED = 'OFFBOARDING_STARTED',
+  OFFBOARDING_TASK_ASSIGNED = 'OFFBOARDING_TASK_ASSIGNED',
+  OFFBOARDING_COMPLETED = 'OFFBOARDING_COMPLETED',
+
+  // Delegation
+  DELEGATION_ACTIVATED = 'DELEGATION_ACTIVATED',
+  DELEGATION_EXPIRED = 'DELEGATION_EXPIRED',
+
+  // Survey
+  SURVEY_ASSIGNED = 'SURVEY_ASSIGNED',
+  SURVEY_REMINDER = 'SURVEY_REMINDER',
+  SURVEY_CLOSED = 'SURVEY_CLOSED',
+
+  // Social
+  KUDOS_RECEIVED = 'KUDOS_RECEIVED',
+  ANNOUNCEMENT_PUBLISHED = 'ANNOUNCEMENT_PUBLISHED',
+
+  // Timesheet
+  TIMESHEET_SUBMITTED = 'TIMESHEET_SUBMITTED',
+  TIMESHEET_APPROVED = 'TIMESHEET_APPROVED',
+  TIMESHEET_REJECTED = 'TIMESHEET_REJECTED',
+
+  // Contractor
+  CONTRACTOR_INVOICE_SUBMITTED = 'CONTRACTOR_INVOICE_SUBMITTED',
+  CONTRACTOR_INVOICE_APPROVED = 'CONTRACTOR_INVOICE_APPROVED',
+
+  // Leave Balance
+  LEAVE_BALANCE_LOW = 'LEAVE_BALANCE_LOW',
 }
 
 /**
@@ -440,4 +475,156 @@ export enum TrainingCategory {
   SOFT_SKILLS = 'SOFT_SKILLS',
   ONBOARDING = 'ONBOARDING',
   LEADERSHIP = 'LEADERSHIP',
+}
+
+// ─── Phase 6: Competitive Feature Pack Enums ───
+
+/**
+ * Separation Type (reason for offboarding)
+ */
+export enum SeparationType {
+  RESIGNATION = 'RESIGNATION',
+  TERMINATION = 'TERMINATION',
+  RETIREMENT = 'RETIREMENT',
+  CONTRACT_END = 'CONTRACT_END',
+  LAYOFF = 'LAYOFF',
+}
+
+/**
+ * Offboarding Process Status
+ */
+export enum OffboardingStatus {
+  INITIATED = 'INITIATED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+/**
+ * Offboarding Task Status
+ */
+export enum OffboardingTaskStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  SKIPPED = 'SKIPPED',
+  BLOCKED = 'BLOCKED',
+}
+
+/**
+ * Leave Accrual Type
+ */
+export enum LeaveAccrualType {
+  ANNUAL_GRANT = 'ANNUAL_GRANT',
+  MONTHLY_ACCRUAL = 'MONTHLY_ACCRUAL',
+  NO_ACCRUAL = 'NO_ACCRUAL',
+}
+
+/**
+ * Leave Transaction Type (ledger entries)
+ */
+export enum LeaveTransactionType {
+  ACCRUAL = 'ACCRUAL',
+  USAGE = 'USAGE',
+  CARRYOVER = 'CARRYOVER',
+  ADJUSTMENT = 'ADJUSTMENT',
+  EXPIRY = 'EXPIRY',
+  GRANT = 'GRANT',
+}
+
+/**
+ * Survey Type
+ */
+export enum SurveyType {
+  PULSE = 'PULSE',
+  ENGAGEMENT = 'ENGAGEMENT',
+  EXIT = 'EXIT',
+  CUSTOM = 'CUSTOM',
+}
+
+/**
+ * Survey Status
+ */
+export enum SurveyStatus {
+  DRAFT = 'DRAFT',
+  ACTIVE = 'ACTIVE',
+  CLOSED = 'CLOSED',
+  ARCHIVED = 'ARCHIVED',
+}
+
+/**
+ * Survey Question Type
+ */
+export enum SurveyQuestionType {
+  RATING = 'RATING',
+  TEXT = 'TEXT',
+  MULTIPLE_CHOICE = 'MULTIPLE_CHOICE',
+  NPS = 'NPS',
+}
+
+/**
+ * Kudos Category
+ */
+export enum KudosCategory {
+  TEAMWORK = 'TEAMWORK',
+  INNOVATION = 'INNOVATION',
+  LEADERSHIP = 'LEADERSHIP',
+  ABOVE_AND_BEYOND = 'ABOVE_AND_BEYOND',
+  CUSTOMER_FOCUS = 'CUSTOMER_FOCUS',
+}
+
+/**
+ * Announcement Priority
+ */
+export enum AnnouncementPriority {
+  NORMAL = 'NORMAL',
+  IMPORTANT = 'IMPORTANT',
+  URGENT = 'URGENT',
+}
+
+/**
+ * Timesheet Status
+ */
+export enum TimesheetStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+/**
+ * Time Entry Type
+ */
+export enum TimeEntryType {
+  REGULAR = 'REGULAR',
+  OVERTIME = 'OVERTIME',
+  BILLABLE = 'BILLABLE',
+  NON_BILLABLE = 'NON_BILLABLE',
+}
+
+/**
+ * Contractor Status
+ */
+export enum ContractorStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  TERMINATED = 'TERMINATED',
+}
+
+/**
+ * Contract Type
+ */
+export enum ContractType {
+  FIXED_PRICE = 'FIXED_PRICE',
+  HOURLY = 'HOURLY',
+  MILESTONE = 'MILESTONE',
+}
+
+/**
+ * Contractor Invoice Payment Status
+ */
+export enum InvoicePaymentStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  PAID = 'PAID',
+  REJECTED = 'REJECTED',
 }

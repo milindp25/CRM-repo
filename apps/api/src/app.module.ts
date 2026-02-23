@@ -30,6 +30,15 @@ import { TrainingModule } from './modules/training/training.module';
 import { ExpenseModule } from './modules/expense/expense.module';
 import { ShiftModule } from './modules/shift/shift.module';
 import { PolicyModule } from './modules/policy/policy.module';
+import { LeavePolicyModule } from './modules/leave-policy/leave-policy.module';
+import { OffboardingModule } from './modules/offboarding/offboarding.module';
+import { SocialModule } from './modules/social/social.module';
+import { SurveyModule } from './modules/survey/survey.module';
+import { TimesheetModule } from './modules/timesheet/timesheet.module';
+import { ContractorModule } from './modules/contractor/contractor.module';
+import { GeofenceModule } from './modules/geofence/geofence.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { GatewayModule } from './common/gateways/gateway.module';
 import { validate } from './config/env.validation';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -119,6 +128,15 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     ExpenseModule,
     ShiftModule,
     PolicyModule,
+    LeavePolicyModule,
+    OffboardingModule,
+    SocialModule,
+    SurveyModule,
+    TimesheetModule,
+    ContractorModule,
+    GeofenceModule,
+    AnalyticsModule,
+    DashboardModule,
 
     // Real-time WebSocket Gateway
     GatewayModule,

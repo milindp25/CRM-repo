@@ -39,6 +39,19 @@ export enum Feature {
   API_ACCESS = 'API_ACCESS',
   WEBHOOKS = 'WEBHOOKS',
   SSO = 'SSO',
+
+  // Phase 6: Competitive Features
+  OFFBOARDING = 'OFFBOARDING',
+  LEAVE_POLICIES = 'LEAVE_POLICIES',
+  SURVEYS = 'SURVEYS',
+  DIRECTORY = 'DIRECTORY',
+  TIME_TRACKING = 'TIME_TRACKING',
+  CONTRACTORS = 'CONTRACTORS',
+  ANALYTICS = 'ANALYTICS',
+  DASHBOARD_CONFIG = 'DASHBOARD_CONFIG',
+
+  // Paid Add-ons (not included in any tier)
+  PAYSLIP_ARCHIVE = 'PAYSLIP_ARCHIVE',
 }
 
 /** Features included in each subscription tier */
@@ -59,6 +72,8 @@ export const TIER_FEATURES: Record<SubscriptionTier, Feature[]> = {
     Feature.LEAVE,
     Feature.PAYROLL,
     Feature.REPORTS,
+    Feature.DIRECTORY,
+    Feature.DASHBOARD_CONFIG,
   ],
 
   [SubscriptionTier.PROFESSIONAL]: [
@@ -73,6 +88,11 @@ export const TIER_FEATURES: Record<SubscriptionTier, Feature[]> = {
     Feature.DOCUMENTS,
     Feature.WORKFLOWS,
     Feature.CUSTOM_FIELDS,
+    Feature.LEAVE_POLICIES,
+    Feature.OFFBOARDING,
+    Feature.TIME_TRACKING,
+    Feature.DIRECTORY,
+    Feature.DASHBOARD_CONFIG,
   ],
 
   [SubscriptionTier.ENTERPRISE]: Object.values(Feature),
@@ -101,6 +121,15 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   [Feature.API_ACCESS]: 'API Access',
   [Feature.WEBHOOKS]: 'Webhooks',
   [Feature.SSO]: 'Single Sign-On (SSO)',
+  [Feature.OFFBOARDING]: 'Employee Offboarding',
+  [Feature.LEAVE_POLICIES]: 'Leave Policies & Accrual',
+  [Feature.SURVEYS]: 'Pulse Surveys',
+  [Feature.DIRECTORY]: 'Employee Directory',
+  [Feature.TIME_TRACKING]: 'Time Tracking',
+  [Feature.CONTRACTORS]: 'Contractor Management',
+  [Feature.ANALYTICS]: 'HR Analytics',
+  [Feature.DASHBOARD_CONFIG]: 'Configurable Dashboards',
+  [Feature.PAYSLIP_ARCHIVE]: 'Payslip Archive',
 };
 
 /** Feature descriptions for admin UI */
@@ -126,4 +155,13 @@ export const FEATURE_DESCRIPTIONS: Record<Feature, string> = {
   [Feature.API_ACCESS]: 'API keys for external integrations',
   [Feature.WEBHOOKS]: 'Event-driven webhooks for third-party systems',
   [Feature.SSO]: 'SAML/OAuth single sign-on for enterprise',
+  [Feature.OFFBOARDING]: 'Employee exit management with checklists and final settlement',
+  [Feature.LEAVE_POLICIES]: 'Leave accrual policies, carryover rules, and balance tracking',
+  [Feature.SURVEYS]: 'Pulse surveys, engagement surveys, and NPS scoring',
+  [Feature.DIRECTORY]: 'Employee directory with search, celebrations, and social feed',
+  [Feature.TIME_TRACKING]: 'Project timesheets, time entries, and overtime tracking',
+  [Feature.CONTRACTORS]: 'Contractor profiles, contracts, and invoice management',
+  [Feature.ANALYTICS]: 'Advanced HR analytics with headcount, attrition, and cost trends',
+  [Feature.DASHBOARD_CONFIG]: 'Customizable role-based dashboard layouts and widgets',
+  [Feature.PAYSLIP_ARCHIVE]: 'Archive and access historical payslips and tax documents',
 };

@@ -178,4 +178,240 @@ export class NotificationGateway
     }
     this.sendToCompany(payload.companyId, 'expense:updated', payload);
   }
+
+  // ── Payroll Event Listeners ────────────────────────────────────
+
+  @OnEvent('payroll.batch.completed')
+  handlePayrollBatchCompleted(payload: {
+    companyId: string;
+    batchId: string;
+    month: number;
+    year: number;
+    status?: string;
+    processedCount?: number;
+    failedCount?: number;
+    [key: string]: any;
+  }) {
+    this.sendToCompany(payload.companyId, 'payroll:batch_completed', {
+      batchId: payload.batchId,
+      month: payload.month,
+      year: payload.year,
+      processedCount: payload.processedCount ?? 0,
+      failedCount: payload.failedCount ?? 0,
+      message: `Payroll batch for ${payload.month}/${payload.year} completed — ${payload.processedCount ?? 0} processed, ${payload.failedCount ?? 0} failed`,
+    });
+  }
+
+  @OnEvent('payroll.processed')
+  handlePayrollProcessed(payload: {
+    companyId: string;
+    employeeId: string;
+    payrollId?: string;
+    userId?: string;
+    month?: number;
+    year?: number;
+    [key: string]: any;
+  }) {
+    // Broadcast to company for HR dashboard updates
+    this.sendToCompany(payload.companyId, 'payroll:processed', {
+      employeeId: payload.employeeId,
+      payrollId: payload.payrollId,
+      month: payload.month,
+      year: payload.year,
+    });
+    // If userId is provided, notify the employee directly
+    if (payload.userId) {
+      this.sendToUser(payload.userId, 'payroll:processed', {
+        employeeId: payload.employeeId,
+        month: payload.month,
+        year: payload.year,
+        message: `Your payroll for ${payload.month}/${payload.year} has been processed`,
+      });
+    }
+  }
+
+  @OnEvent('payroll.paid')
+  handlePayrollPaid(payload: {
+    companyId: string;
+    employeeId: string;
+    payrollId?: string;
+    userId?: string;
+    month?: number;
+    year?: number;
+    [key: string]: any;
+  }) {
+    // Notify the employee that their paycheck is ready
+    if (payload.userId) {
+      this.sendToUser(payload.userId, 'payroll:paid', {
+        employeeId: payload.employeeId,
+        payrollId: payload.payrollId,
+        month: payload.month,
+        year: payload.year,
+        message: `Your paycheck for ${payload.month}/${payload.year} is now available! View details →`,
+      });
+    }
+    // Also notify company-wide for HR dashboard updates
+    this.sendToCompany(payload.companyId, 'payroll:updated', {
+      employeeId: payload.employeeId,
+      month: payload.month,
+      year: payload.year,
+      status: 'PAID',
+    });
+  }
+
+  @OnEvent('payroll.bonus')
+  handlePayrollBonus(payload: {
+    companyId: string;
+    employeeId: string;
+    payrollId?: string;
+    userId?: string;
+    bonusAmount?: number;
+    currency?: string;
+    [key: string]: any;
+  }) {
+    const amount = payload.bonusAmount ?? 0;
+    const currency = payload.currency === 'INR' ? '₹' : payload.currency === 'USD' ? '$' : (payload.currency ?? '');
+    // Notify the employee about their bonus
+    if (payload.userId) {
+      this.sendToUser(payload.userId, 'payroll:bonus', {
+        employeeId: payload.employeeId,
+        amount,
+        currency,
+        message: `You received a bonus of ${currency}${amount.toLocaleString()}!`,
+      });
+    }
+    // Company-wide notification
+    this.sendToCompany(payload.companyId, 'payroll:bonus_processed', {
+      employeeId: payload.employeeId,
+      amount,
+    });
+  }
+
+  @OnEvent('payroll.approval.pending')
+  handlePayrollApprovalPending(payload: {
+    companyId: string;
+    batchId?: string;
+    month?: number;
+    year?: number;
+    approverUserIds?: string[];
+    [key: string]: any;
+  }) {
+    // Notify designated approvers
+    if (payload.approverUserIds && payload.approverUserIds.length > 0) {
+      for (const approverId of payload.approverUserIds) {
+        this.sendToUser(approverId, 'payroll:approval_pending', {
+          batchId: payload.batchId,
+          month: payload.month,
+          year: payload.year,
+          message: `Payroll batch for ${payload.month}/${payload.year} is pending your approval`,
+        });
+      }
+    }
+    // Also broadcast to company for dashboard awareness
+    this.sendToCompany(payload.companyId, 'payroll:approval_pending', {
+      batchId: payload.batchId,
+      month: payload.month,
+      year: payload.year,
+    });
+  }
+
+  @OnEvent('payroll.approval.approved')
+  handlePayrollApprovalApproved(payload: {
+    companyId: string;
+    batchId?: string;
+    month?: number;
+    year?: number;
+    [key: string]: any;
+  }) {
+    this.sendToCompany(payload.companyId, 'payroll:approval_approved', {
+      batchId: payload.batchId,
+      month: payload.month,
+      year: payload.year,
+      message: `Payroll batch for ${payload.month}/${payload.year} has been approved`,
+    });
+  }
+
+  @OnEvent('payroll.approval.rejected')
+  handlePayrollApprovalRejected(payload: {
+    companyId: string;
+    batchId?: string;
+    month?: number;
+    year?: number;
+    reason?: string;
+    [key: string]: any;
+  }) {
+    this.sendToCompany(payload.companyId, 'payroll:approval_rejected', {
+      batchId: payload.batchId,
+      month: payload.month,
+      year: payload.year,
+      reason: payload.reason,
+      message: `Payroll batch for ${payload.month}/${payload.year} was rejected${payload.reason ? ' — ' + payload.reason : ''}`,
+    });
+  }
+
+  // ── Phase 6: Competitive Feature Event Listeners ─────────────────
+
+  @OnEvent('offboarding.started')
+  handleOffboardingStarted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'offboarding:started', payload);
+  }
+
+  @OnEvent('offboarding.completed')
+  handleOffboardingCompleted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'offboarding:completed', payload);
+  }
+
+  @OnEvent('announcement.published')
+  handleAnnouncementPublished(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'announcement:published', payload);
+  }
+
+  @OnEvent('kudos.sent')
+  handleKudosSent(payload: { companyId: string; userId?: string; [key: string]: any }) {
+    if (payload.userId) {
+      this.sendToUser(payload.userId, 'kudos:received', payload);
+    }
+    this.sendToCompany(payload.companyId, 'kudos:sent', payload);
+  }
+
+  @OnEvent('survey.activated')
+  handleSurveyActivated(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'survey:activated', payload);
+  }
+
+  @OnEvent('survey.response.submitted')
+  handleSurveyResponseSubmitted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'survey:response_submitted', payload);
+  }
+
+  @OnEvent('timesheet.submitted')
+  handleTimesheetSubmitted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'timesheet:submitted', payload);
+  }
+
+  @OnEvent('timesheet.approved')
+  handleTimesheetApproved(payload: { companyId: string; userId?: string; [key: string]: any }) {
+    if (payload.userId) {
+      this.sendToUser(payload.userId, 'timesheet:approved', payload);
+    }
+    this.sendToCompany(payload.companyId, 'timesheet:updated', payload);
+  }
+
+  @OnEvent('timesheet.rejected')
+  handleTimesheetRejected(payload: { companyId: string; userId?: string; [key: string]: any }) {
+    if (payload.userId) {
+      this.sendToUser(payload.userId, 'timesheet:rejected', payload);
+    }
+    this.sendToCompany(payload.companyId, 'timesheet:updated', payload);
+  }
+
+  @OnEvent('contractor.invoice.submitted')
+  handleContractorInvoiceSubmitted(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'contractor:invoice_submitted', payload);
+  }
+
+  @OnEvent('contractor.invoice.approved')
+  handleContractorInvoiceApproved(payload: { companyId: string; [key: string]: any }) {
+    this.sendToCompany(payload.companyId, 'contractor:invoice_approved', payload);
+  }
 }

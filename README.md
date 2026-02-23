@@ -1,352 +1,270 @@
-# HRPlatform CRM - Company Portal
+# HRPlatform
 
-> Enterprise-grade Human Resource Management Platform for companies to manage employees, attendance, leave, payroll, and performance.
+Enterprise-grade Human Resource Management Platform — multi-tenant SaaS with full HRIS capabilities.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-green)](https://nodejs.org/)
-
-## 🎯 Overview
-
-HRPlatform is a comprehensive HRIS (Human Resource Information System) built with enterprise-grade architecture following SOLID principles. It includes:
-
-- **Core HR**: Employee management, organizational structure, document management
-- **Attendance & Time**: Biometric integration, shift management, overtime tracking
-- **Leave Management**: Multi-type leaves, approval workflows, balance tracking
-- **Payroll**: Multi-country support (India & US), statutory compliance, bank file generation
-- **Performance**: Goal management, reviews, 360-degree feedback
-- **Recruitment**: ATS, candidate tracking, interview scheduling
-- **Analytics**: Real-time dashboards, custom reports, predictive analytics
-
-## 🏗️ Architecture
-
-- **Monorepo**: Turborepo with Yarn workspaces
-- **Backend**: Node.js + TypeScript following Clean Architecture
-- **Frontend**: Next.js 14 with App Router
-- **Database**: PostgreSQL with Prisma ORM
-- **Cache**: Redis for sessions and rate limiting
-- **Logging**: Winston + Elasticsearch + Kibana
-- **Testing**: Jest + React Testing Library
-
-## 📁 Project Structure
+## Architecture
 
 ```
-hrplatform-crm/
+hrplatform/
 ├── apps/
-│   ├── web/                 # Company CRM Portal (Next.js)
-│   ├── mobile/              # React Native (Stage 3)
-│   └── workers/             # Background Jobs (Stage 2)
+│   ├── api/           # Tenant API    (NestJS 11, port 4000)
+│   ├── admin-api/     # Admin API     (NestJS 11, port 4001)
+│   ├── web/           # Tenant Portal (Next.js 14, port 3000)
+│   └── admin/         # Admin Portal  (Next.js 14, port 3001)
 ├── packages/
-│   ├── database/            # Prisma schema & migrations
-│   ├── core/                # Business logic (domain modules)
-│   ├── ui/                  # Shared UI components
-│   ├── types/               # TypeScript types
-│   ├── utils/               # Shared utilities
-│   └── config/              # Shared configs
-├── super-admin-docs/        # Documentation for separate Super Admin repo
-└── scripts/                 # Build & deployment scripts
+│   ├── database/      # Prisma schema, migrations, seed
+│   ├── shared/        # Enums, types, constants (compiled to dist/)
+│   └── validation/    # Zod schemas
+├── .env.example       # Environment variable reference guide
+└── turbo.json         # Turborepo pipeline config
 ```
 
-## 🚀 Quick Start
+**Tech Stack:** TypeScript, PostgreSQL (Supabase/AWS RDS/any), Prisma ORM, Yarn 4 workspaces, Turborepo
 
-### Prerequisites
+## Prerequisites
 
-- Node.js 20+ ([Download](https://nodejs.org/))
-- Yarn 4.0+ (installed automatically with corepack)
-- Docker & Docker Compose ([Download](https://www.docker.com/get-started))
-- Git
+- **Node.js** 20+ — [Download](https://nodejs.org/)
+- **Yarn 4** — Enabled via corepack (see below)
+- **PostgreSQL** — Supabase, AWS RDS, local Docker, or any PostgreSQL instance
+- **Git**
 
-### 1. Clone the repository
+## Setup (First Time)
+
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/yourusername/hrplatform.git
 cd hrplatform
-```
 
-### 2. Enable Corepack (for Yarn 4)
-
-```bash
+# Enable Yarn 4
 corepack enable
 corepack prepare yarn@4.1.0 --activate
-```
 
-### 3. Install dependencies
-
-```bash
+# Install all dependencies
 yarn install
 ```
 
-### 4. Setup environment variables
+### 2. Configure environment variables
+
+Each app has its own `.env` file. Copy the templates and fill in your values:
 
 ```bash
-cp .env.example .env.local
-# Edit .env.local with your actual values
+# Backend APIs
+cp apps/api/.env.example apps/api/.env
+cp apps/admin-api/.env.example apps/admin-api/.env
+
+# Frontend apps
+cp apps/web/.env.example apps/web/.env.local
+cp apps/admin/.env.example apps/admin/.env.local
+
+# Database package (for Prisma CLI)
+cp packages/database/.env.example packages/database/.env
 ```
 
-### 5. Start Docker services
+**Generate secrets:**
 
 ```bash
-# Start PostgreSQL, Redis, Elasticsearch, Kibana
-yarn docker:up
+# JWT Secret (use the same value in api, admin-api, and web)
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
-# Wait for services to be healthy (check with)
-yarn docker:logs
+# Encryption Key (api only — encrypts employee PII)
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+# JWT Refresh Secret (api only)
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-### 6. Run database migrations
+**Secret locations:**
+
+| Secret | Where to set | Notes |
+|--------|-------------|-------|
+| `DATABASE_URL` | api, admin-api, web, packages/database | Same DB for all |
+| `JWT_SECRET` | api, admin-api, web | **Must match** across all three |
+| `ENCRYPTION_KEY` | api only | AES-256 key for PII encryption |
+| `JWT_REFRESH_SECRET` | api only | Refresh token signing |
+| `SMTP_*` | api only (optional) | Email notifications |
+| `GOOGLE_CLIENT_*` | api only (optional) | Google SSO |
+
+### 3. Set up the database
 
 ```bash
-yarn db:migrate:dev
-yarn db:seed  # Optional: seed with sample data
+# Generate Prisma client
+npx prisma generate --schema=packages/database/prisma/schema.prisma
+
+# Run migrations (applies all pending migrations)
+cd packages/database
+npx prisma migrate deploy
+
+# Seed with demo data (optional)
+npx tsx src/seed.ts
+cd ../..
 ```
 
-### 7. Start development servers
+### 4. Build shared packages
 
 ```bash
+# Shared package must be compiled before APIs/frontends can import it
+cd packages/shared && npx tsc && cd ../..
+```
+
+### 5. Start all apps
+
+```bash
+# Start everything (all 4 apps in parallel via Turborepo)
 yarn dev
 ```
 
-This will start:
-- Web app (CRM): http://localhost:3000
-- Kibana (logs): http://localhost:5601
-- Mailhog (emails): http://localhost:8025
-
-## 🔧 Development
-
-### Available Scripts
+Or start individually:
 
 ```bash
-# Development
-yarn dev                     # Start all apps in dev mode
-yarn build                   # Build all apps for production
-yarn test                    # Run all tests
-yarn test:watch              # Run tests in watch mode
-yarn test:coverage           # Generate coverage report
-yarn lint                    # Lint all packages
-yarn lint:fix                # Fix linting issues
-yarn type-check              # TypeScript type checking
-yarn format                  # Format code with Prettier
+# Tenant API (port 4000)
+cd apps/api && yarn start:dev
 
-# Database
-yarn db:migrate:dev          # Create and apply migration
-yarn db:migrate              # Apply pending migrations
-yarn db:studio               # Open Prisma Studio
-yarn db:seed                 # Seed database with sample data
-yarn db:reset                # Reset database (DANGER!)
+# Admin API (port 4001)
+cd apps/admin-api && yarn start:dev
 
-# Docker
-yarn docker:up               # Start all services
-yarn docker:down             # Stop all services
-yarn docker:restart          # Restart all services
-yarn docker:logs             # View all logs
-yarn docker:logs:elasticsearch  # View Elasticsearch logs
-yarn docker:logs:kibana      # View Kibana logs
-yarn docker:clean            # Remove all volumes (DANGER!)
+# Tenant Portal (port 3000)
+cd apps/web && yarn dev
 
-# Deployment
-yarn deploy:web              # Deploy web app to Vercel
+# Admin Portal (port 3001)
+cd apps/admin && yarn dev
 ```
 
-### Code Organization
+### 6. Verify
 
-#### Clean Architecture Layers
+| App | URL | Credentials |
+|-----|-----|-------------|
+| Tenant Portal | http://localhost:3000 | `admin@demotech.com` / `Test@12345` |
+| Admin Portal | http://localhost:3001 | `superadmin@hrplatform.com` / `Admin@12345` |
+| Tenant API Health | http://localhost:4000/v1/health | — |
+| Admin API Health | http://localhost:4001/v1/health | — |
+| API Docs (Swagger) | http://localhost:4000/api-docs | — |
 
-```
-packages/core/
-├── domain/              # Entities, Value Objects, Domain Events
-├── application/         # Use Cases, DTOs, Interfaces
-├── infrastructure/      # External dependencies (DB, APIs, etc.)
-└── presentation/        # Controllers, Validators
-```
+## Database Migrations
 
-#### Example: Employee Module
+This project uses **Prisma Migrate** for schema management (not `db push`).
 
-```
-packages/core/src/employees/
-├── domain/
-│   ├── entities/
-│   │   └── employee.entity.ts         # Employee domain entity
-│   ├── value-objects/
-│   │   ├── email.vo.ts                # Email value object
-│   │   └── aadhaar.vo.ts              # Aadhaar value object
-│   └── events/
-│       └── employee-created.event.ts  # Domain event
-├── application/
-│   ├── use-cases/
-│   │   ├── create-employee.use-case.ts
-│   │   └── update-employee.use-case.ts
-│   ├── dtos/
-│   │   └── create-employee.dto.ts
-│   └── interfaces/
-│       └── employee.repository.interface.ts
-└── infrastructure/
-    ├── repositories/
-    │   └── prisma-employee.repository.ts
-    └── services/
-        └── encryption.service.ts
-```
+### Creating a new migration
 
-## 📊 Logging & Monitoring
-
-### Log Levels
-
-- `error`: Error messages that need immediate attention
-- `warn`: Warning messages for potential issues
-- `info`: General informational messages
-- `http`: HTTP request/response logs
-- `debug`: Detailed debugging information
-- `audit`: Security and compliance audit logs
-
-### Viewing Logs
-
-**Console (Development)**:
 ```bash
-# Logs automatically printed to console in development
-yarn dev
+cd packages/database
+
+# 1. Edit schema.prisma with your changes
+
+# 2. Generate migration SQL + apply to dev database
+npx prisma migrate dev --name describe_your_change
+
+# 3. Regenerate Prisma client
+npx prisma generate
 ```
 
-**File Logs**:
+### Deploying migrations to another database
+
 ```bash
-# Check log files
-cat logs/combined.log
-cat logs/error.log
-cat logs/audit.log
+# Apply all pending migrations to a target database
+DATABASE_URL="postgresql://user:pass@host:5432/dbname" \
+npx prisma migrate deploy
 ```
 
-**Kibana (Recommended)**:
-1. Open http://localhost:5601
-2. Go to "Discover"
-3. Create index pattern: `hrplatform-logs-*`
-4. View and filter logs
+### Multi-database deployment (per-tenant databases)
 
-### Structured Logging Example
+```bash
+# Deploy migrations to multiple tenant databases
+for db_url in "$TENANT_DB_1" "$TENANT_DB_2" "$TENANT_DB_3"; do
+  echo "Migrating: $db_url"
+  DATABASE_URL="$db_url" npx prisma migrate deploy
+done
+```
 
-```typescript
-import { logger } from '@hrplatform/core/infrastructure/logging';
+### Switching database providers
 
-// Log with context
-logger.info('Employee created', {
-  userId: user.id,
-  companyId: company.id,
-  employeeId: employee.id,
-  action: 'EMPLOYEE_CREATE'
-});
+The codebase supports any SQL database via Prisma:
 
-// Error logging
-try {
-  // ... code
-} catch (error) {
-  logger.error('Failed to create employee', {
-    error: error.message,
-    stack: error.stack,
-    userId: user.id,
-    companyId: company.id
-  });
-  throw error;
+| Database | Provider | Connection String Format |
+|----------|----------|-------------------------|
+| PostgreSQL (Supabase) | `postgresql` | `postgresql://user:pass@host:5432/db` |
+| PostgreSQL (AWS RDS) | `postgresql` | `postgresql://user:pass@rds-endpoint:5432/db` |
+| MySQL (RDS/PlanetScale) | `mysql` | `mysql://user:pass@host:3306/db` |
+| Azure SQL | `sqlserver` | `sqlserver://host:1433;database=db;user=sa;password=pass` |
+
+To switch providers, change `provider` in `packages/database/prisma/schema.prisma`:
+
+```prisma
+datasource db {
+  provider  = "mysql"  // or "postgresql", "sqlserver", "cockroachdb"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
-// Audit logging
-logger.audit('Sensitive data accessed', {
-  userId: user.id,
-  companyId: company.id,
-  resourceType: 'EMPLOYEE_SALARY',
-  resourceId: employee.id,
-  action: 'READ'
-});
 ```
 
-## 🔒 Security
-
-- **Encryption**: AES-256-GCM for PII (Aadhaar, PAN, Bank details)
-- **Authentication**: JWT with refresh tokens
-- **Authorization**: Role-based access control (RBAC)
-- **Multi-tenancy**: Row-level security with company isolation
-- **Rate Limiting**: Redis-backed rate limiting
-- **Audit Logging**: Complete audit trail of all operations
-- **Data Retention**: Configurable retention policies
-
-## 🧪 Testing
+### Other database commands
 
 ```bash
-# Run all tests
-yarn test
-
-# Run tests with coverage
-yarn test:coverage
-
-# Run tests in watch mode
-yarn test:watch
-
-# Run specific test file
-yarn test employee.service.test.ts
+yarn db:studio          # Open Prisma Studio (visual DB editor)
+yarn db:seed            # Run seed script
+yarn db:reset           # Reset DB + re-run all migrations + seed
+yarn db:migrate         # Apply pending migrations (production)
+yarn db:migrate:dev     # Create + apply migration (development)
 ```
 
-### Test Structure
+## Available Scripts
+
+### Root (Turborepo)
+
+| Command | Description |
+|---------|-------------|
+| `yarn dev` | Start all 4 apps in dev mode |
+| `yarn build` | Build all apps for production |
+| `yarn type-check` | TypeScript checking across all packages |
+| `yarn lint` | ESLint across all packages |
+| `yarn format` | Prettier formatting |
+| `yarn test` | Run all tests |
+
+### Database
+
+| Command | Description |
+|---------|-------------|
+| `yarn db:migrate:dev` | Create + apply migration (development) |
+| `yarn db:migrate` | Apply pending migrations (production) |
+| `yarn db:studio` | Open Prisma Studio GUI |
+| `yarn db:seed` | Seed database with demo data |
+| `yarn db:reset` | Reset database (destructive!) |
+
+## Project Structure
+
+### Tenant API (`apps/api`) — 36 modules
+
+Core HR, attendance, leave, payroll, performance, recruitment, training, assets, expenses, shifts, policies, analytics, surveys, timesheets, contractors, geofencing, offboarding, social directory, workflows, notifications, documents, API keys, webhooks, custom fields, import/export, and more.
+
+### Admin API (`apps/admin-api`) — 4 modules
+
+Company management, feature add-ons, billing/invoicing, revenue dashboard.
+
+### Security
+
+- **RBAC**: 5-tier roles (SUPER_ADMIN > COMPANY_ADMIN > HR_ADMIN > MANAGER > EMPLOYEE)
+- **Permissions**: 50+ granular permissions
+- **Guard chain**: JWT > Throttler > CompanyIsolation > Subscription > Feature > Roles > Permissions
+- **Encryption**: AES-256-CBC for PII (SSN, Aadhaar, bank details, salary)
+- **Multi-tenancy**: Row-level isolation via companyId
+- **Feature flags**: Tier-based (FREE/BASIC/PROFESSIONAL/ENTERPRISE) + paid add-ons
+
+### Frontend Features
+
+Dark mode, i18n (English/Spanish), real-time WebSocket notifications, org chart, activity feed, calendar widget, help panel, configurable dashboards.
+
+## Environment Variable Reference
+
+See `.env.example` in each app directory for full documentation. Quick reference:
 
 ```
-src/
-├── employees/
-│   ├── __tests__/
-│   │   ├── employee.service.test.ts
-│   │   ├── employee.repository.test.ts
-│   │   └── create-employee.use-case.test.ts
-│   └── ...
+apps/api/.env              ← All backend secrets (DB, JWT, encryption, SMTP)
+apps/admin-api/.env        ← DB + JWT (must match api)
+apps/web/.env.local        ← Public URLs + server-side DB/JWT
+apps/admin/.env.local      ← Public URLs only (no secrets needed)
+packages/database/.env     ← DB URL for Prisma CLI
 ```
 
-## 📚 Documentation
+## License
 
-- [Features Documentation](./docs/enterprise-crm-features-v2-updated.md)
-- [Technical Design](./docs/enterprise-crm-technical-design-v2.md)
-- [Analytics Module](./docs/analytics-reporting-module.md)
-- [API Documentation](./docs/api/) (Coming soon)
-
-## 🛣️ Roadmap
-
-### Phase 1: Foundation (Current)
-- ✅ Monorepo setup
-- ✅ Docker Compose setup
-- ✅ Logging infrastructure
-- ⏳ Database schema
-- ⏳ Authentication service
-- ⏳ Employee management
-
-### Phase 2: Core HRIS
-- ⏳ Attendance & time tracking
-- ⏳ Leave management
-- ⏳ Basic payroll (India)
-
-### Phase 3: Advanced Features
-- ⏳ Performance management
-- ⏳ Recruitment & ATS
-- ⏳ Mobile apps
-- ⏳ US payroll support
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](./CONTRIBUTING.md) for details.
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
-## 👥 Team
-
-- **Milind Prabhakar** - Project Lead
-
-## 🙏 Acknowledgments
-
-- Built with [Next.js](https://nextjs.org/)
-- Database powered by [PostgreSQL](https://www.postgresql.org/)
-- ORM by [Prisma](https://www.prisma.io/)
-- Logging with [Winston](https://github.com/winstonjs/winston)
-- Monorepo by [Turborepo](https://turbo.build/)
-
-## 📞 Support
-
-- Documentation: [Read the docs](./docs/)
-- Issues: [GitHub Issues](https://github.com/yourusername/hrplatform/issues)
-- Email: support@hrplatform.com
-
----
-
-**Built with ❤️ using enterprise-grade architecture and SOLID principles**
+MIT

@@ -5,6 +5,7 @@
 import "dotenv/config"; // loads .env from current working dir
 import { PrismaClient } from '@prisma/client';
 import * as crypto from 'crypto';
+import * as bcrypt from 'bcryptjs';
 
 import * as dotenv from "dotenv";
 import path from "path";
@@ -41,9 +42,20 @@ async function main() {
       state: 'Karnataka',
       country: 'India',
       postalCode: '560001',
-      subscriptionTier: 'PREMIUM',
+      subscriptionTier: 'ENTERPRISE',
       subscriptionStatus: 'ACTIVE',
-      featuresEnabled: ['ATTENDANCE', 'LEAVE', 'PAYROLL', 'PERFORMANCE'],
+      featuresEnabled: [
+        'ATTENDANCE', 'LEAVE', 'PAYROLL', 'PERFORMANCE', 'RECRUITMENT',
+        'TRAINING', 'ASSETS', 'EXPENSES', 'SHIFTS', 'POLICIES',
+        'CUSTOM_FIELDS', 'API_ACCESS', 'WEBHOOKS', 'AUDIT_LOGS',
+        'ADVANCED_REPORTS', 'SSO', 'OFFBOARDING', 'DIRECTORY',
+        'SOCIAL_FEED', 'SURVEYS', 'TIME_TRACKING', 'CONTRACTORS',
+        'ANALYTICS', 'GEOFENCING', 'LEAVE_POLICIES', 'DELEGATIONS',
+      ],
+      payrollCountry: 'IN',
+      payFrequency: 'MONTHLY',
+      pfEnabled: true,
+      esiEnabled: false,
     },
   });
   console.log(`✅ Company created: ${company.companyName} (${company.id})\n`);
@@ -182,10 +194,12 @@ async function main() {
 
   // 5. Create admin user
   console.log('🔐 Creating admin user...');
+  const adminPasswordHash = await bcrypt.hash('Test@12345', 12);
   const adminUser = await prisma.user.create({
     data: {
       companyId: company.id,
       email: 'admin@demotech.com',
+      passwordHash: adminPasswordHash,
       firstName: 'Admin',
       lastName: 'User',
       role: 'COMPANY_ADMIN',
@@ -258,7 +272,194 @@ async function main() {
   });
   console.log(`✅ Created ${2} leave applications\n`);
 
-  // 8. Create sample payroll record
+  // 8. Seed Tax Configurations (day-0 rates for India & US)
+  console.log('📊 Seeding tax configurations...');
+  const taxConfigs = [
+    {
+      country: 'IN',
+      configKey: 'IN_NEW_REGIME_BRACKETS',
+      configValue: {
+        fiscalYear: 2025,
+        standardDeduction: 75000,
+        slabs: [
+          { min: 0, max: 400000, rate: 0 },
+          { min: 400000, max: 800000, rate: 5 },
+          { min: 800000, max: 1200000, rate: 10 },
+          { min: 1200000, max: 1600000, rate: 15 },
+          { min: 1600000, max: 2000000, rate: 20 },
+          { min: 2000000, max: 2400000, rate: 25 },
+          { min: 2400000, max: null, rate: 30 },
+        ],
+        rebate87A: { maxIncome: 1200000, maxRebate: 60000 },
+        cess: 4,
+      },
+      fiscalYear: 2025,
+      effectiveFrom: new Date('2025-04-01'),
+      effectiveTo: new Date('2026-03-31'),
+    },
+    {
+      country: 'IN',
+      configKey: 'IN_OLD_REGIME_BRACKETS',
+      configValue: {
+        fiscalYear: 2025,
+        standardDeduction: 50000,
+        slabs: [
+          { min: 0, max: 250000, rate: 0 },
+          { min: 250000, max: 500000, rate: 5 },
+          { min: 500000, max: 1000000, rate: 20 },
+          { min: 1000000, max: null, rate: 30 },
+        ],
+        rebate87A: { maxIncome: 500000, maxRebate: 12500 },
+        cess: 4,
+      },
+      fiscalYear: 2025,
+      effectiveFrom: new Date('2025-04-01'),
+      effectiveTo: new Date('2026-03-31'),
+    },
+    {
+      country: 'IN',
+      configKey: 'IN_PF_CONFIG',
+      configValue: { employeeRate: 12, employerEpfRate: 3.67, employerEpsRate: 8.33, ceilingMonthly: 15000 },
+      fiscalYear: 2025,
+      effectiveFrom: new Date('2025-04-01'),
+      effectiveTo: new Date('2026-03-31'),
+    },
+    {
+      country: 'IN',
+      configKey: 'IN_ESI_CONFIG',
+      configValue: { employeeRate: 0.75, employerRate: 3.25, grossCeilingMonthly: 21000 },
+      fiscalYear: 2025,
+      effectiveFrom: new Date('2025-04-01'),
+      effectiveTo: new Date('2026-03-31'),
+    },
+    {
+      country: 'IN',
+      configKey: 'IN_PROFESSIONAL_TAX',
+      configValue: {
+        Karnataka: [{ minMonthly: 0, maxMonthly: 15000, tax: 0 }, { minMonthly: 15001, maxMonthly: null, tax: 200 }],
+        Maharashtra: [{ minMonthly: 0, maxMonthly: 7500, tax: 0 }, { minMonthly: 7501, maxMonthly: 10000, tax: 175 }, { minMonthly: 10001, maxMonthly: null, tax: 200 }],
+        'Tamil Nadu': [{ minMonthly: 0, maxMonthly: 21000, tax: 0 }, { minMonthly: 21001, maxMonthly: 30000, tax: 135 }, { minMonthly: 30001, maxMonthly: 45000, tax: 315 }, { minMonthly: 45001, maxMonthly: 60000, tax: 690 }, { minMonthly: 60001, maxMonthly: 75000, tax: 1025 }, { minMonthly: 75001, maxMonthly: null, tax: 1250 }],
+        Telangana: [{ minMonthly: 0, maxMonthly: 15000, tax: 0 }, { minMonthly: 15001, maxMonthly: 20000, tax: 150 }, { minMonthly: 20001, maxMonthly: null, tax: 200 }],
+      },
+      fiscalYear: 2025,
+      effectiveFrom: new Date('2025-04-01'),
+      effectiveTo: new Date('2026-03-31'),
+    },
+    {
+      country: 'US',
+      configKey: 'US_FICA_CONFIG',
+      configValue: {
+        socialSecurity: { employeeRate: 6.2, employerRate: 6.2, wageCap: 176100 },
+        medicare: { employeeRate: 1.45, employerRate: 1.45, additionalMedicareRate: 0.9, additionalMedicareThreshold: 200000 },
+      },
+      fiscalYear: 2025,
+      effectiveFrom: new Date('2025-01-01'),
+      effectiveTo: new Date('2025-12-31'),
+    },
+    {
+      country: 'US',
+      configKey: 'US_FEDERAL_TAX',
+      configValue: {
+        standardDeduction: { SINGLE: 15750, MARRIED_FILING_JOINTLY: 31500, MARRIED_FILING_SEPARATELY: 15750, HEAD_OF_HOUSEHOLD: 23625 },
+        brackets: {
+          SINGLE: [
+            { min: 0, max: 11925, rate: 10 }, { min: 11925, max: 48475, rate: 12 },
+            { min: 48475, max: 103350, rate: 22 }, { min: 103350, max: 197300, rate: 24 },
+            { min: 197300, max: 250525, rate: 32 }, { min: 250525, max: 626350, rate: 35 },
+            { min: 626350, max: null, rate: 37 },
+          ],
+          MARRIED_FILING_JOINTLY: [
+            { min: 0, max: 23850, rate: 10 }, { min: 23850, max: 96950, rate: 12 },
+            { min: 96950, max: 206700, rate: 22 }, { min: 206700, max: 394600, rate: 24 },
+            { min: 394600, max: 501050, rate: 32 }, { min: 501050, max: 751600, rate: 35 },
+            { min: 751600, max: null, rate: 37 },
+          ],
+        },
+      },
+      fiscalYear: 2025,
+      effectiveFrom: new Date('2025-01-01'),
+      effectiveTo: new Date('2025-12-31'),
+    },
+    {
+      country: 'US',
+      configKey: 'US_STATE_TAX',
+      configValue: {
+        TX: { type: 'none' }, FL: { type: 'none' }, WA: { type: 'none' }, NV: { type: 'none' },
+        IL: { type: 'flat', rate: 4.95 }, PA: { type: 'flat', rate: 3.07 }, CO: { type: 'flat', rate: 4.4 },
+        CA: { type: 'bracket', brackets: [
+          { min: 0, max: 10412, rate: 1 }, { min: 10412, max: 24684, rate: 2 },
+          { min: 24684, max: 38959, rate: 4 }, { min: 38959, max: 54081, rate: 6 },
+          { min: 54081, max: 68350, rate: 8 }, { min: 68350, max: 349137, rate: 9.3 },
+          { min: 349137, max: null, rate: 12.3 },
+        ]},
+        NY: { type: 'bracket', brackets: [
+          { min: 0, max: 8500, rate: 4 }, { min: 8500, max: 11700, rate: 4.5 },
+          { min: 11700, max: 80650, rate: 5.5 }, { min: 80650, max: 215400, rate: 6 },
+          { min: 215400, max: 1077550, rate: 6.85 }, { min: 1077550, max: null, rate: 10.9 },
+        ]},
+      },
+      fiscalYear: 2025,
+      effectiveFrom: new Date('2025-01-01'),
+      effectiveTo: new Date('2025-12-31'),
+    },
+  ];
+
+  let taxConfigCount = 0;
+  for (const config of taxConfigs) {
+    await prisma.taxConfiguration.upsert({
+      where: {
+        country_configKey_fiscalYear: {
+          country: config.country,
+          configKey: config.configKey,
+          fiscalYear: config.fiscalYear,
+        },
+      },
+      update: { configValue: config.configValue as any, effectiveFrom: config.effectiveFrom, effectiveTo: config.effectiveTo, isActive: true },
+      create: { ...config, configValue: config.configValue as any, isActive: true },
+    });
+    taxConfigCount++;
+  }
+  console.log(`✅ Seeded ${taxConfigCount} tax configurations (India FY 2025-26 + US 2025)\n`);
+
+  // 9. Create default salary structure for the company
+  console.log('💼 Creating salary structure...');
+  const seedStructureId = '00000000-0000-4000-a000-000000000001';
+  const salaryStructure = await prisma.salaryStructure.upsert({
+    where: { id: seedStructureId },
+    update: {},
+    create: {
+      id: seedStructureId,
+      companyId: company.id,
+      name: 'Standard CTC Structure (India)',
+      description: 'Default salary breakup: 50% Basic, 20% HRA, 10% Special Allowance, 20% Other',
+      country: 'IN',
+      components: [
+        { name: 'Basic Salary', type: 'EARNING', calculationType: 'PERCENTAGE_OF_GROSS', value: 50, isTaxable: true },
+        { name: 'HRA', type: 'EARNING', calculationType: 'PERCENTAGE_OF_BASIC', value: 40, isTaxable: true },
+        { name: 'Special Allowance', type: 'EARNING', calculationType: 'PERCENTAGE_OF_GROSS', value: 10, isTaxable: true },
+        { name: 'Other Allowances', type: 'EARNING', calculationType: 'PERCENTAGE_OF_GROSS', value: 20, isTaxable: false },
+      ] as any,
+      isActive: true,
+    },
+  });
+  console.log(`✅ Salary structure created: ${salaryStructure.name}\n`);
+
+  // Update employees with salary structure and annual CTC
+  await prisma.employee.update({
+    where: { id: emp1.id },
+    data: { salaryStructureId: salaryStructure.id, annualCtc: 1200000 },
+  });
+  await prisma.employee.update({
+    where: { id: emp2.id },
+    data: { salaryStructureId: salaryStructure.id, annualCtc: 1000000 },
+  });
+  await prisma.employee.update({
+    where: { id: emp3.id },
+    data: { salaryStructureId: salaryStructure.id, annualCtc: 600000 },
+  });
+  console.log(`✅ Linked 3 employees to salary structure with annual CTC\n`);
+
+  // 10. Create sample payroll record
   console.log('💰 Creating payroll records...');
   await prisma.payroll.create({
     data: {
@@ -303,10 +504,12 @@ async function main() {
   console.log(`   - 1 Company: ${company.companyName}`);
   console.log(`   - 3 Departments`);
   console.log(`   - 3 Designations`);
-  console.log(`   - 3 Employees`);
+  console.log(`   - 3 Employees (with salary structure + annual CTC)`);
   console.log(`   - 1 Admin User: ${adminUser.email}`);
   console.log(`   - ${attendanceCount} Attendance records`);
   console.log(`   - 2 Leave applications`);
+  console.log(`   - ${taxConfigCount} Tax configurations (India + US)`);
+  console.log(`   - 1 Salary structure: ${salaryStructure.name}`);
   console.log(`   - 1 Payroll record`);
   console.log(`   - 1 Audit log\n`);
 }

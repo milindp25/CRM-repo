@@ -316,6 +316,132 @@ export interface PayrollPaginationResponse {
   };
 }
 
+// ==================== Payroll Extended Types (Overhaul) ====================
+
+export interface SalaryComponent {
+  name: string;
+  type: 'EARNING' | 'DEDUCTION';
+  calculationType: 'FIXED' | 'PERCENTAGE_OF_BASIC' | 'PERCENTAGE_OF_GROSS';
+  value: number;
+  isTaxable: boolean;
+}
+
+export interface SalaryStructure {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  country: string;
+  components: SalaryComponent[];
+  designationId?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSalaryStructureData {
+  name: string;
+  description?: string;
+  country: string;
+  components: SalaryComponent[];
+  designationId?: string;
+}
+
+export interface UpdateSalaryStructureData {
+  name?: string;
+  description?: string;
+  country?: string;
+  components?: SalaryComponent[];
+  designationId?: string;
+  isActive?: boolean;
+}
+
+export interface SalaryStructurePaginationResponse {
+  data: SalaryStructure[];
+  meta: {
+    totalItems: number;
+    itemsPerPage: number;
+    currentPage: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+export interface PayrollBatch {
+  id: string;
+  companyId: string;
+  month: number;
+  year: number;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'PARTIAL';
+  totalCount: number;
+  processedCount: number;
+  failedCount: number;
+  errors?: Array<{ employeeId: string; error: string }>;
+  initiatedBy?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayrollYTD {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  fiscalYear: number;
+  grossEarnings: number;
+  totalDeductions: number;
+  taxPaid: number;
+  pfEmployeeYtd?: number;
+  pfEmployerYtd?: number;
+  esiEmployeeYtd?: number;
+  esiEmployerYtd?: number;
+  tdsYtd?: number;
+  ptYtd?: number;
+  ssEmployeeYtd?: number;
+  ssEmployerYtd?: number;
+  medicareYtd?: number;
+  federalTaxYtd?: number;
+  stateTaxYtd?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReconciliationAnomaly {
+  employeeId: string;
+  employeeName: string;
+  type: 'MISSING' | 'NEW' | 'SALARY_CHANGE' | 'DEDUCTION_CHANGE';
+  currentGross?: number;
+  previousGross?: number;
+  changePercent?: number;
+  details: string;
+}
+
+export interface ReconciliationReport {
+  month: number;
+  year: number;
+  currentBatchTotal: number;
+  previousBatchTotal: number;
+  variance: number;
+  variancePercent: number;
+  headcountChange: number;
+  anomalies: ReconciliationAnomaly[];
+}
+
+export interface PayrollCompanySettings {
+  payrollCountry?: string;
+  payFrequency?: string;
+  pfEnabled?: boolean;
+  esiEnabled?: boolean;
+  emailPayslipEnabled?: boolean;
+  companyPan?: string;
+  gstin?: string;
+  tan?: string;
+  pfRegNo?: string;
+  esiRegNo?: string;
+  ein?: string;
+}
+
 // ==================== User & Company Types ====================
 
 export interface CompanyUser {
@@ -347,6 +473,15 @@ export interface Company {
   postalCode?: string;
   gstin?: string;
   pan?: string;
+  payrollCountry?: string;
+  payFrequency?: string;
+  pfEnabled?: boolean;
+  esiEnabled?: boolean;
+  emailPayslipEnabled?: boolean;
+  tan?: string;
+  pfRegNo?: string;
+  esiRegNo?: string;
+  ein?: string;
   subscriptionTier: string;
   subscriptionStatus: string;
   isActive: boolean;
@@ -368,6 +503,15 @@ export interface UpdateCompanyData {
   postalCode?: string;
   gstin?: string;
   pan?: string;
+  payrollCountry?: string;
+  payFrequency?: string;
+  pfEnabled?: boolean;
+  esiEnabled?: boolean;
+  emailPayslipEnabled?: boolean;
+  tan?: string;
+  pfRegNo?: string;
+  esiRegNo?: string;
+  ein?: string;
 }
 
 // ==================== Audit Log Types ====================
