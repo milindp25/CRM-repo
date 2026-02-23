@@ -111,6 +111,56 @@ export class TimesheetController {
     );
   }
 
+  // ─── Project CRUD (must be above :id route to avoid conflicts) ────
+
+  @Get('projects')
+  @RequirePermissions(Permission.MANAGE_TIMESHEETS, Permission.VIEW_OWN_TIMESHEETS)
+  @ApiOperation({ summary: 'List all projects' })
+  @ApiResponse({ status: 200, description: 'Projects retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getProjects(@CurrentUser() user: JwtPayload) {
+    return this.timesheetService.getProjects(user.companyId);
+  }
+
+  @Post('projects')
+  @RequirePermissions(Permission.MANAGE_TIMESHEETS)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Create a new project' })
+  @ApiResponse({ status: 201, description: 'Project created successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async createProject(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateProjectDto,
+  ) {
+    return this.timesheetService.createProject(
+      user.companyId,
+      user.userId,
+      dto,
+    );
+  }
+
+  @Patch('projects/:id')
+  @RequirePermissions(Permission.MANAGE_TIMESHEETS)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Update a project' })
+  @ApiResponse({ status: 200, description: 'Project updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Project not found' })
+  async updateProject(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+  ) {
+    return this.timesheetService.updateProject(
+      id,
+      user.companyId,
+      user.userId,
+      dto,
+    );
+  }
+
   @Get(':id')
   @RequirePermissions(Permission.VIEW_OWN_TIMESHEETS, Permission.MANAGE_TIMESHEETS)
   @ApiOperation({ summary: 'Get timesheet by ID' })
@@ -250,53 +300,4 @@ export class TimesheetController {
     );
   }
 
-  // ─── Project CRUD ──────────────────────────────────────────────────
-
-  @Get('/projects')
-  @RequirePermissions(Permission.MANAGE_TIMESHEETS, Permission.VIEW_OWN_TIMESHEETS)
-  @ApiOperation({ summary: 'List all projects' })
-  @ApiResponse({ status: 200, description: 'Projects retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProjects(@CurrentUser() user: JwtPayload) {
-    return this.timesheetService.getProjects(user.companyId);
-  }
-
-  @Post('/projects')
-  @RequirePermissions(Permission.MANAGE_TIMESHEETS)
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Create a new project' })
-  @ApiResponse({ status: 201, description: 'Project created successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  async createProject(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: CreateProjectDto,
-  ) {
-    return this.timesheetService.createProject(
-      user.companyId,
-      user.userId,
-      dto,
-    );
-  }
-
-  @Patch('/projects/:id')
-  @RequirePermissions(Permission.MANAGE_TIMESHEETS)
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Update a project' })
-  @ApiResponse({ status: 200, description: 'Project updated successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 404, description: 'Project not found' })
-  async updateProject(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
-    @Body() dto: UpdateProjectDto,
-  ) {
-    return this.timesheetService.updateProject(
-      id,
-      user.companyId,
-      user.userId,
-      dto,
-    );
-  }
 }

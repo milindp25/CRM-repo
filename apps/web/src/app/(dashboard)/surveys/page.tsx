@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 interface Survey {
   id: string;
@@ -18,10 +19,9 @@ interface Survey {
 }
 
 export default function SurveysPage() {
+  const toast = useToast();
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [responding, setResponding] = useState(false);
@@ -42,43 +42,76 @@ export default function SurveysPage() {
       setLoading(true);
       const data = await apiClient.request('/surveys');
       setSurveys(Array.isArray(data) ? data : data?.data || []);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to load surveys', err.message); }
     finally { setLoading(false); }
+  };
+
+  const validateCreateForm = (): boolean => {
+    if (!form.title.trim()) {
+      toast.error('Validation Error', 'Survey title is required');
+      return false;
+    }
+    if (form.questions.length === 0) {
+      toast.error('Validation Error', 'Add at least one question');
+      return false;
+    }
+    for (let i = 0; i < form.questions.length; i++) {
+      if (!form.questions[i].text.trim()) {
+        toast.error('Validation Error', `Question ${i + 1} text is required`);
+        return false;
+      }
+      if (form.questions[i].type === 'MULTIPLE_CHOICE' && (!form.questions[i].options || form.questions[i].options.length < 2)) {
+        toast.error('Validation Error', `Question ${i + 1} (Multiple Choice) needs at least 2 options`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const validateResponse = (): boolean => {
+    if (!selectedSurvey) return false;
+    const questions = selectedSurvey.questions || [];
+    for (const q of questions) {
+      if (q.required && (answers[q.id] === undefined || answers[q.id] === '')) {
+        toast.error('Required Question', `Please answer: "${q.text}"`);
+        return false;
+      }
+    }
+    return true;
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateCreateForm()) return;
     try {
       await apiClient.request('/surveys', {
         method: 'POST',
         body: JSON.stringify(form),
       });
       setShowCreate(false);
-      setSuccess('Survey created');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Survey Created', `Survey "${form.title}" is ready as a draft`);
       fetchSurveys();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to create survey', err.message); }
   };
 
   const handleActivate = async (id: string) => {
     try {
       await apiClient.request(`/surveys/${id}/activate`, { method: 'POST' });
-      setSuccess('Survey activated');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Survey Activated', 'Employees can now respond to this survey');
       fetchSurveys();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to activate survey', err.message); }
   };
 
   const handleClose = async (id: string) => {
     try {
       await apiClient.request(`/surveys/${id}/close`, { method: 'POST' });
-      setSuccess('Survey closed');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.info('Survey Closed', 'No more responses will be accepted');
       fetchSurveys();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to close survey', err.message); }
   };
 
   const handleRespond = async (surveyId: string) => {
+    if (!validateResponse()) return;
     try {
       const answerArray = Object.entries(answers).map(([questionId, value]) => ({ questionId, value }));
       await apiClient.request(`/surveys/${surveyId}/responses`, {
@@ -88,16 +121,15 @@ export default function SurveysPage() {
       setResponding(false);
       setSelectedSurvey(null);
       setAnswers({});
-      setSuccess('Response submitted');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) { setError(err.message); }
+      toast.success('Response Submitted', 'Thank you for your feedback!');
+    } catch (err: any) { toast.error('Failed to submit response', err.message); }
   };
 
   const fetchAnalytics = async (id: string) => {
     try {
       const data = await apiClient.request(`/surveys/${id}/analytics`);
       setAnalytics(data);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to load analytics', err.message); }
   };
 
   const addQuestion = () => {
@@ -180,9 +212,6 @@ export default function SurveysPage() {
           {showCreate ? 'Cancel' : 'Create Survey'}
         </button>
       </div>
-
-      {error && <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>}
-      {success && <div className="p-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg">{success}</div>}
 
       {showCreate && (
         <form onSubmit={handleCreate} className="bg-card border border-border rounded-lg p-6 space-y-4">

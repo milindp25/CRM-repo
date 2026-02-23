@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 interface LeavePolicy {
   id: string;
@@ -15,10 +16,9 @@ interface LeavePolicy {
 }
 
 export default function LeavePoliciesPage() {
+  const toast = useToast();
   const [policies, setPolicies] = useState<LeavePolicy[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
     leaveType: 'CASUAL',
@@ -35,19 +35,53 @@ export default function LeavePoliciesPage() {
   const fetchPolicies = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.request('/leave/policies');
+      const data = await apiClient.request('/leave-policies');
       setPolicies(Array.isArray(data) ? data : data?.data || []);
     } catch (err: any) {
-      setError(err.message);
+      toast.error('Failed to load policies', err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const validateForm = (): boolean => {
+    if (!form.name.trim()) {
+      toast.error('Validation Error', 'Policy name is required');
+      return false;
+    }
+    const entitlement = Number(form.annualEntitlement);
+    if (!entitlement || entitlement <= 0) {
+      toast.error('Validation Error', 'Annual entitlement must be greater than 0');
+      return false;
+    }
+    if (entitlement > 365) {
+      toast.error('Validation Error', 'Annual entitlement cannot exceed 365 days');
+      return false;
+    }
+    const carryover = Number(form.carryoverLimit);
+    if (carryover < 0) {
+      toast.error('Validation Error', 'Carryover limit cannot be negative');
+      return false;
+    }
+    if (carryover > entitlement) {
+      toast.error('Validation Error', 'Carryover limit cannot exceed annual entitlement');
+      return false;
+    }
+    if (form.maxConsecutiveDays) {
+      const maxDays = Number(form.maxConsecutiveDays);
+      if (maxDays <= 0) {
+        toast.error('Validation Error', 'Max consecutive days must be greater than 0');
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     try {
-      await apiClient.request('/leave/policies', {
+      await apiClient.request('/leave-policies', {
         method: 'POST',
         body: JSON.stringify({
           ...form,
@@ -58,11 +92,10 @@ export default function LeavePoliciesPage() {
         }),
       });
       setShowCreate(false);
-      setSuccess('Policy created');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Policy Created', `Leave policy "${form.name}" has been created`);
       fetchPolicies();
     } catch (err: any) {
-      setError(err.message);
+      toast.error('Failed to create policy', err.message);
     }
   };
 
@@ -80,9 +113,6 @@ export default function LeavePoliciesPage() {
           {showCreate ? 'Cancel' : 'New Policy'}
         </button>
       </div>
-
-      {error && <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>}
-      {success && <div className="p-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg">{success}</div>}
 
       {showCreate && (
         <form onSubmit={handleCreate} className="bg-card border border-border rounded-lg p-6 space-y-4">

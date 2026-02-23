@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 interface OffboardingProcess {
   id: string;
@@ -14,12 +15,12 @@ interface OffboardingProcess {
 }
 
 export default function OffboardingPage() {
+  const toast = useToast();
   const [processes, setProcesses] = useState<OffboardingProcess[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showStart, setShowStart] = useState(false);
   const [selectedProcess, setSelectedProcess] = useState<OffboardingProcess | null>(null);
+  const [confirmComplete, setConfirmComplete] = useState(false);
   const [form, setForm] = useState({ employeeId: '', separationType: 'RESIGNATION', lastWorkingDay: '' });
   const [employees, setEmployees] = useState<any[]>([]);
 
@@ -30,7 +31,7 @@ export default function OffboardingPage() {
       setLoading(true);
       const data = await apiClient.request('/offboarding');
       setProcesses(Array.isArray(data) ? data : data?.data || []);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to load offboarding processes', err.message); }
     finally { setLoading(false); }
   };
 
@@ -41,15 +42,31 @@ export default function OffboardingPage() {
     } catch {}
   };
 
+  const validateForm = (): boolean => {
+    if (!form.employeeId) {
+      toast.error('Validation Error', 'Please select an employee');
+      return false;
+    }
+    if (!form.lastWorkingDay) {
+      toast.error('Validation Error', 'Please select a last working day');
+      return false;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    if (form.lastWorkingDay < today) {
+      toast.warning('Date Warning', 'Last working day is in the past');
+    }
+    return true;
+  };
+
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     try {
       await apiClient.request('/offboarding/start', { method: 'POST', body: JSON.stringify(form) });
       setShowStart(false);
-      setSuccess('Offboarding started');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Offboarding Started', 'The offboarding process has been initiated');
       fetchProcesses();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to start offboarding', err.message); }
   };
 
   const handleCompleteTask = async (processId: string, taskId: string) => {
@@ -58,24 +75,23 @@ export default function OffboardingPage() {
         method: 'PATCH',
         body: JSON.stringify({ status: 'COMPLETED' }),
       });
-      setSuccess('Task completed');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Task Completed', 'Offboarding task marked as complete');
       fetchProcesses();
       if (selectedProcess?.id === processId) {
         const updated = await apiClient.request(`/offboarding/${processId}`);
         setSelectedProcess(updated);
       }
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to complete task', err.message); }
   };
 
   const handleComplete = async (processId: string) => {
     try {
       await apiClient.request(`/offboarding/${processId}/complete`, { method: 'POST' });
-      setSuccess('Offboarding completed');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Offboarding Completed', 'Employee has been offboarded and deactivated');
       setSelectedProcess(null);
+      setConfirmComplete(false);
       fetchProcesses();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to complete offboarding', err.message); }
   };
 
   const statusColors: Record<string, string> = {
@@ -102,9 +118,7 @@ export default function OffboardingPage() {
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[selectedProcess.status] || ''}`}>{selectedProcess.status}</span>
         </div>
 
-        {error && <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>}
-        {success && <div className="p-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg">{success}</div>}
-
+        
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-foreground">Progress</span>
@@ -141,10 +155,23 @@ export default function OffboardingPage() {
           ))}
         </div>
 
-        {selectedProcess.status !== 'COMPLETED' && (
-          <button onClick={() => handleComplete(selectedProcess.id)} className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">
+        {selectedProcess.status !== 'COMPLETED' && !confirmComplete && (
+          <button onClick={() => setConfirmComplete(true)} className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">
             Complete Offboarding
           </button>
+        )}
+        {confirmComplete && (
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-3">
+            <p className="text-sm font-medium text-destructive">Are you sure? This will deactivate the employee account and cannot be undone.</p>
+            <div className="flex gap-2">
+              <button onClick={() => handleComplete(selectedProcess.id)} className="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:opacity-90 text-sm">
+                Yes, Complete Offboarding
+              </button>
+              <button onClick={() => setConfirmComplete(false)} className="px-4 py-2 border border-border text-foreground rounded-lg hover:bg-muted text-sm">
+                Cancel
+              </button>
+            </div>
+          </div>
         )}
       </div>
     );
@@ -161,9 +188,6 @@ export default function OffboardingPage() {
           {showStart ? 'Cancel' : 'Start Offboarding'}
         </button>
       </div>
-
-      {error && <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>}
-      {success && <div className="p-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg">{success}</div>}
 
       {showStart && (
         <form onSubmit={handleStart} className="bg-card border border-border rounded-lg p-6 space-y-4">

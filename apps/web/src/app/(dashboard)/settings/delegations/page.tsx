@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 interface Delegation {
   id: string;
@@ -24,11 +25,10 @@ interface UserOption {
 }
 
 export default function DelegationsPage() {
+  const toast = useToast();
   const [delegations, setDelegations] = useState<Delegation[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
     delegateId: '',
@@ -49,7 +49,7 @@ export default function DelegationsPage() {
       const data = await apiClient.request('/workflows/delegations');
       setDelegations(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      setError(err.message);
+      toast.error('Failed to load delegations', err.message);
     } finally {
       setLoading(false);
     }
@@ -62,8 +62,32 @@ export default function DelegationsPage() {
     } catch {}
   };
 
+  const validateForm = (): boolean => {
+    if (!form.delegateId) {
+      toast.error('Validation Error', 'Please select a delegate');
+      return false;
+    }
+    if (!form.startDate) {
+      toast.error('Validation Error', 'Please select a start date');
+      return false;
+    }
+    if (!form.endDate) {
+      toast.error('Validation Error', 'Please select an end date');
+      return false;
+    }
+    if (new Date(form.endDate) <= new Date(form.startDate)) {
+      toast.error('Validation Error', 'End date must be after start date');
+      return false;
+    }
+    if (new Date(form.startDate) < new Date(new Date().toISOString().split('T')[0])) {
+      toast.warning('Date Warning', 'Start date is in the past');
+    }
+    return true;
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     try {
       await apiClient.request('/workflows/delegations', {
         method: 'POST',
@@ -74,22 +98,20 @@ export default function DelegationsPage() {
       });
       setShowCreate(false);
       setForm({ delegateId: '', startDate: '', endDate: '', reason: '', scope: [] });
-      setSuccess('Delegation created');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Delegation Created', 'Approval delegation has been set up successfully');
       fetchDelegations();
     } catch (err: any) {
-      setError(err.message);
+      toast.error('Failed to create delegation', err.message);
     }
   };
 
   const handleRevoke = async (id: string) => {
     try {
       await apiClient.request(`/workflows/delegations/${id}`, { method: 'DELETE' });
-      setSuccess('Delegation revoked');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Delegation Revoked', 'The delegation has been revoked');
       fetchDelegations();
     } catch (err: any) {
-      setError(err.message);
+      toast.error('Failed to revoke delegation', err.message);
     }
   };
 
@@ -109,9 +131,6 @@ export default function DelegationsPage() {
           {showCreate ? 'Cancel' : 'New Delegation'}
         </button>
       </div>
-
-      {error && <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>}
-      {success && <div className="p-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg">{success}</div>}
 
       {showCreate && (
         <form onSubmit={handleCreate} className="bg-card border border-border rounded-lg p-6 space-y-4">

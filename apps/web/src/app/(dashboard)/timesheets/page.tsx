@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 interface TimeEntry {
   id: string;
@@ -26,10 +27,9 @@ interface Timesheet {
 }
 
 export default function TimesheetsPage() {
+  const toast = useToast();
   const [timesheets, setTimesheets] = useState<Timesheet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [selectedSheet, setSelectedSheet] = useState<Timesheet | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [weekStart, setWeekStart] = useState('');
@@ -42,24 +42,53 @@ export default function TimesheetsPage() {
       setLoading(true);
       const data = await apiClient.request('/timesheets/my');
       setTimesheets(Array.isArray(data) ? data : data?.data || []);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to load timesheets', err.message); }
     finally { setLoading(false); }
   };
 
+  const validateWeekStart = (): boolean => {
+    if (!weekStart) {
+      toast.error('Validation Error', 'Please select a week start date');
+      return false;
+    }
+    const date = new Date(weekStart);
+    if (date.getUTCDay() !== 1) {
+      toast.warning('Auto-adjusted', 'Date will be normalized to the nearest Monday by the server');
+    }
+    return true;
+  };
+
+  const validateEntry = (): boolean => {
+    if (!entryForm.date) {
+      toast.error('Validation Error', 'Please select a date for this entry');
+      return false;
+    }
+    if (!entryForm.hours || Number(entryForm.hours) <= 0) {
+      toast.error('Validation Error', 'Hours must be greater than 0');
+      return false;
+    }
+    if (Number(entryForm.hours) > 24) {
+      toast.error('Validation Error', 'Hours cannot exceed 24 per day');
+      return false;
+    }
+    return true;
+  };
+
   const handleCreate = async () => {
+    if (!validateWeekStart()) return;
     try {
       const ts = await apiClient.request('/timesheets', { method: 'POST', body: JSON.stringify({ weekStartDate: weekStart }) });
       setShowCreate(false);
       setWeekStart('');
-      setSuccess('Timesheet created');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Timesheet Created', 'You can now add time entries');
       fetchTimesheets();
       setSelectedSheet(ts);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to create timesheet', err.message); }
   };
 
   const handleAddEntry = async () => {
     if (!selectedSheet) return;
+    if (!validateEntry()) return;
     try {
       await apiClient.request(`/timesheets/${selectedSheet.id}/entries`, {
         method: 'POST',
@@ -68,27 +97,30 @@ export default function TimesheetsPage() {
       setEntryForm({ date: '', hours: '', projectName: '', taskDescription: '', entryType: 'REGULAR' });
       const updated = await apiClient.request(`/timesheets/${selectedSheet.id}`);
       setSelectedSheet(updated);
+      toast.success('Entry Added', `${entryForm.hours}h logged`);
       fetchTimesheets();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to add entry', err.message); }
   };
 
   const handleSubmit = async (id: string) => {
+    if (selectedSheet && (!selectedSheet.entries || selectedSheet.entries.length === 0)) {
+      toast.error('Cannot Submit', 'Add at least one time entry before submitting');
+      return;
+    }
     try {
       await apiClient.request(`/timesheets/${id}/submit`, { method: 'POST' });
-      setSuccess('Timesheet submitted');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Timesheet Submitted', 'Your timesheet has been sent for approval');
       setSelectedSheet(null);
       fetchTimesheets();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to submit timesheet', err.message); }
   };
 
   const handleApprove = async (id: string) => {
     try {
       await apiClient.request(`/timesheets/${id}/approve`, { method: 'POST' });
-      setSuccess('Timesheet approved');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Timesheet Approved', 'The timesheet has been approved');
       fetchTimesheets();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to approve timesheet', err.message); }
   };
 
   const statusColors: Record<string, string> = {
@@ -106,8 +138,6 @@ export default function TimesheetsPage() {
           <h1 className="text-2xl font-bold text-foreground">Week of {new Date(selectedSheet.weekStartDate).toLocaleDateString()}</h1>
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[selectedSheet.status]}`}>{selectedSheet.status}</span>
         </div>
-
-        {error && <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>}
 
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex justify-between items-center mb-2">
@@ -174,8 +204,6 @@ export default function TimesheetsPage() {
         </button>
       </div>
 
-      {error && <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>}
-      {success && <div className="p-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg">{success}</div>}
 
       {showCreate && (
         <div className="bg-card border border-border rounded-lg p-4 flex items-end gap-4">

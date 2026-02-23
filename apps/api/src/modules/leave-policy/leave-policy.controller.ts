@@ -32,14 +32,14 @@ interface JwtPayload {
 @ApiTags('Leave Policies & Balances')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Controller({ path: 'leave', version: '1' })
+@Controller({ path: 'leave-policies', version: '1' })
 @RequireFeature('LEAVE_POLICIES')
 export class LeavePolicyController {
   constructor(private readonly leavePolicyService: LeavePolicyService) {}
 
   // ─── Policy CRUD ─────────────────────────────────────────────────────
 
-  @Get('policies')
+  @Get()
   @RequirePermissions(Permission.MANAGE_LEAVE_POLICIES, Permission.VIEW_LEAVE_BALANCES)
   @ApiOperation({ summary: 'List all leave policies for the company' })
   @ApiResponse({ status: 200, description: 'Leave policies retrieved successfully' })
@@ -48,7 +48,7 @@ export class LeavePolicyController {
     return this.leavePolicyService.getPolicies(user.companyId);
   }
 
-  @Post('policies')
+  @Post()
   @RequirePermissions(Permission.MANAGE_LEAVE_POLICIES)
   @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
   @ApiOperation({ summary: 'Create a new leave policy' })
@@ -63,7 +63,7 @@ export class LeavePolicyController {
     return this.leavePolicyService.createPolicy(user.companyId, user.userId, dto);
   }
 
-  @Patch('policies/:id')
+  @Patch(':id')
   @RequirePermissions(Permission.MANAGE_LEAVE_POLICIES)
   @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
   @ApiOperation({ summary: 'Update a leave policy' })
@@ -79,7 +79,7 @@ export class LeavePolicyController {
     return this.leavePolicyService.updatePolicy(id, user.companyId, user.userId, dto);
   }
 
-  @Delete('policies/:id')
+  @Delete(':id')
   @RequirePermissions(Permission.MANAGE_LEAVE_POLICIES)
   @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
   @ApiOperation({ summary: 'Delete a leave policy' })

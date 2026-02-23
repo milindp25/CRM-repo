@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 interface GeofenceZone {
   id: string;
@@ -14,10 +15,9 @@ interface GeofenceZone {
 }
 
 export default function GeofencePage() {
+  const toast = useToast();
   const [zones, setZones] = useState<GeofenceZone[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', latitude: '', longitude: '', radiusMeters: '100', allowedIpRanges: '' });
 
@@ -28,12 +28,48 @@ export default function GeofencePage() {
       setLoading(true);
       const data = await apiClient.request('/geofence/zones');
       setZones(Array.isArray(data) ? data : []);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to load zones', err.message); }
     finally { setLoading(false); }
+  };
+
+  const validateForm = (): boolean => {
+    if (!form.name.trim()) {
+      toast.error('Validation Error', 'Zone name is required');
+      return false;
+    }
+    const lat = Number(form.latitude);
+    const lng = Number(form.longitude);
+    if (!form.latitude || isNaN(lat)) {
+      toast.error('Validation Error', 'Please enter a valid latitude');
+      return false;
+    }
+    if (lat < -90 || lat > 90) {
+      toast.error('Validation Error', 'Latitude must be between -90 and 90');
+      return false;
+    }
+    if (!form.longitude || isNaN(lng)) {
+      toast.error('Validation Error', 'Please enter a valid longitude');
+      return false;
+    }
+    if (lng < -180 || lng > 180) {
+      toast.error('Validation Error', 'Longitude must be between -180 and 180');
+      return false;
+    }
+    const radius = Number(form.radiusMeters);
+    if (!radius || radius <= 0) {
+      toast.error('Validation Error', 'Radius must be greater than 0');
+      return false;
+    }
+    if (radius > 50000) {
+      toast.error('Validation Error', 'Radius cannot exceed 50,000 meters (50km)');
+      return false;
+    }
+    return true;
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     try {
       await apiClient.request('/geofence/zones', {
         method: 'POST',
@@ -47,18 +83,22 @@ export default function GeofencePage() {
       });
       setShowCreate(false);
       setForm({ name: '', latitude: '', longitude: '', radiusMeters: '100', allowedIpRanges: '' });
-      setSuccess('Zone created');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Zone Created', `Geofence zone "${form.name}" has been created`);
       fetchZones();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to create zone', err.message); }
   };
 
   const handleGetLocation = () => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => setForm({ ...form, latitude: String(pos.coords.latitude), longitude: String(pos.coords.longitude) }),
-        () => setError('Failed to get location')
+        (pos) => {
+          setForm({ ...form, latitude: String(pos.coords.latitude), longitude: String(pos.coords.longitude) });
+          toast.success('Location Detected', 'Your coordinates have been filled in');
+        },
+        () => toast.error('Location Error', 'Failed to get your location. Please check browser permissions.')
       );
+    } else {
+      toast.error('Not Supported', 'Geolocation is not supported by your browser');
     }
   };
 
@@ -73,9 +113,6 @@ export default function GeofencePage() {
           {showCreate ? 'Cancel' : 'Add Zone'}
         </button>
       </div>
-
-      {error && <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>}
-      {success && <div className="p-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg">{success}</div>}
 
       {showCreate && (
         <form onSubmit={handleCreate} className="bg-card border border-border rounded-lg p-6 space-y-4">

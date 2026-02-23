@@ -7,9 +7,9 @@ interface OverviewData {
   totalEmployees: number;
   activeEmployees: number;
   attritionRate: number;
-  avgTenure: number;
+  avgTenureMonths: number;
   pendingLeaves: number;
-  todayAttendance: number;
+  todayAttendance: { present: number; total: number } | number;
   openPositions: number;
   monthlyPayrollCost: number;
 }
@@ -97,9 +97,9 @@ export default function AnalyticsPage() {
           {kpiCard('Total Employees', overview.totalEmployees)}
           {kpiCard('Active Employees', overview.activeEmployees, undefined, 'text-green-600 dark:text-green-400')}
           {kpiCard('Attrition Rate', `${(overview.attritionRate || 0).toFixed(1)}%`, 'Last 12 months', overview.attritionRate > 15 ? 'text-red-600' : 'text-foreground')}
-          {kpiCard('Avg Tenure', `${(overview.avgTenure || 0).toFixed(1)} yrs`)}
+          {kpiCard('Avg Tenure', `${((overview.avgTenureMonths || 0) / 12).toFixed(1)} yrs`)}
           {kpiCard('Pending Leaves', overview.pendingLeaves)}
-          {kpiCard('Today Attendance', overview.todayAttendance)}
+          {kpiCard('Today Attendance', typeof overview.todayAttendance === 'object' ? `${overview.todayAttendance.present}/${overview.todayAttendance.total}` : overview.todayAttendance)}
           {kpiCard('Open Positions', overview.openPositions)}
           {kpiCard('Monthly Payroll', `$${(overview.monthlyPayrollCost || 0).toLocaleString()}`, undefined, 'text-blue-600 dark:text-blue-400')}
         </div>
@@ -110,7 +110,10 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {Object.entries(tabData).map(([key, value]) => {
                 if (typeof value === 'number' || typeof value === 'string') {
-                  return kpiCard(key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()), value as any);
+                  return kpiCard(key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()), typeof value === 'number' ? Number(value).toLocaleString() : value);
+                }
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                  return kpiCard(key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()), JSON.stringify(value).replace(/[{}"]/g, '').replace(/,/g, ', '));
                 }
                 return null;
               })}

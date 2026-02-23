@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/toast';
 
 interface Announcement {
   id: string;
@@ -24,12 +25,11 @@ interface Kudos {
 }
 
 export default function SocialPage() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'announcements' | 'kudos'>('announcements');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [kudos, setKudos] = useState<Kudos[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [showKudosForm, setShowKudosForm] = useState(false);
   const [kudosForm, setKudosForm] = useState({ recipientEmployeeId: '', message: '', category: 'TEAMWORK' });
   const [employees, setEmployees] = useState<any[]>([]);
@@ -48,7 +48,7 @@ export default function SocialPage() {
       ]);
       setAnnouncements(Array.isArray(ann) ? ann : ann?.data || []);
       setKudos(Array.isArray(kd) ? kd : kd?.data || []);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to load social feed', err.message); }
     finally { setLoading(false); }
   };
 
@@ -59,16 +59,36 @@ export default function SocialPage() {
     } catch {}
   };
 
+  const validateKudos = (): boolean => {
+    if (!kudosForm.recipientEmployeeId) {
+      toast.error('Validation Error', 'Please select a recipient');
+      return false;
+    }
+    if (!kudosForm.message.trim()) {
+      toast.error('Validation Error', 'Please write a recognition message');
+      return false;
+    }
+    if (kudosForm.message.trim().length < 10) {
+      toast.error('Validation Error', 'Message must be at least 10 characters');
+      return false;
+    }
+    if (kudosForm.message.length > 500) {
+      toast.error('Validation Error', 'Message cannot exceed 500 characters');
+      return false;
+    }
+    return true;
+  };
+
   const handleSendKudos = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateKudos()) return;
     try {
       await apiClient.request('/social/kudos', { method: 'POST', body: JSON.stringify(kudosForm) });
       setShowKudosForm(false);
       setKudosForm({ recipientEmployeeId: '', message: '', category: 'TEAMWORK' });
-      setSuccess('Kudos sent!');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Kudos Sent!', 'Your recognition has been shared');
       fetchData();
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) { toast.error('Failed to send kudos', err.message); }
   };
 
   const priorityColors: Record<string, string> = {
@@ -99,9 +119,6 @@ export default function SocialPage() {
         </button>
       </div>
 
-      {error && <div className="p-3 bg-destructive/10 text-destructive rounded-lg">{error}</div>}
-      {success && <div className="p-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg">{success}</div>}
-
       {showKudosForm && (
         <form onSubmit={handleSendKudos} className="bg-card border border-border rounded-lg p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -121,7 +138,8 @@ export default function SocialPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Message</label>
-            <textarea value={kudosForm.message} onChange={(e) => setKudosForm({ ...kudosForm, message: e.target.value })} rows={3} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" required placeholder="Write your recognition message..." />
+            <textarea value={kudosForm.message} onChange={(e) => setKudosForm({ ...kudosForm, message: e.target.value })} rows={3} maxLength={500} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" required placeholder="Write your recognition message (min 10 characters)..." />
+            <p className={`text-xs mt-1 ${kudosForm.message.length > 450 ? 'text-amber-500' : 'text-muted-foreground'}`}>{kudosForm.message.length}/500</p>
           </div>
           <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">Send Kudos</button>
         </form>
