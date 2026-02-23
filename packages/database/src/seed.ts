@@ -5,6 +5,7 @@
 import "dotenv/config"; // loads .env from current working dir
 import { PrismaClient } from '@prisma/client';
 import * as crypto from 'crypto';
+import * as bcrypt from 'bcryptjs';
 
 import * as dotenv from "dotenv";
 import path from "path";
@@ -41,9 +42,16 @@ async function main() {
       state: 'Karnataka',
       country: 'India',
       postalCode: '560001',
-      subscriptionTier: 'PREMIUM',
+      subscriptionTier: 'ENTERPRISE',
       subscriptionStatus: 'ACTIVE',
-      featuresEnabled: ['ATTENDANCE', 'LEAVE', 'PAYROLL', 'PERFORMANCE'],
+      featuresEnabled: [
+        'ATTENDANCE', 'LEAVE', 'PAYROLL', 'PERFORMANCE', 'RECRUITMENT',
+        'TRAINING', 'ASSETS', 'EXPENSES', 'SHIFTS', 'POLICIES',
+        'CUSTOM_FIELDS', 'API_ACCESS', 'WEBHOOKS', 'AUDIT_LOGS',
+        'ADVANCED_REPORTS', 'SSO', 'OFFBOARDING', 'DIRECTORY',
+        'SOCIAL_FEED', 'SURVEYS', 'TIME_TRACKING', 'CONTRACTORS',
+        'ANALYTICS', 'GEOFENCING', 'LEAVE_POLICIES', 'DELEGATIONS',
+      ],
       payrollCountry: 'IN',
       payFrequency: 'MONTHLY',
       pfEnabled: true,
@@ -186,10 +194,12 @@ async function main() {
 
   // 5. Create admin user
   console.log('🔐 Creating admin user...');
+  const adminPasswordHash = await bcrypt.hash('Test@12345', 12);
   const adminUser = await prisma.user.create({
     data: {
       companyId: company.id,
       email: 'admin@demotech.com',
+      passwordHash: adminPasswordHash,
       firstName: 'Admin',
       lastName: 'User',
       role: 'COMPANY_ADMIN',

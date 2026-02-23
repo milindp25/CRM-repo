@@ -17,21 +17,15 @@ export class AnalyticsService {
   async getOverview(companyId: string) {
     this.logger.log('Fetching analytics overview', 'AnalyticsService');
 
-    const [
-      headcount,
-      attritionData,
-      tenureData,
-      pendingLeaves,
-      todayAttendance,
-      recruitmentData,
-      payrollRecords,
-    ] = await Promise.all([
+    // All methods use sequential internal queries (max 1 connection each),
+    // so running 7 in parallel uses at most 7 concurrent connections
+    const [headcount, attritionData, tenureData, pendingLeaves, todayAttendance, openPositions, payrollRecords] = await Promise.all([
       this.repository.getHeadcount(companyId),
       this.repository.getAttritionRate(companyId, 12),
       this.repository.getAvgTenure(companyId),
       this.repository.getPendingLeavesCount(companyId),
       this.repository.getTodayAttendanceCount(companyId),
-      this.repository.getRecruitmentMetrics(companyId),
+      this.repository.getOpenPositionsCount(companyId),
       this.repository.getPayrollRecordsByMonth(companyId, 1),
     ]);
 
@@ -50,7 +44,7 @@ export class AnalyticsService {
         present: todayAttendance.present,
         total: todayAttendance.total,
       },
-      openPositions: recruitmentData.openPositions,
+      openPositions,
       monthlyPayrollCost,
     };
   }

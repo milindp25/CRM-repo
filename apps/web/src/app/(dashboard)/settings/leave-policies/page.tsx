@@ -125,11 +125,11 @@ export default function LeavePoliciesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Policy Name</label>
-              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" required />
+              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" placeholder="e.g. Annual Casual Leave" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Annual Entitlement (days)</label>
-              <input type="number" value={form.annualEntitlement} onChange={(e) => setForm({ ...form, annualEntitlement: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" required />
+              <input type="number" value={form.annualEntitlement} onChange={(e) => setForm({ ...form, annualEntitlement: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Accrual Type</label>

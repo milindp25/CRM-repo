@@ -11,61 +11,75 @@ export class AnalyticsRepository {
    * Count active employees, grouped by department.
    */
   async getHeadcount(companyId: string) {
-    const total = await this.prisma.employee.count({
-      where: { companyId, isActive: true },
+    // Single query: get departments with employee counts
+    const departments = await this.prisma.department.findMany({
+      where: { companyId },
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { employees: { where: { isActive: true } } } },
+      },
     });
 
-    const byDepartment = await this.prisma.employee.groupBy({
-      by: ['departmentId'],
-      where: { companyId, isActive: true },
-      _count: { id: true },
+    // Count unassigned employees
+    const unassignedCount = await this.prisma.employee.count({
+      where: { companyId, isActive: true, departmentId: null },
     });
 
-    // Fetch department names for the grouped results
-    const departmentIds = byDepartment
-      .map((d) => d.departmentId)
-      .filter((id): id is string => id !== null);
+    const headcountByDepartment = departments
+      .filter((d) => d._count.employees > 0)
+      .map((d) => ({
+        departmentId: d.id,
+        departmentName: d.name,
+        count: d._count.employees,
+      }));
 
-    const departments = departmentIds.length > 0
-      ? await this.prisma.department.findMany({
-          where: { id: { in: departmentIds } },
-          select: { id: true, name: true },
-        })
-      : [];
+    if (unassignedCount > 0) {
+      headcountByDepartment.push({
+        departmentId: null as any,
+        departmentName: 'Unassigned',
+        count: unassignedCount,
+      });
+    }
 
-    const departmentMap = new Map(departments.map((d) => [d.id, d.name]));
-
-    const headcountByDepartment = byDepartment.map((d) => ({
-      departmentId: d.departmentId,
-      departmentName: d.departmentId ? departmentMap.get(d.departmentId) || 'Unknown' : 'Unassigned',
-      count: d._count.id,
-    }));
+    const total = headcountByDepartment.reduce((sum, d) => sum + d.count, 0);
 
     return { total, byDepartment: headcountByDepartment };
   }
 
   /**
    * Monthly employee count over past N months using dateOfJoining/dateOfLeaving.
+   * Fetches all employees once and computes monthly headcount in-memory.
    */
   async getHeadcountTrends(companyId: string, months: number) {
     const now = new Date();
+    const earliestMonth = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
+
+    // Single query: fetch all employees who were active at any point during the range
+    const employees = await this.prisma.employee.findMany({
+      where: {
+        companyId,
+        dateOfJoining: { lte: now },
+        OR: [
+          { dateOfLeaving: null },
+          { dateOfLeaving: { gte: earliestMonth } },
+        ],
+      },
+      select: { dateOfJoining: true, dateOfLeaving: true },
+    });
+
     const trends: Array<{ month: number; year: number; count: number }> = [];
 
     for (let i = months - 1; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
-      // Employees who had joined by end of month and hadn't left yet (or left after this month)
-      const count = await this.prisma.employee.count({
-        where: {
-          companyId,
-          dateOfJoining: { lte: endOfMonth },
-          OR: [
-            { dateOfLeaving: null },
-            { dateOfLeaving: { gt: endOfMonth } },
-          ],
-        },
-      });
+      const count = employees.filter((emp) => {
+        const joined = new Date(emp.dateOfJoining);
+        if (joined > endOfMonth) return false;
+        if (!emp.dateOfLeaving) return true;
+        return new Date(emp.dateOfLeaving) > endOfMonth;
+      }).length;
 
       trends.push({
         month: date.getMonth() + 1,
@@ -81,53 +95,50 @@ export class AnalyticsRepository {
 
   /**
    * Attrition rate: employees who left in past N months / total employees.
+   * Fetches all employees once and computes monthly attrition in-memory.
    */
   async getAttritionRate(companyId: string, months: number) {
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth() - months, 1);
 
-    const leaversCount = await this.prisma.employee.count({
+    // Two sequential queries to avoid connection pool exhaustion
+    const allEmployees = await this.prisma.employee.findMany({
       where: {
         companyId,
-        dateOfLeaving: {
-          not: null,
-          gte: startDate,
-        },
+        OR: [
+          { dateOfLeaving: null },
+          { dateOfLeaving: { gte: startDate } },
+        ],
       },
+      select: { dateOfJoining: true, dateOfLeaving: true },
     });
 
-    const totalEmployees = await this.prisma.employee.count({
-      where: { companyId },
-    });
+    const totalEmployees = await this.prisma.employee.count({ where: { companyId } });
 
-    // Monthly attrition trend
+    // Compute leavers count
+    const leaversCount = allEmployees.filter(
+      (e) => e.dateOfLeaving && new Date(e.dateOfLeaving) >= startDate,
+    ).length;
+
+    // Build monthly trend in-memory
     const monthlyTrend: Array<{ month: number; year: number; leavers: number; rate: number }> = [];
 
     for (let i = months - 1; i >= 0; i--) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
 
-      const monthLeavers = await this.prisma.employee.count({
-        where: {
-          companyId,
-          dateOfLeaving: {
-            gte: monthStart,
-            lte: monthEnd,
-          },
-        },
-      });
+      const monthLeavers = allEmployees.filter((e) => {
+        if (!e.dateOfLeaving) return false;
+        const left = new Date(e.dateOfLeaving);
+        return left >= monthStart && left <= monthEnd;
+      }).length;
 
-      // Active headcount at start of that month
-      const headcountAtStart = await this.prisma.employee.count({
-        where: {
-          companyId,
-          dateOfJoining: { lte: monthStart },
-          OR: [
-            { dateOfLeaving: null },
-            { dateOfLeaving: { gt: monthStart } },
-          ],
-        },
-      });
+      const headcountAtStart = allEmployees.filter((e) => {
+        const joined = new Date(e.dateOfJoining);
+        if (joined > monthStart) return false;
+        if (!e.dateOfLeaving) return true;
+        return new Date(e.dateOfLeaving) > monthStart;
+      }).length;
 
       monthlyTrend.push({
         month: monthStart.getMonth() + 1,
@@ -354,6 +365,7 @@ export class AnalyticsRepository {
    * Job postings by status, applicants by stage, and time-to-hire.
    */
   async getRecruitmentMetrics(companyId: string) {
+    // Sequential queries to avoid connection pool exhaustion
     const jobPostingsByStatus = await this.prisma.jobPosting.groupBy({
       by: ['status'],
       where: { companyId },
@@ -366,19 +378,21 @@ export class AnalyticsRepository {
       _count: { id: true },
     });
 
-    // Average time-to-hire: from job posting createdAt to applicant reaching HIRED
     const hiredApplicants = await this.prisma.applicant.findMany({
-      where: {
-        companyId,
-        stage: 'HIRED',
-      },
+      where: { companyId, stage: 'HIRED' },
       select: {
         createdAt: true,
         updatedAt: true,
-        jobPosting: {
-          select: { createdAt: true },
-        },
+        jobPosting: { select: { createdAt: true } },
       },
+    });
+
+    const openPositions = await this.prisma.jobPosting.count({
+      where: { companyId, status: 'PUBLISHED' },
+    });
+
+    const totalApplicants = await this.prisma.applicant.count({
+      where: { companyId },
     });
 
     let avgTimeToHireDays = 0;
@@ -392,14 +406,6 @@ export class AnalyticsRepository {
       }
       avgTimeToHireDays = Math.round((totalDays / hiredApplicants.length) * 10) / 10;
     }
-
-    const openPositions = await this.prisma.jobPosting.count({
-      where: { companyId, status: 'PUBLISHED' },
-    });
-
-    const totalApplicants = await this.prisma.applicant.count({
-      where: { companyId },
-    });
 
     return {
       jobPostingsByStatus: jobPostingsByStatus.map((j) => ({
@@ -481,10 +487,7 @@ export class AnalyticsRepository {
     const present = await this.prisma.attendance.count({
       where: {
         companyId,
-        attendanceDate: {
-          gte: today,
-          lt: tomorrow,
-        },
+        attendanceDate: { gte: today, lt: tomorrow },
         status: 'PRESENT',
       },
     });
@@ -492,14 +495,17 @@ export class AnalyticsRepository {
     const total = await this.prisma.attendance.count({
       where: {
         companyId,
-        attendanceDate: {
-          gte: today,
-          lt: tomorrow,
-        },
+        attendanceDate: { gte: today, lt: tomorrow },
       },
     });
 
     return { present, total };
+  }
+
+  async getOpenPositionsCount(companyId: string) {
+    return this.prisma.jobPosting.count({
+      where: { companyId, status: 'PUBLISHED' },
+    });
   }
 
   async getPendingLeavesCount(companyId: string) {
