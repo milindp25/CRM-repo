@@ -840,13 +840,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@faker-js/faker@npm:^8.4.0":
-  version: 8.4.1
-  resolution: "@faker-js/faker@npm:8.4.1"
-  checksum: 10c0/4f2aecddcfdc2cc8b50b2d15d1e37302a7c7a5bbd184ae910a9d271bc11248533ca74dcdd4a9ccbe20410553e7af0f6a4d334c5b955635e09a32ddf4a64942d4
-  languageName: node
-  linkType: hard
-
 "@formatjs/ecma402-abstract@npm:3.1.1":
   version: 3.1.1
   resolution: "@formatjs/ecma402-abstract@npm:3.1.1"
@@ -937,27 +930,6 @@ __metadata:
   dependencies:
     "@types/node": "npm:^20.11.19"
     typescript: "npm:^5.3.3"
-  languageName: unknown
-  linkType: soft
-
-"@hrplatform/testing@workspace:packages/testing":
-  version: 0.0.0-use.local
-  resolution: "@hrplatform/testing@workspace:packages/testing"
-  dependencies:
-    "@faker-js/faker": "npm:^8.4.0"
-    "@hrplatform/shared": "workspace:*"
-    "@types/node": "npm:^20.11.19"
-    typescript: "npm:^5.3.3"
-  languageName: unknown
-  linkType: soft
-
-"@hrplatform/validation@workspace:*, @hrplatform/validation@workspace:packages/validation":
-  version: 0.0.0-use.local
-  resolution: "@hrplatform/validation@workspace:packages/validation"
-  dependencies:
-    "@types/node": "npm:^20.11.19"
-    typescript: "npm:^5.3.3"
-    zod: "npm:^3.22.4"
   languageName: unknown
   linkType: soft
 
@@ -4304,7 +4276,6 @@ __metadata:
     "@eslint/js": "npm:^9.18.0"
     "@hrplatform/database": "workspace:*"
     "@hrplatform/shared": "workspace:*"
-    "@hrplatform/validation": "workspace:*"
     "@nestjs/cli": "npm:^11.0.0"
     "@nestjs/common": "npm:^11.0.1"
     "@nestjs/config": "npm:^4.0.3"
