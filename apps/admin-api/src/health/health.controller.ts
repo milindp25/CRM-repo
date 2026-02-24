@@ -10,7 +10,7 @@ import { Public } from '../common/decorators/public.decorator.js';
  * @SkipThrottle() - Health checks are excluded from rate limiting
  * so that Render/Kubernetes probes are never blocked by ThrottlerGuard.
  */
-@SkipThrottle()
+@SkipThrottle({ default: true })
 @ApiTags('health')
 @Controller({
   path: 'health',
