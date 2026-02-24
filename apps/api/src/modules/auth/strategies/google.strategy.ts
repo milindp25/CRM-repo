@@ -26,12 +26,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   ) {
     // Use env vars as defaults; per-company config is validated in the callback
     super({
-      clientID: configService.get<string>('GOOGLE_CLIENT_ID', 'placeholder-client-id'),
-      clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET', 'placeholder-client-secret'),
-      callbackURL: configService.get<string>(
-        'GOOGLE_CALLBACK_URL',
-        'http://localhost:4000/api/v1/auth/google/callback',
-      ),
+      clientID: configService.get<string>('GOOGLE_CLIENT_ID') || 'not-configured',
+      clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET') || 'not-configured',
+      callbackURL: configService.get<string>('GOOGLE_CALLBACK_URL') || `http://localhost:${configService.get('API_PORT', 4000)}/api/v1/auth/google/callback`,
       scope: ['email', 'profile'],
       passReqToCallback: true,
     });

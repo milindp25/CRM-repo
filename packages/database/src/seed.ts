@@ -10,14 +10,17 @@ import * as bcrypt from 'bcryptjs';
 import * as dotenv from "dotenv";
 import path from "path";
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env.local") });
+// Load env from multiple possible locations
+dotenv.config({ path: path.resolve(__dirname, "../../apps/api/.env") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 
 const prisma = new PrismaClient();
 
-// Simple encryption for demo (use proper encryption in production)
+// Encryption for seed data (uses same key as the API for consistency)
 function simpleEncrypt(text: string): string {
-  const key = process.env.ENCRYPTION_KEY || 'demo-key-32-bytes-long-exactly!!';
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) throw new Error('ENCRYPTION_KEY env var is required. Set it in packages/database/.env or apps/api/.env');
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key.substring(0, 32)), iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');

@@ -1,0 +1,58 @@
+# =============================================================================
+# Database Migration Deployment
+# =============================================================================
+# Manually triggered workflow to run Prisma migrations against production DB.
+# Runs: prisma migrate deploy (applies pending migrations)
+# =============================================================================
+
+name: Deploy Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  migrate:
+    name: Run Prisma Migrations
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build shared package
+        run: cd packages/shared && npx tsc
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=packages/database/prisma/schema.prisma
+
+      - name: Run migrations
+        run: npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Verify migration status
+        run: npx prisma migrate status --schema=packages/database/prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}

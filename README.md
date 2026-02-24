@@ -252,6 +252,25 @@ Company management, feature add-ons, billing/invoicing, revenue dashboard.
 
 Dark mode, i18n (English/Spanish), real-time WebSocket notifications, org chart, activity feed, calendar widget, help panel, configurable dashboards.
 
+## Deployment
+
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for the full deployment guide.
+
+**TL;DR:** Vercel (frontends) + Render (APIs) + Supabase (database) — **$0/month on free tier**.
+
+```
+Supabase (PostgreSQL)  ←── Render (Tenant API + Admin API)  ←── Vercel (Web + Admin)
+```
+
+**Quick deploy:**
+1. Set up Supabase DB and run migrations
+2. Deploy APIs via Render Blueprint (`render.yaml`)
+3. Deploy frontends via Vercel (root dirs: `apps/web`, `apps/admin`)
+4. Set environment variables in each platform's dashboard
+5. Set up GitHub Secrets for CI/CD workflows
+
+**CI/CD:** GitHub Actions runs on every PR — builds all 4 apps, validates Prisma schema. See `.github/workflows/`.
+
 ## Environment Variable Reference
 
 See `.env.example` in each app directory for full documentation. Quick reference:
