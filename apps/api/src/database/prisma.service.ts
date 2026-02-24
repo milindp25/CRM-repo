@@ -12,12 +12,24 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
+    const TIMEOUT_MS = 10_000;
     try {
-      await this.$connect();
+      await Promise.race([
+        this.$connect(),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`DB connection timed out after ${TIMEOUT_MS}ms`)),
+            TIMEOUT_MS,
+          ),
+        ),
+      ]);
       this.logger.log('Database connected successfully');
     } catch (error) {
-      this.logger.error('Database connection failed', error);
-      throw error;
+      // Don't throw — let the app start so Render/cloud health checks pass.
+      // Prisma will attempt lazy reconnection on the first query.
+      this.logger.warn(
+        `Database connection failed at startup — app will retry on first query: ${(error as Error).message}`,
+      );
     }
   }
 
