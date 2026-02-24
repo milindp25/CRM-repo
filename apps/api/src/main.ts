@@ -96,9 +96,11 @@ async function bootstrap() {
   // Start the server
   // Priority: API_PORT (explicit) > PORT (Render auto-assigns 10000) > 4000 (local dev)
   const port = configService.get<number>('API_PORT') || configService.get<number>('PORT') || 4000;
-  await app.listen(port);
+  // Bind to 0.0.0.0 — required for Render (and most cloud platforms)
+  // so the reverse proxy can reach the app
+  await app.listen(port, '0.0.0.0');
 
-  logger.log(`HR Platform API running on http://localhost:${port}`, 'Bootstrap');
+  logger.log(`HR Platform API running on http://0.0.0.0:${port}`, 'Bootstrap');
   logger.log(`Swagger docs at http://localhost:${port}/api/docs`, 'Bootstrap');
   logger.log(`Environment: ${configService.get('NODE_ENV', 'development')}`, 'Bootstrap');
 
