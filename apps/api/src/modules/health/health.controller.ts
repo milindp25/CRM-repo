@@ -18,7 +18,7 @@ import { PrismaService } from '../../database/prisma.service';
  * @SkipThrottle() - Health checks are excluded from rate limiting
  * so that Render/Kubernetes probes are never blocked by ThrottlerGuard.
  */
-@SkipThrottle()
+@SkipThrottle({ default: true, auth: true })
 @ApiTags('health')
 @Controller({
   path: 'health',
