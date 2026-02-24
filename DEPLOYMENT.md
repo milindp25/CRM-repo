@@ -9,10 +9,10 @@
 │   Vercel         │     │   Render          │     │   Supabase     │
 │                  │     │                   │     │                │
 │  Tenant Portal   │────▶│  Tenant API       │────▶│  PostgreSQL    │
-│  (Next.js:3000)  │     │  (NestJS:4000)    │     │  (free tier)   │
+│  (Next.js)       │     │  (NestJS)         │     │  (free tier)   │
 │                  │     │                   │     │                │
 │  Admin Portal    │────▶│  Admin API        │     │                │
-│  (Next.js:3001)  │     │  (NestJS:4001)    │     │                │
+│  (Next.js)       │     │  (NestJS)         │     │                │
 └─────────────────┘     └──────────────────┘     └────────────────┘
 ```
 
@@ -33,9 +33,21 @@
 You likely already have this set up. If not:
 
 1. Go to [supabase.com](https://supabase.com) → New Project
-2. Note your connection strings from **Settings → Database**:
-   - `DATABASE_URL` — Pooled connection (Transaction mode, port 6543)
-   - `DIRECT_URL` — Direct connection (Session mode, port 5432)
+2. Go to **Connect** (top bar) to get your connection strings:
+   - `DATABASE_URL` — **Transaction Pooler** (port 6543, append `?pgbouncer=true`)
+   - `DIRECT_URL` — **Session Pooler** (port 5432)
+
+> **IPv4 Important:** Newer Supabase projects default to **IPv6-only** for direct connections. Render free tier only supports **IPv4**. You must use **pooler URLs** (Transaction Pooler or Session Pooler), which are IPv4 compatible. In Supabase's Connect dialog, check that the method shows "IPv4" or use the Session Pooler for `DIRECT_URL`.
+
+### Connection String Format
+
+```
+# DATABASE_URL — Transaction Pooler (for runtime queries)
+postgresql://postgres.XXXX:[PASSWORD]@aws-0-XX-XXXX-X.pooler.supabase.com:6543/postgres?pgbouncer=true
+
+# DIRECT_URL — Session Pooler (for Prisma migrations, IPv4 compatible)
+postgresql://postgres.XXXX:[PASSWORD]@aws-0-XX-XXXX-X.pooler.supabase.com:5432/postgres
+```
 
 ### Run Migrations
 
@@ -76,15 +88,20 @@ For each API (`hrplatform-api` and `hrplatform-admin-api`):
 | Plan           | Free                                | Free                                 |
 | Health Check   | `/v1/health`                        | `/v1/health`                         |
 
-**Tenant API Build Command:**
+**Build Command (both APIs):**
 ```
-corepack enable && yarn install && cd packages/shared && npx tsc && cd ../.. && npx prisma generate --schema=packages/database/prisma/schema.prisma && cd apps/api && npx nest build
+mkdir -p .corepack && corepack enable --install-directory .corepack && export PATH="$PWD/.corepack:$PATH" && yarn install && cd packages/shared && npx tsc && cd ../.. && npx prisma generate --schema=packages/database/prisma/schema.prisma && cd apps/api && npx nest build
 ```
+> For Admin API, replace `cd apps/api && npx nest build` with `cd apps/admin-api && npx nest build`.
 
-**Admin API Build Command:**
-```
-corepack enable && yarn install && cd packages/shared && npx tsc && cd ../.. && npx prisma generate --schema=packages/database/prisma/schema.prisma && cd apps/admin-api && npx nest build
-```
+> **Corepack Note:** Render's filesystem is read-only at `/usr/bin/`, so `corepack enable` needs a local install directory. The `mkdir -p .corepack && corepack enable --install-directory .corepack && export PATH="$PWD/.corepack:$PATH"` pattern handles this.
+
+### Port Configuration
+
+Render automatically sets `PORT=10000` for web services. The APIs detect this automatically — **no need to set `API_PORT` or `ADMIN_API_PORT`**. The port resolution order is:
+
+- Tenant API: `API_PORT` → `PORT` → `4000` (default)
+- Admin API: `ADMIN_API_PORT` → `PORT` → `4001` (default)
 
 ### Render Environment Variables
 
@@ -93,9 +110,9 @@ corepack enable && yarn install && cd packages/shared && npx tsc && cd ../.. && 
 | Variable              | Required | Example                                           |
 |-----------------------|----------|---------------------------------------------------|
 | `NODE_ENV`            | Yes      | `production`                                      |
-| `API_PORT`            | Yes      | `4000`                                            |
-| `DATABASE_URL`        | Yes      | `postgresql://...@db.xxx.supabase.co:6543/...`    |
-| `DIRECT_URL`          | Yes      | `postgresql://...@db.xxx.supabase.co:5432/...`    |
+| `NODE_VERSION`        | Yes      | `20`                                              |
+| `DATABASE_URL`        | Yes      | Transaction Pooler URL (port 6543, `?pgbouncer=true`) |
+| `DIRECT_URL`          | Yes      | Session Pooler URL (port 5432, IPv4 compatible)   |
 | `JWT_SECRET`          | Yes      | `<64-char hex>` ← generate with command below     |
 | `JWT_REFRESH_SECRET`  | Yes      | `<64-char hex>` ← different from JWT_SECRET       |
 | `ENCRYPTION_KEY`      | Yes      | `<32-char string>` for AES-256 PII encryption     |
@@ -115,7 +132,7 @@ corepack enable && yarn install && cd packages/shared && npx tsc && cd ../.. && 
 | Variable                | Required | Example                                        |
 |-------------------------|----------|------------------------------------------------|
 | `NODE_ENV`              | Yes      | `production`                                   |
-| `ADMIN_API_PORT`        | Yes      | `4001`                                         |
+| `NODE_VERSION`          | Yes      | `20`                                           |
 | `DATABASE_URL`          | Yes      | Same as Tenant API                             |
 | `DIRECT_URL`            | Yes      | Same as Tenant API                             |
 | `JWT_SECRET`            | Yes      | **Must match** Tenant API's JWT_SECRET         |
@@ -151,8 +168,8 @@ node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
 | `NEXT_PUBLIC_API_URL` | `https://hrplatform-api.onrender.com/v1`    |
 | `NEXT_PUBLIC_APP_URL` | `https://your-web.vercel.app`               |
 | `NEXT_PUBLIC_WS_URL`  | `https://hrplatform-api.onrender.com`       |
-| `DATABASE_URL`        | Same Supabase pooled URL                    |
-| `DIRECT_URL`          | Same Supabase direct URL                    |
+| `DATABASE_URL`        | Same Supabase Transaction Pooler URL        |
+| `DIRECT_URL`          | Same Supabase Session Pooler URL            |
 | `JWT_SECRET`          | **Must match** API's JWT_SECRET             |
 
 ### Admin Portal (`apps/admin`)
@@ -181,8 +198,8 @@ Go to your repo → **Settings** → **Secrets and variables** → **Actions** �
 
 | Secret Name          | Used By         | Description                               |
 |----------------------|-----------------|-------------------------------------------|
-| `DATABASE_URL`       | CI, Migrations  | Supabase pooled connection string         |
-| `DIRECT_URL`         | CI, Migrations  | Supabase direct connection string         |
+| `DATABASE_URL`       | CI, Migrations  | Supabase Transaction Pooler URL           |
+| `DIRECT_URL`         | CI, Migrations  | Supabase Session Pooler URL               |
 | `SHADOW_DATABASE_URL`| CI (optional)   | Separate DB for migration drift detection |
 
 > **Note:** Render and Vercel manage their own environment variables through their dashboards. GitHub Secrets are only needed for CI workflows and the manual migration workflow.
@@ -191,8 +208,8 @@ Go to your repo → **Settings** → **Secrets and variables** → **Actions** �
 
 ```bash
 # If you have GitHub CLI (gh) installed:
-gh secret set DATABASE_URL --body "postgresql://postgres.xxx:password@db.xxx.supabase.co:6543/postgres?pgbouncer=true"
-gh secret set DIRECT_URL --body "postgresql://postgres.xxx:password@db.xxx.supabase.co:5432/postgres"
+gh secret set DATABASE_URL --body "postgresql://postgres.xxx:password@aws-0-xx.pooler.supabase.com:6543/postgres?pgbouncer=true"
+gh secret set DIRECT_URL --body "postgresql://postgres.xxx:password@aws-0-xx.pooler.supabase.com:5432/postgres"
 ```
 
 Or via the GitHub web UI:
@@ -258,7 +275,7 @@ The **Deploy Migrations** workflow (`.github/workflows/deploy-db.yml`):
 
 ## Deployment Checklist
 
-- [ ] Supabase project created with connection strings
+- [ ] Supabase project created with IPv4-compatible pooler URLs
 - [ ] Database migrations applied (`prisma migrate deploy`)
 - [ ] Database seeded (`npx tsx packages/database/src/seed.ts`)
 - [ ] Render: Both API services created and env vars set
@@ -274,11 +291,23 @@ The **Deploy Migrations** workflow (`.github/workflows/deploy-db.yml`):
 
 ## Troubleshooting
 
+### Render: Build fails with Yarn/Corepack errors
+Render's filesystem is read-only at system paths. Use the corepack workaround:
+```
+mkdir -p .corepack && corepack enable --install-directory .corepack && export PATH="$PWD/.corepack:$PATH"
+```
+
 ### Render: Build fails with "command not found: nest"
 Ensure the build command includes `yarn install` before `npx nest build`.
 
+### Render: Health check fails with 429 (rate limit)
+Health endpoints should have `@SkipThrottle()` decorator. This is already configured in the codebase — if you see this, ensure you're on the latest code.
+
 ### Render: API returns 502 after deploy
-Check that `API_PORT` / `ADMIN_API_PORT` env vars are set. Render needs the app to listen on the correct port.
+The API auto-detects Render's `PORT` env var (10000). If it's not working, you can explicitly set `API_PORT=10000` (or `ADMIN_API_PORT=10000` for admin API).
+
+### Supabase: "Can't reach database server" on Render
+Newer Supabase projects are **IPv6-only** for direct connections. Render free tier only supports IPv4. Solution: Use **Session Pooler** URLs (IPv4 compatible) from Supabase's Connect dialog instead of direct connection URLs.
 
 ### Vercel: Build fails with "Cannot find module '@hrplatform/shared'"
 Ensure `vercel.json` is in the app directory and the build command includes building the shared package first.

@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import {
   HealthCheckService,
   HealthCheck,
@@ -13,7 +14,11 @@ import { PrismaService } from '../../database/prisma.service';
 /**
  * Health Controller
  * Provides health check endpoints for monitoring
+ *
+ * @SkipThrottle() - Health checks are excluded from rate limiting
+ * so that Render/Kubernetes probes are never blocked by ThrottlerGuard.
  */
+@SkipThrottle()
 @ApiTags('health')
 @Controller({
   path: 'health',
