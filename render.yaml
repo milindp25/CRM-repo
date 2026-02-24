@@ -25,7 +25,9 @@ services:
     region: oregon
     plan: free
     buildCommand: >
-      corepack enable &&
+      mkdir -p .corepack &&
+      corepack enable --install-directory .corepack &&
+      export PATH="$PWD/.corepack:$PATH" &&
       yarn install &&
       cd packages/shared && npx tsc &&
       cd ../.. &&
@@ -82,7 +84,9 @@ services:
     region: oregon
     plan: free
     buildCommand: >
-      corepack enable &&
+      mkdir -p .corepack &&
+      corepack enable --install-directory .corepack &&
+      export PATH="$PWD/.corepack:$PATH" &&
       yarn install &&
       cd packages/shared && npx tsc &&
       cd ../.. &&
