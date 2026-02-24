@@ -139,6 +139,26 @@ dashboard, companies, features, subscription, addons, billing/plans, billing/rev
 - Supabase connection pool limit ~10-15 concurrent connections — avoid heavy parallelism
 - Cold API startup has ~4-5s Prisma connection warmup; subsequent calls <1s
 
+## Deployment
+
+**Stack:** Vercel (frontends) + Render (APIs) + Supabase (database) — $0/month free tier.
+
+**Config files:**
+- `render.yaml` — Render Blueprint (both NestJS APIs)
+- `apps/web/vercel.json` — Vercel config for Tenant Portal
+- `apps/admin/vercel.json` — Vercel config for Admin Portal
+- `.github/workflows/ci.yml` — CI pipeline (builds all 4 apps on PR/push)
+- `.github/workflows/deploy-db.yml` — Manual migration deployment
+- `DEPLOYMENT.md` — Full deployment guide
+
+**CI/CD:** Auto-deploy via Render (APIs) and Vercel (frontends) on push to main. GitHub Actions validates builds on PRs.
+
+**Key deployment notes:**
+- All localhost URLs in source use env-var-with-fallback pattern (`process.env.X || 'http://localhost:...'`)
+- No hardcoded secrets in source code — all via environment variables
+- `JWT_SECRET` must match across: tenant API, admin API, tenant portal
+- Render free tier spins down after 15 min — ~30-60s cold start on first request
+
 ## Test Credentials
 
 | Portal | Email | Password | Role |

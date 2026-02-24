@@ -1,0 +1,108 @@
+# =============================================================================
+# Render Blueprint — HRPlatform Deployment
+# =============================================================================
+#
+# This file defines the infrastructure for Render.com deployment.
+# Deploy both NestJS APIs on Render's free tier.
+#
+# SETUP:
+#   1. Push this file to your repo
+#   2. Go to https://dashboard.render.com/blueprints
+#   3. Click "New Blueprint Instance"
+#   4. Connect your GitHub repo
+#   5. Render will auto-detect this file and create the services
+#   6. Set environment variables in Render dashboard (see DEPLOYMENT.md)
+#
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Tenant API (NestJS) — Port 4000
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: hrplatform-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: >
+      corepack enable &&
+      yarn install &&
+      cd packages/shared && npx tsc &&
+      cd ../.. &&
+      npx prisma generate --schema=packages/database/prisma/schema.prisma &&
+      cd apps/api && npx nest build
+    startCommand: cd apps/api && node dist/main
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: "4000"
+      - key: NODE_VERSION
+        value: "20"
+      # --- Secrets (set in Render dashboard, NOT here) ---
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      # --- Optional (set if using features) ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # Admin API (NestJS) — Port 4001
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: hrplatform-admin-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: >
+      corepack enable &&
+      yarn install &&
+      cd packages/shared && npx tsc &&
+      cd ../.. &&
+      npx prisma generate --schema=packages/database/prisma/schema.prisma &&
+      cd apps/admin-api && npx nest build
+    startCommand: cd apps/admin-api && node dist/main
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_API_PORT
+        value: "4001"
+      - key: NODE_VERSION
+        value: "20"
+      # --- Secrets (set in Render dashboard, NOT here) ---
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_ALLOWED_ORIGINS
+        sync: false

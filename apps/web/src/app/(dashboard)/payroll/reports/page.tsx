@@ -7,6 +7,8 @@ import { Permission } from '@hrplatform/shared';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/v1';
+
 const QUARTERS = [
   { value: 1, label: 'Q1 (Jan-Mar / Apr-Jun)' },
   { value: 2, label: 'Q2 (Apr-Jun / Jul-Sep)' },
@@ -115,7 +117,7 @@ export default function PayrollReportsPage() {
                 </div>
                 <button
                   onClick={() => downloadFile('Form 24Q', () => apiClient.get(`/payroll/reports/form24q?quarter=${quarter}&fiscalYear=${year}`, { headers: { Accept: 'text/csv' } } as any).then(() => { throw new Error('Use blob download'); }).catch(() => {
-                    const url = `http://localhost:4000/v1/payroll/reports/form24q?quarter=${quarter}&fiscalYear=${year}`;
+                    const url = `${API_BASE}/payroll/reports/form24q?quarter=${quarter}&fiscalYear=${year}`;
                     return fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob());
                   }), `form24q_Q${quarter}_FY${year}.csv`)}
                   disabled={downloading === 'Form 24Q'}
@@ -132,7 +134,7 @@ export default function PayrollReportsPage() {
                 </div>
                 <button
                   onClick={() => {
-                    const url = `http://localhost:4000/v1/payroll/reports/pf-ecr?month=${month}&year=${year}`;
+                    const url = `${API_BASE}/payroll/reports/pf-ecr?month=${month}&year=${year}`;
                     downloadFile('PF ECR', () => fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob()), `pf_ecr_${month}_${year}.csv`);
                   }}
                   disabled={downloading === 'PF ECR'}
@@ -149,7 +151,7 @@ export default function PayrollReportsPage() {
                 </div>
                 <button
                   onClick={() => {
-                    const url = `http://localhost:4000/v1/payroll/reports/esi?month=${month}&year=${year}`;
+                    const url = `${API_BASE}/payroll/reports/esi?month=${month}&year=${year}`;
                     downloadFile('ESI', () => fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob()), `esi_${month}_${year}.csv`);
                   }}
                   disabled={downloading === 'ESI'}
@@ -177,7 +179,7 @@ export default function PayrollReportsPage() {
                 </div>
                 <button
                   onClick={() => {
-                    const url = `http://localhost:4000/v1/payroll/reports/form941?quarter=${quarter}&year=${year}`;
+                    const url = `${API_BASE}/payroll/reports/form941?quarter=${quarter}&year=${year}`;
                     downloadFile('Form 941', () => fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob()), `form941_Q${quarter}_${year}.pdf`);
                   }}
                   disabled={downloading === 'Form 941'}
@@ -195,7 +197,7 @@ export default function PayrollReportsPage() {
                 <button
                   onClick={() => {
                     if (!state) { toast.error('Required', 'Enter a state code'); return; }
-                    const url = `http://localhost:4000/v1/payroll/reports/state-tax?quarter=${quarter}&year=${year}&state=${state}`;
+                    const url = `${API_BASE}/payroll/reports/state-tax?quarter=${quarter}&year=${year}&state=${state}`;
                     downloadFile('State Tax', () => fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob()), `state_tax_${state}_Q${quarter}_${year}.csv`);
                   }}
                   disabled={downloading === 'State Tax'}
