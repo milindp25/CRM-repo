@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { HealthModule } from './health/health.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { AddonModule } from './addon/addon.module.js';
 import { BillingModule } from './billing/billing.module.js';
@@ -44,6 +45,7 @@ import { RolesGuard } from './common/guards/roles.guard.js';
 
     DatabaseModule,
     AuthModule,
+    HealthModule,
 
     AdminModule,
     AddonModule,

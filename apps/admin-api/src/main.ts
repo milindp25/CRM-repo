@@ -90,7 +90,8 @@ async function bootstrap() {
   });
 
   // Start
-  const port = configService.get<number>('ADMIN_API_PORT', 4001);
+  // Priority: ADMIN_API_PORT (explicit) > PORT (Render auto-assigns 10000) > 4001 (local dev)
+  const port = configService.get<number>('ADMIN_API_PORT') || configService.get<number>('PORT') || 4001;
   await app.listen(port);
 
   logger.log(`Admin API running on http://localhost:${port}`);

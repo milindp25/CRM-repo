@@ -94,7 +94,8 @@ async function bootstrap() {
   });
 
   // Start the server
-  const port = configService.get<number>('API_PORT', 4000);
+  // Priority: API_PORT (explicit) > PORT (Render auto-assigns 10000) > 4000 (local dev)
+  const port = configService.get<number>('API_PORT') || configService.get<number>('PORT') || 4000;
   await app.listen(port);
 
   logger.log(`HR Platform API running on http://localhost:${port}`, 'Bootstrap');

@@ -17,7 +17,7 @@
 
 services:
   # ---------------------------------------------------------------------------
-  # Tenant API (NestJS) — Port 4000
+  # Tenant API (NestJS) — Render assigns PORT=10000 automatically
   # ---------------------------------------------------------------------------
   - type: web
     name: hrplatform-api
@@ -38,10 +38,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: API_PORT
-        value: "4000"
       - key: NODE_VERSION
         value: "20"
+      # Note: No API_PORT needed — Render sets PORT=10000 automatically
+      # and the app detects it via: API_PORT || PORT || 4000
       # --- Secrets (set in Render dashboard, NOT here) ---
       - key: DATABASE_URL
         sync: false
@@ -76,7 +76,7 @@ services:
         sync: false
 
   # ---------------------------------------------------------------------------
-  # Admin API (NestJS) — Port 4001
+  # Admin API (NestJS) — Render assigns PORT=10000 automatically
   # ---------------------------------------------------------------------------
   - type: web
     name: hrplatform-admin-api
@@ -97,10 +97,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: ADMIN_API_PORT
-        value: "4001"
       - key: NODE_VERSION
         value: "20"
+      # Note: No ADMIN_API_PORT needed — Render sets PORT=10000 automatically
+      # and the app detects it via: ADMIN_API_PORT || PORT || 4001
       # --- Secrets (set in Render dashboard, NOT here) ---
       - key: DATABASE_URL
         sync: false
