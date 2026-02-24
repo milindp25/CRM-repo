@@ -16,7 +16,6 @@ HRPlatform is a multi-tenant SaaS HRIS (Human Resource Information System). It h
 **Shared packages:**
 - `packages/database` — Prisma schema, migrations, seed script
 - `packages/shared` — Enums, types, constants (compiled to `dist/`)
-- `packages/validation` — Zod validation schemas
 
 ## Key Commands
 

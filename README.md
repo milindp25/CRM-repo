@@ -13,8 +13,7 @@ hrplatform/
 │   └── admin/         # Admin Portal  (Next.js 14, port 3001)
 ├── packages/
 │   ├── database/      # Prisma schema, migrations, seed
-│   ├── shared/        # Enums, types, constants (compiled to dist/)
-│   └── validation/    # Zod schemas
+│   └── shared/        # Enums, types, constants (compiled to dist/)
 ├── .env.example       # Environment variable reference guide
 └── turbo.json         # Turborepo pipeline config
 ```
