@@ -25,6 +25,7 @@ services:
     region: oregon
     plan: free
     buildCommand: >
+      corepack enable &&
       yarn install &&
       cd packages/shared && npx tsc &&
       cd ../.. &&
@@ -81,6 +82,7 @@ services:
     region: oregon
     plan: free
     buildCommand: >
+      corepack enable &&
       yarn install &&
       cd packages/shared && npx tsc &&
       cd ../.. &&

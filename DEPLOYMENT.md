@@ -78,12 +78,12 @@ For each API (`hrplatform-api` and `hrplatform-admin-api`):
 
 **Tenant API Build Command:**
 ```
-yarn install && cd packages/shared && npx tsc && cd ../.. && npx prisma generate --schema=packages/database/prisma/schema.prisma && cd apps/api && npx nest build
+corepack enable && yarn install && cd packages/shared && npx tsc && cd ../.. && npx prisma generate --schema=packages/database/prisma/schema.prisma && cd apps/api && npx nest build
 ```
 
 **Admin API Build Command:**
 ```
-yarn install && cd packages/shared && npx tsc && cd ../.. && npx prisma generate --schema=packages/database/prisma/schema.prisma && cd apps/admin-api && npx nest build
+corepack enable && yarn install && cd packages/shared && npx tsc && cd ../.. && npx prisma generate --schema=packages/database/prisma/schema.prisma && cd apps/admin-api && npx nest build
 ```
 
 ### Render Environment Variables
