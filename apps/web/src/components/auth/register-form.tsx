@@ -65,7 +65,7 @@ export function RegisterForm() {
         <div>
           <label
             htmlFor="firstName"
-            className="block text-sm font-medium text-foreground mb-2"
+            className="block text-sm font-medium text-gray-700 mb-2"
           >
             First Name
           </label>
@@ -87,7 +87,7 @@ export function RegisterForm() {
         <div>
           <label
             htmlFor="lastName"
-            className="block text-sm font-medium text-foreground mb-2"
+            className="block text-sm font-medium text-gray-700 mb-2"
           >
             Last Name
           </label>
@@ -110,7 +110,7 @@ export function RegisterForm() {
       <div>
         <label
           htmlFor="companyName"
-          className="block text-sm font-medium text-foreground mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Company Name
         </label>
@@ -132,7 +132,7 @@ export function RegisterForm() {
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-foreground mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Email Address
         </label>
@@ -154,7 +154,7 @@ export function RegisterForm() {
       <div>
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-foreground mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Password
         </label>

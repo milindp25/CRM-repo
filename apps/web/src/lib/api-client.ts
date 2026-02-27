@@ -437,6 +437,28 @@ class ApiClient {
     return this.request<UserProfile>('/auth/me');
   }
 
+  /**
+   * Request a password reset email
+   */
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+      skipAuth: true,
+    });
+  }
+
+  /**
+   * Reset password using token from email
+   */
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+      skipAuth: true,
+    });
+  }
+
   // ==================== Health Endpoints ====================
 
   /**
