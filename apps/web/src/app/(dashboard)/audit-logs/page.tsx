@@ -1,11 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient, type AuditLog } from '@/lib/api-client';
 import { RoleGate } from '@/components/common/role-gate';
 import { Permission } from '@hrplatform/shared';
 
-const RESOURCE_TYPES = ['USER', 'EMPLOYEE', 'DEPARTMENT', 'DESIGNATION', 'ATTENDANCE', 'LEAVE', 'PAYROLL', 'COMPANY'];
+const RESOURCE_TYPES = ['USER', 'EMPLOYEE', 'DEPARTMENT', 'DESIGNATION', 'ATTENDANCE', 'LEAVE', 'PAYROLL', 'COMPANY', 'DOCUMENT', 'WORKFLOW'];
+
+const ACTION_TYPES = [
+  'USER_LOGIN', 'USER_LOGOUT', 'USER_REGISTERED', 'USER_SSO_LOGIN',
+  'CREATE', 'UPDATE', 'DELETE',
+  'EMPLOYEE_CREATED', 'EMPLOYEE_UPDATED', 'EMPLOYEE_DELETED',
+  'LEAVE_CREATED', 'LEAVE_APPROVED', 'LEAVE_REJECTED',
+  'PAYROLL_PROCESSED',
+];
 
 function formatAction(action: string): string {
   return action
@@ -29,6 +37,7 @@ export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
 
   const TAKE = 20;
@@ -38,13 +47,11 @@ export default function AuditLogsPage() {
     action: '',
     resourceType: '',
     userId: '',
+    startDate: '',
+    endDate: '',
   });
 
-  useEffect(() => {
-    fetchLogs();
-  }, [skip, filters]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -54,6 +61,8 @@ export default function AuditLogsPage() {
         action: filters.action || undefined,
         resourceType: filters.resourceType || undefined,
         userId: filters.userId || undefined,
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined,
       });
       setLogs(response.data);
       setTotal(response.total);
@@ -62,12 +71,62 @@ export default function AuditLogsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [skip, filters]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const handleFilterChange = (field: string, value: string) => {
     setSkip(0);
     setFilters(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      const params = new URLSearchParams();
+      if (filters.action) params.append('action', filters.action);
+      if (filters.resourceType) params.append('resourceType', filters.resourceType);
+      if (filters.userId) params.append('userId', filters.userId);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+
+      const queryString = params.toString();
+      const url = `/v1/audit-logs/export/csv${queryString ? `?${queryString}` : ''}`;
+
+      // Use fetch directly for file download
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const response = await fetch(`${baseUrl}${url}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (err: any) {
+      setError(err.message || 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleClearFilters = () => {
+    setSkip(0);
+    setFilters({ action: '', resourceType: '', userId: '', startDate: '', endDate: '' });
+  };
+
+  const hasActiveFilters = Object.values(filters).some(v => v !== '');
 
   const totalPages = Math.ceil(total / TAKE);
   const currentPage = Math.floor(skip / TAKE) + 1;
@@ -75,30 +134,49 @@ export default function AuditLogsPage() {
   return (
     <RoleGate requiredPermissions={[Permission.VIEW_AUDIT_LOGS]}>
       <div className="p-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Audit Logs</h1>
-          <p className="text-muted-foreground mt-1">Track all actions performed in your company</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Audit Logs</h1>
+            <p className="text-muted-foreground mt-1">Track all actions performed in your company</p>
+          </div>
+          <button
+            onClick={handleExportCsv}
+            disabled={exporting || total === 0}
+            className="px-4 py-2 bg-foreground text-background rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {exporting ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                Exporting...
+              </>
+            ) : (
+              <>Export CSV</>
+            )}
+          </button>
         </div>
 
       {/* Filters */}
       <div className="bg-card rounded-lg shadow-md p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Action</label>
-            <input
-              type="text"
+            <select
               value={filters.action}
               onChange={(e) => handleFilterChange('action', e.target.value)}
-              placeholder="e.g. USER_LOGIN"
-              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
+            >
+              <option value="">All Actions</option>
+              {ACTION_TYPES.map(a => (
+                <option key={a} value={a}>{formatAction(a)}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Resource Type</label>
             <select
               value={filters.resourceType}
               onChange={(e) => handleFilterChange('resourceType', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
             >
               <option value="">All Types</option>
               {RESOURCE_TYPES.map(rt => (
@@ -107,20 +185,48 @@ export default function AuditLogsPage() {
             </select>
           </div>
           <div>
+            <label className="block text-sm font-medium text-foreground mb-1">From Date</label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">To Date</label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-foreground mb-1">User ID</label>
             <input
               type="text"
               value={filters.userId}
               onChange={(e) => handleFilterChange('userId', e.target.value)}
               placeholder="Filter by user ID"
-              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
             />
           </div>
         </div>
+        {hasActiveFilters && (
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={handleClearFilters}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">{error}</div>
       )}
 
       {/* Table */}
@@ -149,7 +255,7 @@ export default function AuditLogsPage() {
                     <td className="px-4 py-3 text-sm text-foreground">{log.userEmail}</td>
                     <td className="px-4 py-3 text-sm font-medium text-foreground">{formatAction(log.action)}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
-                   <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded text-xs font-mono">
+                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded text-xs font-mono">
                         {log.resourceType}
                       </span>
                     </td>
@@ -158,9 +264,9 @@ export default function AuditLogsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {log.success ? (
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Success</span>
+                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">Success</span>
                       ) : (
-                        <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">Failed</span>
+                        <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs font-medium rounded-full">Failed</span>
                       )}
                     </td>
                   </tr>
@@ -185,7 +291,7 @@ export default function AuditLogsPage() {
                 Previous
               </button>
               <span className="px-3 py-1 text-sm text-muted-foreground">
-             Page {currentPage} of {totalPages}
+                Page {currentPage} of {totalPages}
               </span>
               <button
                 onClick={() => setSkip(skip + TAKE)}

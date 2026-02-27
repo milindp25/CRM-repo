@@ -23,7 +23,7 @@ import { ConfigService } from '@nestjs/config';
 // (isolatedModules + emitDecoratorMetadata). Cast to Response in private helpers.
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto, RefreshTokenDto, AuthResponseDto } from './dto';
+import { LoginDto, RegisterDto, RefreshTokenDto, AuthResponseDto, ForgotPasswordDto, ResetPasswordDto } from './dto';
 import { UpdateSSOConfigDto, SSOConfigResponseDto } from './dto/sso-config.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
@@ -180,6 +180,29 @@ export class AuthController {
     @Body() body: { currentPassword: string; newPassword: string },
   ): Promise<void> {
     await this.authService.changePassword(userId, body.currentPassword, body.newPassword);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request a password reset email' })
+  @ApiResponse({ status: 200, description: 'If the email exists, a reset link has been sent' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
+    await this.authService.forgotPassword(dto.email);
+    return { message: 'If an account with that email exists, a password reset link has been sent.' };
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password using token from email' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired reset token' })
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
+    await this.authService.resetPassword(dto.token, dto.newPassword);
+    return { message: 'Password has been reset successfully. You can now log in with your new password.' };
   }
 
   // ============================================================================

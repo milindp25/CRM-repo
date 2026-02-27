@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import type { EmployeeFilters } from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 
 interface EmployeeFiltersProps {
   filters: EmployeeFilters;
@@ -22,6 +23,19 @@ export function EmployeeFiltersComponent({
 }: EmployeeFiltersProps) {
   const [searchInput, setSearchInput] = useState(filters.search || '');
   const [showFilters, setShowFilters] = useState(false);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
+  const [designations, setDesignations] = useState<{ id: string; title: string }[]>([]);
+
+  // Fetch departments and designations on mount
+  useEffect(() => {
+    apiClient.getDepartments({ limit: 100 }).then((res) => {
+      setDepartments(res.data.map((d: any) => ({ id: d.id, name: d.name })));
+    }).catch(() => {});
+
+    apiClient.getDesignations({ limit: 100 }).then((res) => {
+      setDesignations(res.data.map((d: any) => ({ id: d.id, title: d.title })));
+    }).catch(() => {});
+  }, []);
 
   // Debounced search
   useEffect(() => {
@@ -131,7 +145,7 @@ export function EmployeeFiltersComponent({
             </select>
           </div>
 
-          {/* Department Filter - TODO: Fetch from API */}
+          {/* Department Filter */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
               Department
@@ -142,11 +156,15 @@ export function EmployeeFiltersComponent({
               className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Departments</option>
-              {/* TODO: Populate from API */}
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Designation Filter - TODO: Fetch from API */}
+          {/* Designation Filter */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5">
               Designation
@@ -157,7 +175,11 @@ export function EmployeeFiltersComponent({
               className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Designations</option>
-              {/* TODO: Populate from API */}
+              {designations.map((desig) => (
+                <option key={desig.id} value={desig.id}>
+                  {desig.title}
+                </option>
+              ))}
             </select>
           </div>
         </div>

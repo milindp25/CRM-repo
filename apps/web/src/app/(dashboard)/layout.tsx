@@ -9,6 +9,7 @@ import { navigation } from '@/lib/navigation';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useFeatures } from '@/contexts/feature-context';
 import { useWebSocket } from '@/hooks/use-websocket';
+import { useLocale } from '@/contexts/locale-context';
 import { Menu, X } from 'lucide-react';
 import type { Permission } from '@hrplatform/shared';
 
@@ -20,6 +21,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { hasAnyPermission } = usePermissions();
   const { hasFeature } = useFeatures();
+  const { t } = useLocale();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Close sidebar on route change (mobile)
@@ -90,7 +92,7 @@ export default function DashboardLayout({
             onClick={() => setSidebarOpen(false)}
           >
             <Icon className="w-5 h-5 flex-shrink-0" />
-            <span>{item.name}</span>
+            <span>{item.nameKey ? t(item.nameKey) : item.name}</span>
           </Link>
         );
       })}

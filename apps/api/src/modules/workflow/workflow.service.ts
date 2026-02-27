@@ -661,22 +661,33 @@ export class WorkflowService {
    *
    * - USER: approverValue must match the userId
    * - ROLE: approverValue must match the user's role
-   * - MANAGER: for now, any user with MANAGER role can approve
+   * - MANAGER: checks actual reporting manager chain via employee records;
+   *            falls back to role-based check if employee records are missing
    */
-  canUserApproveStep(
+  async canUserApproveStep(
     step: { approverType: string; approverValue: string },
     userId: string,
     userRole: string,
-  ): boolean {
+    initiatorUserId?: string,
+    companyId?: string,
+  ): Promise<boolean> {
     switch (step.approverType) {
       case WorkflowApproverType.USER:
         return step.approverValue === userId;
       case WorkflowApproverType.ROLE:
         return step.approverValue === userRole;
       case WorkflowApproverType.MANAGER:
-        // For now, accept any user with MANAGER role
-        // TODO: Implement actual reporting manager check via employee lookup
-        return userRole === 'MANAGER';
+        // Try actual reporting manager check if we have the context
+        if (initiatorUserId && companyId) {
+          const isManager = await this.repository.isReportingManagerOf(
+            userId,
+            initiatorUserId,
+            companyId,
+          );
+          if (isManager) return true;
+        }
+        // Fallback: accept MANAGER or higher roles (HR_ADMIN, COMPANY_ADMIN)
+        return ['MANAGER', 'HR_ADMIN', 'COMPANY_ADMIN'].includes(userRole);
       default:
         return false;
     }

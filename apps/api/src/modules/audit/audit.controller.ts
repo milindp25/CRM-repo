@@ -1,5 +1,6 @@
-﻿import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards, Res, Header } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { AuditService } from './audit.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -20,7 +21,14 @@ export class AuditController {
 
   @Get()
   @Roles(UserRole.HR_ADMIN, UserRole.COMPANY_ADMIN)
-  @ApiOperation({ summary: 'Get audit logs' })
+  @ApiOperation({ summary: 'Get audit logs with filtering and pagination' })
+  @ApiQuery({ name: 'skip', required: false, type: Number })
+  @ApiQuery({ name: 'take', required: false, type: Number })
+  @ApiQuery({ name: 'resourceType', required: false })
+  @ApiQuery({ name: 'action', required: false })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'startDate', required: false, description: 'Filter from date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'Filter to date (YYYY-MM-DD)' })
   async findAll(
     @CurrentUser() user: JwtPayload,
     @Query('skip') skip?: string,
@@ -28,6 +36,8 @@ export class AuditController {
     @Query('resourceType') resourceType?: string,
     @Query('action') action?: string,
     @Query('userId') userId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.auditService.findAll(user.companyId, {
       skip: skip ? parseInt(skip) : undefined,
@@ -35,6 +45,39 @@ export class AuditController {
       resourceType,
       action,
       userId,
+      startDate,
+      endDate,
     });
+  }
+
+  @Get('export/csv')
+  @Roles(UserRole.HR_ADMIN, UserRole.COMPANY_ADMIN)
+  @ApiOperation({ summary: 'Export audit logs as CSV' })
+  @ApiQuery({ name: 'resourceType', required: false })
+  @ApiQuery({ name: 'action', required: false })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @Header('Content-Type', 'text/csv')
+  async exportCsv(
+    @CurrentUser() user: JwtPayload,
+    @Res({ passthrough: true }) res: any,
+    @Query('resourceType') resourceType?: string,
+    @Query('action') action?: string,
+    @Query('userId') userId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const csv = await this.auditService.exportCsv(user.companyId, {
+      resourceType,
+      action,
+      userId,
+      startDate,
+      endDate,
+    });
+
+    const filename = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    (res as Response).setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return csv;
   }
 }

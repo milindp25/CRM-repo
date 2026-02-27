@@ -449,6 +449,50 @@ export class WorkflowRepository {
     });
   }
 
+  // ─── Employee Lookup ─────────────────────────────────────────────────
+
+  /**
+   * Check if userId is the reporting manager of the workflow initiator's
+   * employee record. Returns true if the user's linked employee is the
+   * reportingManager of the entity-owner's employee.
+   */
+  async isReportingManagerOf(
+    userId: string,
+    initiatorUserId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    // Find the employee record linked to the initiator user
+    const initiatorEmployee = await this.prisma.employee.findFirst({
+      where: { companyId, workEmail: { not: undefined }, deletedAt: null },
+      select: { id: true, reportingManagerId: true },
+      // We need to match by userId — look up via User → Employee link
+    });
+
+    // Find employees by user accounts
+    const [managerUser, initiatorUser] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+      this.prisma.user.findUnique({ where: { id: initiatorUserId }, select: { email: true } }),
+    ]);
+
+    if (!managerUser || !initiatorUser) return false;
+
+    // Find both employee records by work email
+    const [managerEmployee, subEmployee] = await Promise.all([
+      this.prisma.employee.findFirst({
+        where: { companyId, workEmail: managerUser.email, deletedAt: null },
+        select: { id: true },
+      }),
+      this.prisma.employee.findFirst({
+        where: { companyId, workEmail: initiatorUser.email, deletedAt: null },
+        select: { id: true, reportingManagerId: true },
+      }),
+    ]);
+
+    if (!managerEmployee || !subEmployee) return false;
+
+    return subEmployee.reportingManagerId === managerEmployee.id;
+  }
+
   // ─── Audit Log ────────────────────────────────────────────────────────
 
   async createAuditLog(data: {

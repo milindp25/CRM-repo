@@ -1,7 +1,8 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ApiKeyThrottlerGuard } from './common/guards/api-key-throttler.guard';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -169,10 +170,10 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
-    // 2. Rate Limiting
+    // 2. Rate Limiting (extends ThrottlerGuard with per-API-key limits)
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: ApiKeyThrottlerGuard,
     },
     // 3. Multi-tenancy (company data isolation)
     {

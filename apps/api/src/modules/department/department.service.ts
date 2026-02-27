@@ -124,7 +124,7 @@ export class DepartmentService {
       if (dto.parentId === id) {
         throw new ConflictException('Department cannot be its own parent');
       }
-      // TODO: Add more sophisticated circular dependency check
+      await this.validateNoCircularHierarchy(id, dto.parentId, companyId);
     }
 
     this.cache.invalidateByPrefix(`depts:${companyId}`);
@@ -183,6 +183,32 @@ export class DepartmentService {
   async getHierarchy(companyId: string): Promise<DepartmentResponseDto[]> {
     const departments = await this.repository.getHierarchy(companyId);
     return departments.map((dept) => this.formatDepartment(dept));
+  }
+
+  /**
+   * Walk up the parent chain from newParentId and verify that `departmentId`
+   * is never encountered. Prevents A → B → A cycles.
+   */
+  private async validateNoCircularHierarchy(
+    departmentId: string,
+    newParentId: string,
+    companyId: string,
+  ): Promise<void> {
+    const visited = new Set<string>();
+    let currentId: string | null = newParentId;
+
+    while (currentId) {
+      if (currentId === departmentId) {
+        throw new ConflictException(
+          'Circular hierarchy detected: this parent is already a descendant of the department being updated',
+        );
+      }
+      if (visited.has(currentId)) break; // safety: already visited
+      visited.add(currentId);
+
+      const parent = await this.repository.findById(currentId, companyId);
+      currentId = parent?.parent?.id ?? null;
+    }
   }
 
   /**

@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { AuthService } from '../auth.service';
 
 /**
  * Extract JWT from httpOnly cookie or Authorization header.
@@ -22,7 +23,10 @@ function extractJwtFromCookieOrHeader(req: Request): string | null {
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private authService: AuthService,
+  ) {
     const jwtSecret = configService.get<string>('JWT_SECRET');
     if (!jwtSecret) {
       throw new Error('JWT_SECRET must be defined in environment variables');
@@ -39,9 +43,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * Validate JWT payload
    * This method is called after token signature is verified
    */
-  async validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload & { iat?: number }) {
     if (!payload.userId || !payload.companyId) {
       throw new UnauthorizedException('Invalid token payload');
+    }
+
+    // Reject tokens issued before the user's last logout
+    if (payload.iat && this.authService.isTokenBlacklisted(payload.userId, payload.iat)) {
+      throw new UnauthorizedException('Token has been invalidated');
     }
 
     return {

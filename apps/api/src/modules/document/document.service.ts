@@ -10,7 +10,7 @@ import {
   DocumentResponseDto,
   DocumentPaginationResponseDto,
 } from './dto';
-import type { ReadStream } from 'node:fs';
+import type { Readable } from 'node:stream';
 
 @Injectable()
 export class DocumentService {
@@ -233,7 +233,7 @@ export class DocumentService {
   async download(
     id: string,
     companyId: string,
-  ): Promise<{ stream: ReadStream; document: DocumentResponseDto }> {
+  ): Promise<{ stream: Readable; document: DocumentResponseDto; signedUrl?: string }> {
     this.logger.log(`Downloading document ${id}`, 'DocumentService');
 
     const document = await this.repository.findById(id, companyId);
@@ -242,11 +242,15 @@ export class DocumentService {
       throw new NotFoundException('Document not found');
     }
 
-    const stream = this.storageService.getFileStream(document.filePath);
+    // For S3 storage, try to get a signed URL for direct download
+    const signedUrl = await this.storageService.getSignedUrl(document.filePath);
+
+    const stream = await this.storageService.getFileStreamAsync(document.filePath);
 
     return {
       stream,
       document: this.formatDocument(document),
+      signedUrl: signedUrl ?? undefined,
     };
   }
 
