@@ -1,5 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { AdminRepository } from './admin.repository.js';
+import { CreateCompanyDto } from './dto/index.js';
 
 @Injectable()
 export class AdminService {
@@ -115,6 +118,48 @@ export class AdminService {
     }
 
     return this.repository.updateCompanySubscription(id, updateData);
+  }
+
+  // ── Company Creation ──────────────────────────────────────────────
+
+  async createCompany(dto: CreateCompanyDto) {
+    // Check for duplicate company code
+    const existing = await this.repository.findCompanyByCode(dto.companyCode);
+    if (existing) {
+      throw new ConflictException(`Company code "${dto.companyCode}" already exists`);
+    }
+
+    // Generate a temporary password
+    const temporaryPassword = crypto.randomBytes(6).toString('base64url'); // ~8 chars
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+
+    // Default permissions for COMPANY_ADMIN
+    const permissions = ['ALL'];
+
+    const result = await this.repository.createCompanyWithAdmin({
+      companyName: dto.companyName,
+      companyCode: dto.companyCode,
+      subscriptionTier: dto.subscriptionTier || 'FREE',
+      subscriptionStatus: dto.subscriptionStatus || 'ACTIVE',
+      logoUrl: dto.logoUrl,
+      adminEmail: dto.adminEmail,
+      adminFirstName: dto.adminFirstName,
+      adminLastName: dto.adminLastName,
+      adminPasswordHash: passwordHash,
+      permissions,
+    });
+
+    return {
+      company: result.company,
+      adminUser: {
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        role: result.user.role,
+      },
+      temporaryPassword,
+    };
   }
 
   // ── Company Users ──────────────────────────────────────────────────

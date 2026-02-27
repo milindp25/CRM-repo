@@ -463,6 +463,7 @@ export interface Company {
   companyCode: string;
   industry?: string;
   website?: string;
+  logoUrl?: string;
   email?: string;
   phone?: string;
   addressLine1?: string;
@@ -493,6 +494,7 @@ export interface UpdateCompanyData {
   companyName?: string;
   industry?: string;
   website?: string;
+  logoUrl?: string;
   email?: string;
   phone?: string;
   addressLine1?: string;

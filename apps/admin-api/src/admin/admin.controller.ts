@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
   Body,
@@ -10,7 +11,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { AdminService } from './admin.service.js';
 import { UserRole } from '@hrplatform/shared';
 import { Roles } from '../common/decorators/roles.decorator.js';
-import { UpdateCompanyFeaturesDto, UpdateSubscriptionDto } from './dto/index.js';
+import { CreateCompanyDto, UpdateCompanyFeaturesDto, UpdateSubscriptionDto } from './dto/index.js';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -50,6 +51,14 @@ export class AdminController {
       status,
       tier,
     });
+  }
+
+  // ── Create Company ────────────────────────────────────────────────
+
+  @Post('companies')
+  @ApiOperation({ summary: 'Create a new company with initial admin user' })
+  async createCompany(@Body() dto: CreateCompanyDto) {
+    return this.adminService.createCompany(dto);
   }
 
   // ── Company Detail ─────────────────────────────────────────────────

@@ -99,6 +99,55 @@ export class AdminRepository {
     return { data, total, page, limit };
   }
 
+  // ── Company Lookup ─────────────────────────────────────────────────
+
+  async findCompanyByCode(code: string) {
+    return this.prisma.company.findUnique({ where: { companyCode: code } });
+  }
+
+  // ── Company Creation ──────────────────────────────────────────────
+
+  async createCompanyWithAdmin(data: {
+    companyName: string;
+    companyCode: string;
+    subscriptionTier: string;
+    subscriptionStatus: string;
+    logoUrl?: string;
+    adminEmail: string;
+    adminFirstName: string;
+    adminLastName: string;
+    adminPasswordHash: string;
+    permissions: string[];
+  }) {
+    return this.prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          companyName: data.companyName,
+          companyCode: data.companyCode,
+          subscriptionTier: data.subscriptionTier,
+          subscriptionStatus: data.subscriptionStatus,
+          logoUrl: data.logoUrl,
+        },
+      });
+
+      const user = await tx.user.create({
+        data: {
+          companyId: company.id,
+          email: data.adminEmail,
+          passwordHash: data.adminPasswordHash,
+          firstName: data.adminFirstName,
+          lastName: data.adminLastName,
+          role: 'COMPANY_ADMIN',
+          permissions: data.permissions,
+          isActive: true,
+          emailVerified: true,
+        },
+      });
+
+      return { company, user };
+    });
+  }
+
   // ── Company Detail ─────────────────────────────────────────────────
 
   async findCompanyById(id: string) {

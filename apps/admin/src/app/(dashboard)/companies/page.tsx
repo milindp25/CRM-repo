@@ -9,6 +9,10 @@ import {
   Loader2,
   AlertCircle,
   Building2,
+  Plus,
+  X,
+  CheckCircle,
+  Copy,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 
@@ -52,6 +56,25 @@ export default function CompaniesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
+  // Create Company modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [createSuccess, setCreateSuccess] = useState<{
+    company: Record<string, unknown>;
+    adminUser: { email: string; firstName: string; lastName: string };
+    temporaryPassword: string;
+  } | null>(null);
+  const [createForm, setCreateForm] = useState({
+    companyName: '',
+    companyCode: '',
+    subscriptionTier: 'FREE',
+    adminEmail: '',
+    adminFirstName: '',
+    adminLastName: '',
+    logoUrl: '',
+  });
+
   const fetchCompanies = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -84,13 +107,60 @@ export default function CompaniesPage() {
     setPage(1);
   }, [search, tier, status]);
 
+  const handleCreateCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateError('');
+    setCreateLoading(true);
+    try {
+      const result = await apiClient.createCompany({
+        companyName: createForm.companyName,
+        companyCode: createForm.companyCode,
+        subscriptionTier: createForm.subscriptionTier,
+        adminEmail: createForm.adminEmail,
+        adminFirstName: createForm.adminFirstName,
+        adminLastName: createForm.adminLastName,
+        logoUrl: createForm.logoUrl || undefined,
+      });
+      setCreateSuccess(result);
+      fetchCompanies();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create company');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const resetCreateModal = () => {
+    setShowCreateModal(false);
+    setCreateError('');
+    setCreateSuccess(null);
+    setCreateForm({
+      companyName: '',
+      companyCode: '',
+      subscriptionTier: 'FREE',
+      adminEmail: '',
+      adminFirstName: '',
+      adminLastName: '',
+      logoUrl: '',
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
-        <p className="text-gray-500 mt-1">
-          Manage all registered companies ({total} total)
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
+          <p className="text-gray-500 mt-1">
+            Manage all registered companies ({total} total)
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+        >
+          <Plus className="w-4 h-4" />
+          Create Company
+        </button>
       </div>
 
       {/* Filters */}
@@ -258,6 +328,181 @@ export default function CompaniesPage() {
           </div>
         )}
       </div>
+      {/* Create Company Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {createSuccess ? 'Company Created' : 'Create New Company'}
+              </h2>
+              <button onClick={resetCreateModal} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {createSuccess ? (
+              <div className="p-6 space-y-4">
+                <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-4">
+                  <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-green-800">Company created successfully!</p>
+                    <p className="text-sm text-green-700 mt-1">
+                      {createSuccess.adminUser.firstName} {createSuccess.adminUser.lastName} ({createSuccess.adminUser.email}) has been set as the Company Admin.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-amber-800 mb-2">Temporary Password</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-white border border-amber-300 rounded px-3 py-2 text-sm font-mono text-amber-900">
+                      {createSuccess.temporaryPassword}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(createSuccess.temporaryPassword)}
+                      className="p-2 rounded-lg hover:bg-amber-100 transition-colors"
+                      title="Copy password"
+                    >
+                      <Copy className="w-4 h-4 text-amber-700" />
+                    </button>
+                  </div>
+                  <p className="text-xs text-amber-600 mt-2">
+                    Share this password securely with the admin. They should change it after first login.
+                  </p>
+                </div>
+
+                <button
+                  onClick={resetCreateModal}
+                  className="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateCompany} className="p-6 space-y-4">
+                {createError && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3">
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <p className="text-sm text-red-700">{createError}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.companyName}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, companyName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                      placeholder="Acme Corp"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Code</label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.companyCode}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, companyCode: e.target.value.toUpperCase() }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-mono"
+                      placeholder="ACME"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subscription Tier</label>
+                    <select
+                      value={createForm.subscriptionTier}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, subscriptionTier: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white"
+                    >
+                      <option value="FREE">Free</option>
+                      <option value="BASIC">Basic</option>
+                      <option value="PROFESSIONAL">Professional</option>
+                      <option value="ENTERPRISE">Enterprise</option>
+                    </select>
+                  </div>
+                </div>
+
+                <hr className="border-gray-200" />
+                <p className="text-sm font-medium text-gray-700">Initial Admin User</p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.adminFirstName}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, adminFirstName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                      placeholder="John"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.adminLastName}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, adminLastName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                      placeholder="Doe"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Admin Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={createForm.adminEmail}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, adminEmail: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                      placeholder="admin@acme.com"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL (optional)</label>
+                    <input
+                      type="url"
+                      value={createForm.logoUrl}
+                      onChange={(e) => setCreateForm((f) => ({ ...f, logoUrl: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                      placeholder="https://example.com/logo.png"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={resetCreateModal}
+                    className="flex-1 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={createLoading}
+                    className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {createLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Creating...
+                      </span>
+                    ) : (
+                      'Create Company'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

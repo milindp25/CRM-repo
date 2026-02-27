@@ -194,6 +194,26 @@ class AdminApiClient {
     });
   }
 
+  async createCompany(data: {
+    companyName: string;
+    companyCode: string;
+    subscriptionTier?: string;
+    subscriptionStatus?: string;
+    adminEmail: string;
+    adminFirstName: string;
+    adminLastName: string;
+    logoUrl?: string;
+  }): Promise<{
+    company: Record<string, unknown>;
+    adminUser: { id: string; email: string; firstName: string; lastName: string; role: string };
+    temporaryPassword: string;
+  }> {
+    return this.request('/admin/companies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async updateCompanyFeatures(
     id: string,
     features: string[]
