@@ -44,6 +44,8 @@ export class ApiKeyGuard implements CanActivate {
       companyId: apiKey.companyId,
       role: 'API_KEY',
       permissions: apiKey.permissions,
+      apiKeyId: apiKey.id,
+      apiKeyRateLimit: apiKey.rateLimit,
     };
 
     return true;

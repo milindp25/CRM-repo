@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, ConflictException, BadRequestExcepti
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { AuthRepository } from './auth.repository';
 import { IAuthService } from './interfaces/auth.service.interface';
 import { LoginDto, RegisterDto, AuthResponseDto } from './dto';
@@ -9,6 +10,7 @@ import { UpdateSSOConfigDto, SSOConfigResponseDto, SSOProvider } from './dto/sso
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { LoggerService } from '../../common/services/logger.service';
 import { CacheService } from '../../common/services/cache.service';
+import { EmailService } from '../../common/services/email.service';
 
 /**
  * Auth Service (Business Logic Layer)
@@ -23,6 +25,7 @@ export class AuthService implements IAuthService {
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
     private readonly cache: CacheService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -117,24 +120,43 @@ export class AuthService implements IAuthService {
   }
 
   /**
-   * Refresh access token
+   * Refresh access token with token rotation.
+   * Each refresh token can only be used once — reuse triggers session invalidation.
    */
   async refreshToken(refreshToken: string): Promise<AuthResponseDto> {
+    let payload: any;
     try {
-      const payload = this.jwtService.verify(refreshToken, {
+      payload = this.jwtService.verify(refreshToken, {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
       });
-
-      const user = await this.authRepository.findUserById(payload.userId);
-
-      if (!user || !user.isActive) {
-        throw new UnauthorizedException('Invalid token');
-      }
-
-      return this.generateAuthResponse(user);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
+
+    // Check if this refresh token has already been used (replay attack)
+    const jti = payload.jti;
+    if (jti && this.cache.get<boolean>(`rt:used:${jti}`)) {
+      // Possible token theft — invalidate all sessions for this user
+      this.cache.set(`logout:${payload.userId}`, Date.now(), this.getAccessTokenTtlMs());
+      this.logger.warn(
+        `Refresh token reuse detected for user ${payload.userId} — all sessions invalidated`,
+        'AuthService',
+      );
+      throw new UnauthorizedException('Refresh token has already been used');
+    }
+
+    const user = await this.authRepository.findUserById(payload.userId);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    // Mark old refresh token as used (keep in cache for the token's remaining lifetime)
+    if (jti) {
+      const refreshTtlMs = this.getRefreshTokenTtlMs();
+      this.cache.set(`rt:used:${jti}`, true, refreshTtlMs);
+    }
+
+    return this.generateAuthResponse(user);
   }
 
   /**
@@ -185,11 +207,119 @@ export class AuthService implements IAuthService {
   }
 
   /**
-   * Logout user (placeholder for token blacklist implementation)
+   * Request a password reset email.
+   * Always returns success (even if email not found) to prevent user enumeration.
+   */
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.authRepository.findUserByEmail(email);
+    if (!user || !user.isActive) {
+      // Don't reveal that the user doesn't exist
+      return;
+    }
+
+    // Sign a short-lived reset token using JWT_SECRET + passwordHash
+    // This auto-invalidates the token once the password is changed
+    const resetToken = this.jwtService.sign(
+      { userId: user.id, purpose: 'password-reset' },
+      {
+        secret: this.configService.get('JWT_SECRET') + user.passwordHash,
+        expiresIn: '1h',
+      },
+    );
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const resetUrl = `${frontendUrl}/auth/reset-password?token=${resetToken}`;
+
+    await this.emailService.sendTemplatedMail(user.email, 'password-reset', {
+      recipientName: user.firstName ?? undefined,
+      resetUrl,
+      companyName: user.company?.companyName ?? undefined,
+    });
+
+    this.logger.log(`Password reset email sent to ${email}`, 'AuthService');
+  }
+
+  /**
+   * Reset password using a token from the forgot-password email.
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    // Decode the token without verification to extract userId
+    let decoded: any;
+    try {
+      decoded = this.jwtService.decode(token);
+    } catch {
+      throw new BadRequestException('Invalid reset token');
+    }
+
+    if (!decoded?.userId || decoded?.purpose !== 'password-reset') {
+      throw new BadRequestException('Invalid reset token');
+    }
+
+    const user = await this.authRepository.findUserById(decoded.userId);
+    if (!user || !user.isActive) {
+      throw new BadRequestException('Invalid reset token');
+    }
+
+    // Verify the token with the secret that includes the current passwordHash
+    // If the password was already changed, this will fail (token auto-invalidated)
+    try {
+      this.jwtService.verify(token, {
+        secret: this.configService.get('JWT_SECRET') + user.passwordHash,
+      });
+    } catch {
+      throw new BadRequestException('Reset token has expired or already been used');
+    }
+
+    const newHash = await this.hashPassword(newPassword);
+    await this.authRepository.updatePassword(user.id, newHash);
+
+    // Invalidate all existing sessions
+    this.cache.set(`logout:${user.id}`, Date.now(), this.getAccessTokenTtlMs());
+    this.cache.invalidate(`profile:${user.id}`);
+
+    this.logger.log(`Password reset completed for user ${user.id}`, 'AuthService');
+  }
+
+  /**
+   * Logout user — blacklists tokens issued before this moment
    */
   async logout(userId: string): Promise<void> {
-    // TODO: Implement token blacklist or session invalidation
+    const accessTtl = this.getAccessTokenTtlMs();
+    this.cache.set(`logout:${userId}`, Date.now(), accessTtl);
+    this.cache.invalidate(`profile:${userId}`);
     this.logger.log(`User logged out: ${userId}`, 'AuthService');
+  }
+
+  /**
+   * Check if a user's token was issued before their last logout
+   */
+  isTokenBlacklisted(userId: string, tokenIssuedAt: number): boolean {
+    const logoutTimestamp = this.cache.get<number>(`logout:${userId}`);
+    if (!logoutTimestamp) return false;
+    return tokenIssuedAt * 1000 <= logoutTimestamp;
+  }
+
+  private getAccessTokenTtlMs(): number {
+    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '15m');
+    return this.parseDurationToMs(expiresIn, 15 * 60 * 1000);
+  }
+
+  private getRefreshTokenTtlMs(): number {
+    const expiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '30d');
+    return this.parseDurationToMs(expiresIn, 30 * 24 * 60 * 60 * 1000);
+  }
+
+  private parseDurationToMs(duration: string, defaultMs: number): number {
+    const match = duration.match(/^(\d+)([smhd])$/);
+    if (!match) return defaultMs;
+    const value = parseInt(match[1], 10);
+    switch (match[2]) {
+      case 's': return value * 1000;
+      case 'm': return value * 60 * 1000;
+      case 'h': return value * 60 * 60 * 1000;
+      case 'd': return value * 24 * 60 * 60 * 1000;
+      default: return defaultMs;
+    }
   }
 
   // ============================================================================
@@ -350,7 +480,7 @@ export class AuthService implements IAuthService {
     const accessToken = this.jwtService.sign(payload);
 
     const refreshToken = this.jwtService.sign(
-      { userId: user.id, type: 'refresh' },
+      { userId: user.id, type: 'refresh', jti: crypto.randomUUID() },
       {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
         expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', '30d'),

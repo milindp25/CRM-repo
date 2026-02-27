@@ -37,6 +37,8 @@ import { Permission } from '@hrplatform/shared';
 
 export interface NavItem {
   name: string;
+  /** i18n translation key (dot-notation). Falls back to `name` if not translated. */
+  nameKey?: string;
   href: string;
   icon: ComponentType<{ className?: string }>;
   /** If true, visible to all authenticated users regardless of permissions */
@@ -50,12 +52,14 @@ export interface NavItem {
 export const navigation: NavItem[] = [
   {
     name: 'Dashboard',
+    nameKey: 'nav.dashboard',
     href: '/dashboard',
     icon: Home,
     alwaysVisible: true,
   },
   {
     name: 'Employees',
+    nameKey: 'nav.employees',
     href: '/employees',
     icon: Users,
     requiredPermissions: [Permission.VIEW_EMPLOYEES, Permission.MANAGE_EMPLOYEES],
@@ -63,6 +67,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Departments',
+    nameKey: 'nav.departments',
     href: '/departments',
     icon: Building2,
     requiredPermissions: [Permission.VIEW_DEPARTMENTS, Permission.MANAGE_DEPARTMENTS],
@@ -70,6 +75,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Designations',
+    nameKey: 'nav.designations',
     href: '/designations',
     icon: Award,
     requiredPermissions: [Permission.VIEW_DESIGNATIONS, Permission.MANAGE_DESIGNATIONS],
@@ -77,6 +83,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Attendance',
+    nameKey: 'nav.attendance',
     href: '/attendance',
     icon: Calendar,
     requiredPermissions: [Permission.VIEW_ATTENDANCE, Permission.MARK_ATTENDANCE, Permission.MANAGE_ATTENDANCE],
@@ -84,6 +91,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Leave',
+    nameKey: 'nav.leave',
     href: '/leave',
     icon: Briefcase,
     requiredPermissions: [Permission.VIEW_LEAVES, Permission.APPLY_LEAVE, Permission.MANAGE_LEAVES],
@@ -91,6 +99,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Leave Balance',
+    nameKey: 'nav.leaveBalance',
     href: '/leave/balance',
     icon: ClipboardList,
     requiredPermissions: [Permission.VIEW_LEAVES, Permission.APPLY_LEAVE, Permission.MANAGE_LEAVES],
@@ -98,6 +107,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Payroll',
+    nameKey: 'nav.payroll',
     href: '/payroll',
     icon: DollarSign,
     requiredPermissions: [Permission.VIEW_PAYROLL, Permission.VIEW_OWN_PAYROLL, Permission.MANAGE_PAYROLL],
@@ -105,6 +115,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Salary Structures',
+    nameKey: 'nav.salaryStructures',
     href: '/payroll/salary-structures',
     icon: ClipboardList,
     requiredPermissions: [Permission.MANAGE_PAYROLL],
@@ -112,6 +123,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'My Payslips',
+    nameKey: 'nav.myPayslips',
     href: '/payroll/my-payslips',
     icon: Wallet,
     requiredPermissions: [Permission.VIEW_OWN_PAYROLL],
@@ -119,6 +131,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Compliance Reports',
+    nameKey: 'nav.complianceReports',
     href: '/payroll/reports',
     icon: FileBarChart,
     requiredPermissions: [Permission.MANAGE_PAYROLL, Permission.GENERATE_REPORTS],
@@ -126,6 +139,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Reports',
+    nameKey: 'nav.reports',
     href: '/reports',
     icon: BarChart2,
     requiredPermissions: [Permission.VIEW_REPORTS, Permission.GENERATE_REPORTS],
@@ -133,6 +147,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Performance',
+    nameKey: 'nav.performance',
     href: '/performance',
     icon: Target,
     requiredPermissions: [Permission.VIEW_PERFORMANCE, Permission.MANAGE_PERFORMANCE, Permission.VIEW_OWN_PERFORMANCE],
@@ -140,6 +155,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Recruitment',
+    nameKey: 'nav.recruitment',
     href: '/recruitment',
     icon: UserPlus,
     requiredPermissions: [Permission.VIEW_RECRUITMENT, Permission.MANAGE_RECRUITMENT],
@@ -147,6 +163,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Training',
+    nameKey: 'nav.training',
     href: '/training',
     icon: GraduationCap,
     requiredPermissions: [Permission.VIEW_TRAINING, Permission.MANAGE_TRAINING, Permission.ENROLL_TRAINING],
@@ -154,6 +171,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Assets',
+    nameKey: 'nav.assets',
     href: '/assets',
     icon: Package,
     requiredPermissions: [Permission.VIEW_ASSETS, Permission.MANAGE_ASSETS],
@@ -161,6 +179,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Expenses',
+    nameKey: 'nav.expenses',
     href: '/expenses',
     icon: Receipt,
     requiredPermissions: [Permission.VIEW_EXPENSES, Permission.MANAGE_EXPENSES, Permission.SUBMIT_EXPENSE],
@@ -168,6 +187,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Shifts',
+    nameKey: 'nav.shifts',
     href: '/shifts',
     icon: Clock,
     requiredPermissions: [Permission.VIEW_SHIFTS, Permission.MANAGE_SHIFTS],
@@ -175,6 +195,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Policies',
+    nameKey: 'nav.policies',
     href: '/policies',
     icon: FileText,
     requiredPermissions: [Permission.VIEW_POLICIES, Permission.MANAGE_POLICIES, Permission.ACKNOWLEDGE_POLICY],
@@ -182,6 +203,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Offboarding',
+    nameKey: 'nav.offboarding',
     href: '/offboarding',
     icon: UserMinus,
     requiredPermissions: [Permission.VIEW_OFFBOARDING, Permission.MANAGE_OFFBOARDING],
@@ -189,6 +211,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Directory',
+    nameKey: 'nav.directory',
     href: '/directory',
     icon: BookOpen,
     requiredPermissions: [Permission.VIEW_DIRECTORY],
@@ -196,6 +219,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Social Feed',
+    nameKey: 'nav.socialFeed',
     href: '/social',
     icon: MessageSquare,
     requiredPermissions: [Permission.VIEW_DIRECTORY, Permission.SEND_KUDOS],
@@ -203,6 +227,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Surveys',
+    nameKey: 'nav.surveys',
     href: '/surveys',
     icon: ClipboardList,
     requiredPermissions: [Permission.MANAGE_SURVEYS, Permission.RESPOND_SURVEY],
@@ -210,6 +235,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Timesheets',
+    nameKey: 'nav.timesheets',
     href: '/timesheets',
     icon: Timer,
     requiredPermissions: [Permission.MANAGE_TIMESHEETS, Permission.VIEW_OWN_TIMESHEETS],
@@ -217,6 +243,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Contractors',
+    nameKey: 'nav.contractors',
     href: '/contractors',
     icon: Handshake,
     requiredPermissions: [Permission.VIEW_CONTRACTORS, Permission.MANAGE_CONTRACTORS],
@@ -224,6 +251,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Analytics',
+    nameKey: 'nav.analytics',
     href: '/analytics',
     icon: PieChart,
     requiredPermissions: [Permission.VIEW_ANALYTICS],
@@ -231,6 +259,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Org Chart',
+    nameKey: 'nav.orgChart',
     href: '/org-chart',
     icon: Network,
     requiredPermissions: [Permission.VIEW_DEPARTMENTS, Permission.VIEW_EMPLOYEES],
@@ -238,18 +267,21 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Users',
+    nameKey: 'nav.users',
     href: '/users',
     icon: Shield,
     requiredPermissions: [Permission.VIEW_USERS, Permission.MANAGE_USERS],
   },
   {
     name: 'Import/Export',
+    nameKey: 'nav.importExport',
     href: '/import-export',
     icon: ArrowUpDown,
     requiredPermissions: [Permission.VIEW_EMPLOYEES, Permission.MANAGE_EMPLOYEES],
   },
   {
     name: 'Audit Logs',
+    nameKey: 'nav.auditLogs',
     href: '/audit-logs',
     icon: ScrollText,
     requiredPermissions: [Permission.VIEW_AUDIT_LOGS],
@@ -257,12 +289,14 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Settings',
+    nameKey: 'nav.settings',
     href: '/settings',
     icon: Settings,
     requiredPermissions: [Permission.MANAGE_COMPANY],
   },
   {
     name: 'Profile',
+    nameKey: 'nav.profile',
     href: '/profile',
     icon: UserCircle,
     alwaysVisible: true,

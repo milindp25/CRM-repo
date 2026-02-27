@@ -66,7 +66,7 @@ export class EmployeeController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateEmployeeDto,
   ): Promise<EmployeeResponseDto> {
-    return this.employeeService.create(user.companyId, dto);
+    return this.employeeService.create(user.companyId, dto, user.userId, user.email);
   }
 
   @Get()
@@ -122,7 +122,7 @@ export class EmployeeController {
     @Param('id') id: string,
     @Body() dto: UpdateEmployeeDto,
   ): Promise<EmployeeResponseDto> {
-    return this.employeeService.update(id, user.companyId, dto);
+    return this.employeeService.update(id, user.companyId, dto, user.userId, user.email);
   }
 
   @Delete(':id')
@@ -141,6 +141,6 @@ export class EmployeeController {
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
   ): Promise<void> {
-    await this.employeeService.delete(id, user.companyId);
+    await this.employeeService.delete(id, user.companyId, user.userId, user.email);
   }
 }

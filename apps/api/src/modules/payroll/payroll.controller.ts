@@ -23,12 +23,14 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { UserRole } from '@hrplatform/shared';
+import { UserRole, Feature, TIER_FEATURES, SubscriptionTier } from '@hrplatform/shared';
 import {
   BatchPayrollDto,
   ProcessBonusDto,
   SubmitApprovalDto,
 } from './dto';
+import { PrismaService } from '../../database/prisma.service';
+import { CacheService } from '../../common/services/cache.service';
 
 // TS1272 workaround: define locally
 interface JwtPayload {
@@ -50,7 +52,42 @@ export class PayrollController {
     private readonly pdfService: PdfService,
     private readonly bankExportService: BankExportService,
     private readonly statutoryReportService: StatutoryReportService,
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
   ) {}
+
+  /**
+   * Check if a company has the PAYSLIP_ARCHIVE feature via tier, explicit flags, or add-on
+   */
+  private async hasPayslipArchive(companyId: string): Promise<boolean> {
+    const cacheKey = `feature:payslip_archive:${companyId}`;
+    return this.cache.getOrSet(cacheKey, async () => {
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { featuresEnabled: true, subscriptionTier: true },
+      });
+      if (!company) return false;
+
+      // Check explicit features
+      if ((company.featuresEnabled as string[])?.includes(Feature.PAYSLIP_ARCHIVE)) return true;
+
+      // Check tier features
+      const tier = company.subscriptionTier as SubscriptionTier;
+      const tierFeatures = TIER_FEATURES[tier] ?? TIER_FEATURES[SubscriptionTier.FREE];
+      if (tierFeatures.includes(Feature.PAYSLIP_ARCHIVE as any)) return true;
+
+      // Check paid add-on
+      const addon = await this.prisma.companyAddon.findFirst({
+        where: {
+          companyId,
+          status: 'ACTIVE',
+          featureAddon: { feature: Feature.PAYSLIP_ARCHIVE, isActive: true },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+      });
+      return !!addon;
+    }, 30_000);
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // STATIC ROUTES (must be defined BEFORE :id wildcard routes)
@@ -230,8 +267,7 @@ export class PayrollController {
     if (!user.employeeId) {
       return { data: [], hasArchive: false, totalRecords: 0 };
     }
-    // TODO: Check PAYSLIP_ARCHIVE feature flag from company features
-    const hasArchive = false; // Will be populated from feature check
+    const hasArchive = await this.hasPayslipArchive(user.companyId);
     return this.payrollService.getMyHistory(user.companyId, user.employeeId, hasArchive);
   }
 
@@ -258,8 +294,7 @@ export class PayrollController {
     if (!user.employeeId) {
       return null;
     }
-    // TODO: Check PAYSLIP_ARCHIVE feature flag from company features
-    const hasArchive = false;
+    const hasArchive = await this.hasPayslipArchive(user.companyId);
     return this.payrollService.getMyPayroll(user.companyId, user.employeeId, id, hasArchive);
   }
 

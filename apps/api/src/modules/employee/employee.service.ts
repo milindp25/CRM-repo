@@ -45,7 +45,7 @@ export class EmployeeService implements IEmployeeService {
   /**
    * Create a new employee
    */
-  async create(companyId: string, dto: CreateEmployeeDto): Promise<EmployeeResponseDto> {
+  async create(companyId: string, dto: CreateEmployeeDto, userId?: string, userEmail?: string): Promise<EmployeeResponseDto> {
     // Check subscription employee limit
     await this.checkEmployeeLimit(companyId);
 
@@ -81,8 +81,8 @@ export class EmployeeService implements IEmployeeService {
 
     // Create audit log (fire and forget)
     this.employeeRepository.createAuditLog({
-      userId: companyId, // TODO: Get actual userId from context
-      userEmail: 'system',
+      userId: userId || companyId,
+      userEmail: userEmail || 'system',
       action: 'EMPLOYEE_CREATED',
       resourceType: 'EMPLOYEE',
       resourceId: employee.id,
@@ -136,7 +136,7 @@ export class EmployeeService implements IEmployeeService {
   /**
    * Update an employee
    */
-  async update(id: string, companyId: string, dto: UpdateEmployeeDto): Promise<EmployeeResponseDto> {
+  async update(id: string, companyId: string, dto: UpdateEmployeeDto, userId?: string, userEmail?: string): Promise<EmployeeResponseDto> {
     // Check employee exists
     const existing = await this.employeeRepository.findById(id, companyId);
     if (!existing) {
@@ -186,8 +186,8 @@ export class EmployeeService implements IEmployeeService {
 
     // Create audit log (fire and forget)
     this.employeeRepository.createAuditLog({
-      userId: companyId,
-      userEmail: 'system',
+      userId: userId || companyId,
+      userEmail: userEmail || 'system',
       action: 'EMPLOYEE_UPDATED',
       resourceType: 'EMPLOYEE',
       resourceId: employee.id,
@@ -202,7 +202,7 @@ export class EmployeeService implements IEmployeeService {
   /**
    * Soft delete an employee
    */
-  async delete(id: string, companyId: string): Promise<void> {
+  async delete(id: string, companyId: string, userId?: string, userEmail?: string): Promise<void> {
     // Check employee exists
     const existing = await this.employeeRepository.findById(id, companyId);
     if (!existing) {
@@ -217,8 +217,8 @@ export class EmployeeService implements IEmployeeService {
 
     // Create audit log (fire and forget)
     this.employeeRepository.createAuditLog({
-      userId: companyId,
-      userEmail: 'system',
+      userId: userId || companyId,
+      userEmail: userEmail || 'system',
       action: 'EMPLOYEE_DELETED',
       resourceType: 'EMPLOYEE',
       resourceId: id,

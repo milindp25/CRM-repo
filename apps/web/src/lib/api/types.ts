@@ -536,6 +536,8 @@ export interface AuditLogFilters {
   userId?: string;
   action?: string;
   resourceType?: string;
+  startDate?: string;
+  endDate?: string;
   skip?: number;
   take?: number;
 }
