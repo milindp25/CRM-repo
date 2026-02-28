@@ -55,7 +55,7 @@ export function LoginForm() {
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-foreground mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Email Address
         </label>
@@ -78,7 +78,7 @@ export function LoginForm() {
       <div>
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-foreground mb-2"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
           Password
         </label>
@@ -106,23 +106,23 @@ export function LoginForm() {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-border rounded"
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
           <label
             htmlFor="remember-me"
-            className="ml-2 block text-sm text-foreground"
+            className="ml-2 block text-sm text-gray-700"
           >
             Remember me
           </label>
         </div>
 
         <div className="text-sm">
-          <a
-            href="#"
+          <Link
+            href="/auth/forgot-password"
             className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-1"
           >
             Forgot password?
-          </a>
+          </Link>
         </div>
       </div>
 

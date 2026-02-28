@@ -195,24 +195,73 @@ async function main() {
   });
   console.log(`✅ Created ${3} employees\n`);
 
-  // 5. Create admin user
-  console.log('🔐 Creating admin user...');
-  const adminPasswordHash = await bcrypt.hash('Test@12345', 12);
+  // 5. Create users with different roles
+  console.log('🔐 Creating users...');
+  const passwordHash = await bcrypt.hash('Test@12345', 12);
+
   const adminUser = await prisma.user.create({
     data: {
       companyId: company.id,
       email: 'admin@demotech.com',
-      passwordHash: adminPasswordHash,
+      passwordHash: passwordHash,
       firstName: 'Admin',
       lastName: 'User',
       role: 'COMPANY_ADMIN',
       permissions: ['ALL'],
-      employeeId: emp2.id, // Link to HR Manager
       isActive: true,
       emailVerified: true,
     },
   });
-  console.log(`✅ Admin user created: ${adminUser.email}\n`);
+  console.log(`  COMPANY_ADMIN: ${adminUser.email}`);
+
+  const hrUser = await prisma.user.create({
+    data: {
+      companyId: company.id,
+      email: 'hr@demotech.com',
+      passwordHash: passwordHash,
+      firstName: 'Priya',
+      lastName: 'Sharma',
+      role: 'HR_ADMIN',
+      permissions: ['MANAGE_EMPLOYEES', 'VIEW_EMPLOYEES', 'MANAGE_ATTENDANCE', 'VIEW_ATTENDANCE', 'MANAGE_LEAVES', 'VIEW_LEAVES', 'MANAGE_PAYROLL', 'VIEW_PAYROLL', 'VIEW_USERS', 'CREATE_USERS', 'UPDATE_USERS', 'VIEW_REPORTS', 'VIEW_DEPARTMENTS', 'MANAGE_DEPARTMENTS', 'VIEW_DESIGNATIONS', 'MANAGE_DESIGNATIONS', 'VIEW_PERFORMANCE', 'MANAGE_PERFORMANCE', 'VIEW_RECRUITMENT', 'MANAGE_RECRUITMENT', 'VIEW_TRAINING', 'MANAGE_TRAINING', 'VIEW_ASSETS', 'MANAGE_ASSETS', 'VIEW_EXPENSES', 'MANAGE_EXPENSES', 'VIEW_SHIFTS', 'MANAGE_SHIFTS', 'VIEW_POLICIES', 'MANAGE_POLICIES', 'MANAGE_LEAVE_POLICIES', 'MANAGE_OFFBOARDING', 'VIEW_DIRECTORY', 'MANAGE_SURVEYS', 'VIEW_TIMESHEETS', 'VIEW_ANALYTICS', 'MANAGE_DASHBOARD_CONFIG'],
+      employeeId: emp2.id,
+      isActive: true,
+      emailVerified: true,
+    },
+  });
+  console.log(`  HR_ADMIN: ${hrUser.email}`);
+
+  const mgrUser = await prisma.user.create({
+    data: {
+      companyId: company.id,
+      email: 'manager@demotech.com',
+      passwordHash: passwordHash,
+      firstName: 'Rajesh',
+      lastName: 'Kumar',
+      role: 'MANAGER',
+      permissions: ['VIEW_EMPLOYEES', 'VIEW_ATTENDANCE', 'MARK_ATTENDANCE', 'APPLY_LEAVE', 'APPROVE_LEAVE', 'VIEW_LEAVES', 'VIEW_PAYROLL', 'VIEW_OWN_PAYROLL', 'VIEW_DEPARTMENTS', 'VIEW_DESIGNATIONS', 'VIEW_PERFORMANCE', 'VIEW_OWN_PERFORMANCE', 'VIEW_TRAINING', 'ENROLL_TRAINING', 'SUBMIT_EXPENSE', 'APPROVE_EXPENSE', 'VIEW_SHIFTS', 'APPROVE_TIMESHEETS', 'VIEW_OWN_TIMESHEETS', 'SEND_KUDOS', 'VIEW_DIRECTORY', 'RESPOND_SURVEY', 'MANAGE_DASHBOARD_CONFIG', 'VIEW_USERS'],
+      employeeId: emp1.id,
+      isActive: true,
+      emailVerified: true,
+    },
+  });
+  console.log(`  MANAGER: ${mgrUser.email}`);
+
+  const empUser = await prisma.user.create({
+    data: {
+      companyId: company.id,
+      email: 'employee@demotech.com',
+      passwordHash: passwordHash,
+      firstName: 'Amit',
+      lastName: 'Patel',
+      role: 'EMPLOYEE',
+      permissions: ['VIEW_EMPLOYEES', 'VIEW_ATTENDANCE', 'MARK_ATTENDANCE', 'APPLY_LEAVE', 'VIEW_LEAVES', 'VIEW_OWN_PAYROLL', 'VIEW_OWN_PERFORMANCE', 'SUBMIT_SELF_REVIEW', 'ENROLL_TRAINING', 'VIEW_TRAINING', 'SUBMIT_EXPENSE', 'VIEW_OWN_TIMESHEETS', 'SEND_KUDOS', 'VIEW_DIRECTORY', 'RESPOND_SURVEY', 'ACKNOWLEDGE_POLICY'],
+      employeeId: emp3.id,
+      isActive: true,
+      emailVerified: true,
+    },
+  });
+  console.log(`  EMPLOYEE: ${empUser.email}`);
+  console.log(`✅ Created 4 users for DemoTech\n`);
 
   // 6. Create sample attendance records (last 7 days)
   console.log('📅 Creating attendance records...');
@@ -502,13 +551,70 @@ async function main() {
   });
   console.log(`✅ Created audit log\n`);
 
+  // 11. Create SUPER_ADMIN user (for admin portal)
+  console.log('🔑 Creating super admin user...');
+  const superAdminHash = await bcrypt.hash('Admin@12345', 12);
+  const superAdmin = await prisma.user.upsert({
+    where: { companyId_email: { companyId: company.id, email: 'superadmin@hrplatform.com' } },
+    update: {},
+    create: {
+      companyId: company.id,
+      email: 'superadmin@hrplatform.com',
+      passwordHash: superAdminHash,
+      firstName: 'Super',
+      lastName: 'Admin',
+      role: 'SUPER_ADMIN',
+      permissions: ['ALL'],
+      isActive: true,
+      emailVerified: true,
+    },
+  });
+  console.log(`✅ Super admin created: ${superAdmin.email}\n`);
+
+  // 12. Create second company (FREE tier) for feature gating testing
+  console.log('📦 Creating second company (FREE tier)...');
+  const startupCo = await prisma.company.upsert({
+    where: { companyCode: 'STARTUP001' },
+    update: {},
+    create: {
+      companyCode: 'STARTUP001',
+      companyName: 'StartupCo',
+      email: 'contact@startupco.com',
+      phone: '+91-9999999999',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      country: 'India',
+      postalCode: '400001',
+      subscriptionTier: 'FREE',
+      subscriptionStatus: 'ACTIVE',
+      featuresEnabled: [],
+    },
+  });
+  console.log(`✅ Company created: ${startupCo.companyName} (${startupCo.id})`);
+
+  const startupAdminHash = await bcrypt.hash('Test@12345', 12);
+  const startupAdmin = await prisma.user.create({
+    data: {
+      companyId: startupCo.id,
+      email: 'admin@startupco.com',
+      passwordHash: startupAdminHash,
+      firstName: 'Startup',
+      lastName: 'Admin',
+      role: 'COMPANY_ADMIN',
+      permissions: ['ALL'],
+      isActive: true,
+      emailVerified: true,
+    },
+  });
+  console.log(`✅ StartupCo admin created: ${startupAdmin.email}\n`);
+
   console.log('🎉 Database seeded successfully!\n');
   console.log('📊 Summary:');
-  console.log(`   - 1 Company: ${company.companyName}`);
+  console.log(`   - 2 Companies: ${company.companyName} (ENTERPRISE) + ${startupCo.companyName} (FREE)`);
   console.log(`   - 3 Departments`);
   console.log(`   - 3 Designations`);
   console.log(`   - 3 Employees (with salary structure + annual CTC)`);
-  console.log(`   - 1 Admin User: ${adminUser.email}`);
+  console.log(`   - 6 Users: admin, hr, manager, employee @demotech + superadmin + admin@startupco`);
   console.log(`   - ${attendanceCount} Attendance records`);
   console.log(`   - 2 Leave applications`);
   console.log(`   - ${taxConfigCount} Tax configurations (India + US)`);

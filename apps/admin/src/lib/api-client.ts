@@ -194,6 +194,26 @@ class AdminApiClient {
     });
   }
 
+  async createCompany(data: {
+    companyName: string;
+    companyCode: string;
+    subscriptionTier?: string;
+    subscriptionStatus?: string;
+    adminEmail: string;
+    adminFirstName: string;
+    adminLastName: string;
+    logoUrl?: string;
+  }): Promise<{
+    company: Record<string, unknown>;
+    adminUser: { id: string; email: string; firstName: string; lastName: string; role: string };
+    temporaryPassword: string;
+  }> {
+    return this.request('/admin/companies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async updateCompanyFeatures(
     id: string,
     features: string[]
@@ -228,6 +248,73 @@ class AdminApiClient {
     }>
   > {
     return this.request(`/admin/companies/${id}/users`);
+  }
+
+  // ── Company User Management (admin-api) ───────────────────────────
+
+  async deleteCompanyUser(
+    companyId: string,
+    userId: string
+  ): Promise<{ message: string }> {
+    return this.request(`/admin/companies/${companyId}/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ── Company Designations (admin-api) ─────────────────────────────
+
+  async getCompanyDesignations(
+    companyId: string
+  ): Promise<Array<{
+    id: string;
+    title: string;
+    code: string;
+    level: number;
+    description: string | null;
+    minSalary: string | null;
+    maxSalary: string | null;
+    currency: string;
+    _count: { employees: number };
+  }>> {
+    return this.request(`/admin/companies/${companyId}/designations`);
+  }
+
+  async createCompanyDesignation(
+    companyId: string,
+    data: {
+      title: string;
+      code: string;
+      level?: number;
+      description?: string;
+      minSalary?: number;
+      maxSalary?: number;
+      currency?: string;
+    }
+  ): Promise<Record<string, unknown>> {
+    return this.request(`/admin/companies/${companyId}/designations`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCompanyDesignation(
+    companyId: string,
+    designationId: string,
+    data: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    return this.request(`/admin/companies/${companyId}/designations/${designationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCompanyDesignation(
+    companyId: string,
+    designationId: string
+  ): Promise<Record<string, unknown>> {
+    return this.request(`/admin/companies/${companyId}/designations/${designationId}`, {
+      method: 'DELETE',
+    });
   }
 
   // ── Feature Add-ons (admin-api) ────────────────────────────────────

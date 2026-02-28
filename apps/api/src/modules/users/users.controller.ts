@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -38,7 +38,7 @@ export class UsersController {
     @Body('role') role: string,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.usersService.updateRole(id, user.companyId, role);
+    return this.usersService.updateRole(id, user.companyId, role, user.role);
   }
 
   @Patch(':id/activate')
@@ -53,5 +53,12 @@ export class UsersController {
   @ApiOperation({ summary: 'Deactivate a user' })
   async deactivate(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.usersService.setActive(id, user.companyId, false);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.COMPANY_ADMIN)
+  @ApiOperation({ summary: 'Soft-delete a user (COMPANY_ADMIN only, enforces role hierarchy)' })
+  async deleteUser(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.usersService.deleteUser(id, user.companyId, user.role, user.userId);
   }
 }

@@ -28,6 +28,7 @@ import {
   TIER_LIMITS,
   SubscriptionTier,
   RolePermissions,
+  canManageRole,
 } from '@hrplatform/shared';
 
 /**
@@ -60,6 +61,17 @@ export class InvitationService {
     // Prevent inviting SUPER_ADMIN role
     if (dto.role === UserRole.SUPER_ADMIN) {
       throw new BadRequestException('Cannot invite users with SUPER_ADMIN role');
+    }
+
+    // Enforce role hierarchy — inviter can only invite roles below their own
+    const inviter = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    if (inviter && !canManageRole(inviter.role as UserRole, dto.role as UserRole)) {
+      throw new ForbiddenException(
+        `You cannot invite users with role ${dto.role}. You can only invite roles below your own.`,
+      );
     }
 
     // Check if user with this email already exists in the company

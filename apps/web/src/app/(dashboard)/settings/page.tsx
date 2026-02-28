@@ -30,6 +30,7 @@ export default function SettingsPage() {
     companyName: '',
     industry: '',
     website: '',
+    logoUrl: '',
     email: '',
     phone: '',
     addressLine1: '',
@@ -54,6 +55,7 @@ export default function SettingsPage() {
             companyName: data.companyName || '',
             industry: data.industry || '',
             website: data.website || '',
+            logoUrl: data.logoUrl || '',
             email: data.email || '',
             phone: data.phone || '',
             addressLine1: data.addressLine1 || '',
@@ -85,6 +87,7 @@ export default function SettingsPage() {
         companyName: data.companyName || '',
         industry: data.industry || '',
         website: data.website || '',
+        logoUrl: data.logoUrl || '',
         email: data.email || '',
         phone: data.phone || '',
         addressLine1: data.addressLine1 || '',
@@ -188,6 +191,27 @@ export default function SettingsPage() {
                 className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="https://example.com"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Logo URL</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="url"
+                  value={formData.logoUrl}
+                  onChange={(e) => handleChange('logoUrl', e.target.value)}
+                  className="flex-1 px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://example.com/logo.png"
+                />
+                {formData.logoUrl && (
+                  <img
+                    src={formData.logoUrl}
+                    alt="Company logo"
+                    className="w-10 h-10 rounded object-contain border border-border"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    onLoad={(e) => { (e.target as HTMLImageElement).style.display = 'block'; }}
+                  />
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Email</label>

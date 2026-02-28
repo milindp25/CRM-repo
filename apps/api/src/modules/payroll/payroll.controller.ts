@@ -13,6 +13,7 @@ import {
   Res,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { PayrollService } from './payroll.service';
 import { PdfService } from './pdf/pdf.service';
@@ -136,6 +137,7 @@ export class PayrollController {
   // ═══════════════════════════════════════════════════════════════════════════════
 
   @Post('batch')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Roles(UserRole.HR_ADMIN, UserRole.COMPANY_ADMIN)
   @ApiOperation({ summary: 'Batch process payroll for all employees' })
   @ApiResponse({ status: 201, description: 'Batch processing started' })
@@ -165,6 +167,7 @@ export class PayrollController {
   }
 
   @Post('batch/:id/submit-approval')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Roles(UserRole.HR_ADMIN, UserRole.COMPANY_ADMIN)
   @ApiOperation({ summary: 'Submit payroll batch for approval' })
   @ApiResponse({ status: 200, description: 'Submitted for approval or no workflow configured' })

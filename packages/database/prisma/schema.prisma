@@ -33,7 +33,8 @@ model Company {
   email       String?  @db.VarChar(255)
   phone       String?  @db.VarChar(20)
   website     String?  @db.VarChar(255)
-  
+  logoUrl     String?  @map("logo_url") @db.Text
+
   // Address
   addressLine1 String? @map("address_line1") @db.VarChar(255)
   addressLine2 String? @map("address_line2") @db.VarChar(255)

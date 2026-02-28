@@ -171,6 +171,7 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
 
   [UserRole.COMPANY_ADMIN]: [
     Permission.MANAGE_USERS,
+    Permission.DELETE_USERS,
     Permission.MANAGE_EMPLOYEES,
     Permission.MANAGE_ATTENDANCE,
     Permission.MANAGE_LEAVES,
@@ -304,6 +305,25 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.SEND_KUDOS,
     Permission.VIEW_DIRECTORY,
     Permission.VIEW_OWN_TIMESHEETS,
-    Permission.MANAGE_DASHBOARD_CONFIG,
   ],
 };
+
+/**
+ * Role hierarchy levels (higher number = higher authority)
+ * Used to enforce that users can only manage roles below their own level
+ */
+export const ROLE_HIERARCHY: Record<UserRole, number> = {
+  [UserRole.SUPER_ADMIN]: 100,
+  [UserRole.COMPANY_ADMIN]: 80,
+  [UserRole.HR_ADMIN]: 60,
+  [UserRole.MANAGER]: 40,
+  [UserRole.EMPLOYEE]: 20,
+};
+
+/**
+ * Check if actorRole can assign/manage targetRole
+ * An actor can only assign roles strictly below their own level
+ */
+export function canManageRole(actorRole: UserRole, targetRole: UserRole): boolean {
+  return ROLE_HIERARCHY[actorRole] > ROLE_HIERARCHY[targetRole];
+}

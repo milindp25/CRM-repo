@@ -1,7 +1,9 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -10,7 +12,17 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { AdminService } from './admin.service.js';
 import { UserRole } from '@hrplatform/shared';
 import { Roles } from '../common/decorators/roles.decorator.js';
-import { UpdateCompanyFeaturesDto, UpdateSubscriptionDto } from './dto/index.js';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import {
+  CreateCompanyDto,
+  UpdateCompanyDto,
+  UpdateCompanyFeaturesDto,
+  UpdateSubscriptionDto,
+  CreateDesignationDto,
+  UpdateDesignationDto,
+} from './dto/index.js';
+
+interface JwtPayload { userId: string; email: string; companyId: string; role: string; }
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -52,6 +64,14 @@ export class AdminController {
     });
   }
 
+  // ── Create Company ────────────────────────────────────────────────
+
+  @Post('companies')
+  @ApiOperation({ summary: 'Create a new company with initial admin user' })
+  async createCompany(@Body() dto: CreateCompanyDto) {
+    return this.adminService.createCompany(dto);
+  }
+
   // ── Company Detail ─────────────────────────────────────────────────
 
   @Get('companies/:id')
@@ -63,12 +83,12 @@ export class AdminController {
   // ── Update Company ─────────────────────────────────────────────────
 
   @Patch('companies/:id')
-  @ApiOperation({ summary: 'Update company (activate/deactivate)' })
+  @ApiOperation({ summary: 'Update company details (name, email, phone, website, status)' })
   async updateCompany(
     @Param('id') id: string,
-    @Body() body: { isActive?: boolean },
+    @Body() dto: UpdateCompanyDto,
   ) {
-    return this.adminService.updateCompany(id, body);
+    return this.adminService.updateCompany(id, dto);
   }
 
   // ── Update Company Features ────────────────────────────────────────
@@ -99,5 +119,51 @@ export class AdminController {
   @ApiOperation({ summary: 'List users in a company' })
   async getCompanyUsers(@Param('id') id: string) {
     return this.adminService.getCompanyUsers(id);
+  }
+
+  @Delete('companies/:companyId/users/:userId')
+  @ApiOperation({ summary: 'Delete a user from a company (SUPER_ADMIN only, audited)' })
+  async deleteCompanyUser(
+    @Param('companyId') companyId: string,
+    @Param('userId') userId: string,
+    @CurrentUser() admin: JwtPayload,
+  ) {
+    return this.adminService.deleteCompanyUser(companyId, userId, admin.userId, admin.email);
+  }
+
+  // ── Company Designations (Org Structure) ────────────────────────────
+
+  @Get('companies/:id/designations')
+  @ApiOperation({ summary: 'List designations in a company' })
+  async getCompanyDesignations(@Param('id') id: string) {
+    return this.adminService.getCompanyDesignations(id);
+  }
+
+  @Post('companies/:id/designations')
+  @ApiOperation({ summary: 'Create a designation for a company' })
+  async createCompanyDesignation(
+    @Param('id') id: string,
+    @Body() dto: CreateDesignationDto,
+  ) {
+    return this.adminService.createCompanyDesignation(id, dto);
+  }
+
+  @Patch('companies/:companyId/designations/:designationId')
+  @ApiOperation({ summary: 'Update a designation in a company' })
+  async updateCompanyDesignation(
+    @Param('companyId') companyId: string,
+    @Param('designationId') designationId: string,
+    @Body() dto: UpdateDesignationDto,
+  ) {
+    return this.adminService.updateCompanyDesignation(companyId, designationId, dto);
+  }
+
+  @Delete('companies/:companyId/designations/:designationId')
+  @ApiOperation({ summary: 'Delete a designation from a company' })
+  async deleteCompanyDesignation(
+    @Param('companyId') companyId: string,
+    @Param('designationId') designationId: string,
+  ) {
+    return this.adminService.deleteCompanyDesignation(companyId, designationId);
   }
 }

@@ -7,7 +7,7 @@ export class UsersRepository {
 
   async findMany(companyId: string) {
     return this.prisma.user.findMany({
-      where: { companyId },
+      where: { companyId, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -60,6 +60,13 @@ export class UsersRepository {
         createdAt: true,
         updatedAt: true,
       },
+    });
+  }
+
+  async softDelete(id: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date(), isActive: false },
     });
   }
 }
