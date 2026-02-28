@@ -30,6 +30,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
+import { tierColors, statusColors, roleColors } from '@/lib/constants';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -41,6 +42,8 @@ interface CompanyDetail {
   companyCode: string;
   email: string;
   phone: string;
+  website?: string;
+  logoUrl?: string | null;
   subscriptionTier: string;
   subscriptionStatus: string;
   featuresEnabled: string[];
@@ -72,29 +75,6 @@ interface Designation {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────
-
-const tierColors: Record<string, string> = {
-  FREE: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-  BASIC: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200',
-  PROFESSIONAL: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200',
-  ENTERPRISE: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200',
-};
-
-const statusColors: Record<string, string> = {
-  TRIAL: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200',
-  ACTIVE: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200',
-  EXPIRED: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200',
-  SUSPENDED: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200',
-  CANCELLED: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-};
-
-const roleColors: Record<string, string> = {
-  SUPER_ADMIN: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200',
-  COMPANY_ADMIN: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200',
-  HR_ADMIN: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200',
-  MANAGER: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200',
-  EMPLOYEE: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-};
 
 const LEVEL_LABELS: Record<number, string> = {
   1: 'Entry',
@@ -269,7 +249,7 @@ function OverviewTab({ company, companyId, onUpdate }: { company: CompanyDetail;
     companyName: company.companyName,
     email: company.email || '',
     phone: company.phone || '',
-    website: (company as any).website || '',
+    website: company.website || '',
   });
   const [saving, setSaving] = useState(false);
   const [editSuccess, setEditSuccess] = useState('');
@@ -302,7 +282,7 @@ function OverviewTab({ company, companyId, onUpdate }: { company: CompanyDetail;
       companyName: company.companyName,
       email: company.email || '',
       phone: company.phone || '',
-      website: (company as any).website || '',
+      website: company.website || '',
     });
     setEditError('');
     setEditSuccess('');
@@ -423,7 +403,7 @@ function OverviewTab({ company, companyId, onUpdate }: { company: CompanyDetail;
             <InfoRow
               icon={<Globe className="w-4 h-4" />}
               label="Website"
-              value={(company as any).website || 'Not provided'}
+              value={company.website || 'Not provided'}
             />
             <InfoRow
               icon={<Calendar className="w-4 h-4" />}
@@ -745,7 +725,7 @@ function UsersTab({ companyId }: { companyId: string }) {
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-md mx-4 border border-border" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-semibold text-foreground">
                 Confirm User Deletion
@@ -1099,7 +1079,7 @@ function OrgStructureTab({ companyId }: { companyId: string }) {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" onClick={closeModal}>
           <div
-            className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto border border-border"
+            className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -1311,7 +1291,7 @@ function OrgStructureTab({ companyId }: { companyId: string }) {
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-md mx-4 border border-border" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-lg font-semibold text-foreground">
                 Delete Designation

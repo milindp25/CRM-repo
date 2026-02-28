@@ -12,7 +12,7 @@ const AVAILABLE_FEATURES = [
 ];
 
 export default function AddonsPage() {
-  const [addons, setAddons] = useState<any[]>([]);
+  const [addons, setAddons] = useState<Array<Record<string, any>>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [createError, setCreateError] = useState('');
@@ -158,9 +158,9 @@ export default function AddonsPage() {
 
       {/* Error Banner */}
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3">
+        <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
           <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-          <p className="text-sm text-red-700">{error}</p>
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
           <button onClick={() => setError('')} className="ml-auto text-red-500 hover:text-red-700 text-sm font-medium">Dismiss</button>
         </div>
       )}
@@ -194,9 +194,9 @@ export default function AddonsPage() {
           <div className="bg-card rounded-xl shadow-2xl p-6 w-full max-w-md border border-border" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold mb-4">Create Feature Add-on</h2>
             {createError && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
                 <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                <p className="text-sm text-red-700">{createError}</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{createError}</p>
               </div>
             )}
             <form onSubmit={handleCreate} className="space-y-4">
@@ -287,9 +287,9 @@ export default function AddonsPage() {
           <div className="bg-card rounded-xl shadow-2xl p-6 w-full max-w-md border border-border" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold mb-4">Edit Feature Add-on</h2>
             {editError && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
                 <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                <p className="text-sm text-red-700">{editError}</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{editError}</p>
               </div>
             )}
             <form onSubmit={handleEdit} className="space-y-4">
@@ -411,8 +411,8 @@ export default function AddonsPage() {
                     <span
                       className={`text-xs px-2 py-1 rounded-full font-medium ${
                         addon.isActive
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
                       }`}
                     >
                       {addon.isActive ? 'Active' : 'Inactive'}

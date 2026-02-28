@@ -15,24 +15,10 @@ import {
   Copy,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
+import { tierColors, statusColors } from '@/lib/constants';
 
 const TIERS = ['', 'FREE', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE'];
 const STATUSES = ['', 'TRIAL', 'ACTIVE', 'EXPIRED', 'SUSPENDED', 'CANCELLED'];
-
-const tierColors: Record<string, string> = {
-  FREE: 'bg-gray-100 text-gray-700',
-  BASIC: 'bg-blue-100 text-blue-700',
-  PROFESSIONAL: 'bg-purple-100 text-purple-700',
-  ENTERPRISE: 'bg-amber-100 text-amber-700',
-};
-
-const statusColors: Record<string, string> = {
-  TRIAL: 'bg-yellow-100 text-yellow-700',
-  ACTIVE: 'bg-green-100 text-green-700',
-  EXPIRED: 'bg-red-100 text-red-700',
-  SUSPENDED: 'bg-orange-100 text-orange-700',
-  CANCELLED: 'bg-gray-100 text-gray-700',
-};
 
 interface Company {
   id: string;
@@ -63,7 +49,7 @@ export default function CompaniesPage() {
   const [createSuccess, setCreateSuccess] = useState<{
     company: Record<string, unknown>;
     adminUser: { email: string; firstName: string; lastName: string };
-    temporaryPassword: string;
+    message: string;
   } | null>(null);
   const [createForm, setCreateForm] = useState({
     companyName: '',
@@ -203,9 +189,9 @@ export default function CompaniesPage() {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-          <p className="text-red-700 text-sm">{error}</p>
+          <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
         </div>
       )}
 
@@ -343,32 +329,20 @@ export default function CompaniesPage() {
 
             {createSuccess ? (
               <div className="p-6 space-y-4">
-                <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-4">
-                  <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-green-800">Company created successfully!</p>
-                    <p className="text-sm text-green-700 mt-1">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">Company created successfully!</p>
+                    <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                       {createSuccess.adminUser.firstName} {createSuccess.adminUser.lastName} ({createSuccess.adminUser.email}) has been set as the Company Admin.
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <p className="text-sm font-medium text-amber-800 mb-2">Temporary Password</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-white border border-amber-300 rounded px-3 py-2 text-sm font-mono text-amber-900">
-                      {createSuccess.temporaryPassword}
-                    </code>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(createSuccess.temporaryPassword)}
-                      className="p-2 rounded-lg hover:bg-amber-100 transition-colors"
-                      title="Copy password"
-                    >
-                      <Copy className="w-4 h-4 text-amber-700" />
-                    </button>
-                  </div>
-                  <p className="text-xs text-amber-600 mt-2">
-                    Share this password securely with the admin. They should change it after first login.
+                <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">Password Setup</p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    The admin user should use the &quot;Forgot Password&quot; flow to set their password and access the portal.
                   </p>
                 </div>
 
@@ -382,9 +356,9 @@ export default function CompaniesPage() {
             ) : (
               <form onSubmit={handleCreateCompany} className="p-6 space-y-4">
                 {createError && (
-                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
                     <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                    <p className="text-sm text-red-700">{createError}</p>
+                    <p className="text-sm text-red-700 dark:text-red-300">{createError}</p>
                   </div>
                 )}
 

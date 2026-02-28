@@ -305,7 +305,6 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.SEND_KUDOS,
     Permission.VIEW_DIRECTORY,
     Permission.VIEW_OWN_TIMESHEETS,
-    Permission.MANAGE_DASHBOARD_CONFIG,
   ],
 };
 

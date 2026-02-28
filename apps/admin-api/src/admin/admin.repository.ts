@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
+import { UpdateCompanyDto, UpdateDesignationDto } from './dto/index.js';
 
 @Injectable()
 export class AdminRepository {
@@ -24,7 +25,7 @@ export class AdminRepository {
       by: ['subscriptionTier'],
       _count: { id: true },
     });
-    return results.map((r: any) => ({
+    return results.map((r) => ({
       tier: r.subscriptionTier,
       count: r._count.id,
     }));
@@ -35,7 +36,7 @@ export class AdminRepository {
       by: ['subscriptionStatus'],
       _count: { id: true },
     });
-    return results.map((r: any) => ({
+    return results.map((r) => ({
       status: r.subscriptionStatus,
       count: r._count.id,
     }));
@@ -63,10 +64,12 @@ export class AdminRepository {
     const where: any = {};
 
     if (search) {
+      // Limit search string length to prevent abuse
+      const safeSearch = search.slice(0, 200);
       where.OR = [
-        { companyName: { contains: search, mode: 'insensitive' } },
-        { companyCode: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { companyName: { contains: safeSearch, mode: 'insensitive' } },
+        { companyCode: { contains: safeSearch, mode: 'insensitive' } },
+        { email: { contains: safeSearch, mode: 'insensitive' } },
       ];
     }
 
@@ -166,7 +169,7 @@ export class AdminRepository {
 
   // ── Company Update ─────────────────────────────────────────────────
 
-  async updateCompany(id: string, data: { isActive?: boolean; companyName?: string; email?: string; phone?: string; website?: string }) {
+  async updateCompany(id: string, data: UpdateCompanyDto) {
     return this.prisma.company.update({
       where: { id },
       data,
@@ -235,6 +238,7 @@ export class AdminRepository {
 
   async createAdminAuditLog(data: {
     adminUserId: string;
+    adminEmail: string;
     action: string;
     targetUserId: string;
     targetEmail: string;
@@ -244,7 +248,7 @@ export class AdminRepository {
     return this.prisma.auditLog.create({
       data: {
         userId: data.adminUserId,
-        userEmail: 'super-admin',
+        userEmail: data.adminEmail,
         action: data.action,
         resourceType: 'USER',
         resourceId: data.targetUserId,
@@ -289,10 +293,10 @@ export class AdminRepository {
     });
   }
 
-  async updateDesignation(id: string, data: Record<string, unknown>) {
+  async updateDesignation(id: string, data: UpdateDesignationDto) {
     return this.prisma.designation.update({
       where: { id },
-      data: data as any,
+      data,
     });
   }
 

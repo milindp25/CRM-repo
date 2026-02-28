@@ -13,7 +13,14 @@ import { AdminService } from './admin.service.js';
 import { UserRole } from '@hrplatform/shared';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
-import { CreateCompanyDto, UpdateCompanyFeaturesDto, UpdateSubscriptionDto } from './dto/index.js';
+import {
+  CreateCompanyDto,
+  UpdateCompanyDto,
+  UpdateCompanyFeaturesDto,
+  UpdateSubscriptionDto,
+  CreateDesignationDto,
+  UpdateDesignationDto,
+} from './dto/index.js';
 
 interface JwtPayload { userId: string; email: string; companyId: string; role: string; }
 
@@ -79,9 +86,9 @@ export class AdminController {
   @ApiOperation({ summary: 'Update company details (name, email, phone, website, status)' })
   async updateCompany(
     @Param('id') id: string,
-    @Body() body: { isActive?: boolean; companyName?: string; email?: string; phone?: string; website?: string },
+    @Body() dto: UpdateCompanyDto,
   ) {
-    return this.adminService.updateCompany(id, body);
+    return this.adminService.updateCompany(id, dto);
   }
 
   // ── Update Company Features ────────────────────────────────────────
@@ -121,7 +128,7 @@ export class AdminController {
     @Param('userId') userId: string,
     @CurrentUser() admin: JwtPayload,
   ) {
-    return this.adminService.deleteCompanyUser(companyId, userId, admin.userId);
+    return this.adminService.deleteCompanyUser(companyId, userId, admin.userId, admin.email);
   }
 
   // ── Company Designations (Org Structure) ────────────────────────────
@@ -136,17 +143,9 @@ export class AdminController {
   @ApiOperation({ summary: 'Create a designation for a company' })
   async createCompanyDesignation(
     @Param('id') id: string,
-    @Body() body: {
-      title: string;
-      code: string;
-      level?: number;
-      description?: string;
-      minSalary?: number;
-      maxSalary?: number;
-      currency?: string;
-    },
+    @Body() dto: CreateDesignationDto,
   ) {
-    return this.adminService.createCompanyDesignation(id, body);
+    return this.adminService.createCompanyDesignation(id, dto);
   }
 
   @Patch('companies/:companyId/designations/:designationId')
@@ -154,9 +153,9 @@ export class AdminController {
   async updateCompanyDesignation(
     @Param('companyId') companyId: string,
     @Param('designationId') designationId: string,
-    @Body() body: Record<string, unknown>,
+    @Body() dto: UpdateDesignationDto,
   ) {
-    return this.adminService.updateCompanyDesignation(companyId, designationId, body);
+    return this.adminService.updateCompanyDesignation(companyId, designationId, dto);
   }
 
   @Delete('companies/:companyId/designations/:designationId')
@@ -166,5 +165,5 @@ export class AdminController {
     @Param('designationId') designationId: string,
   ) {
     return this.adminService.deleteCompanyDesignation(companyId, designationId);
-    }
+  }
 }

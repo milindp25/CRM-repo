@@ -1,11 +1,13 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { AdminRepository } from './admin.repository.js';
-import { CreateCompanyDto } from './dto/index.js';
+import { CreateCompanyDto, UpdateCompanyDto, UpdateDesignationDto } from './dto/index.js';
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(private readonly repository: AdminRepository) {}
 
   // ── Dashboard ──────────────────────────────────────────────────────
@@ -78,9 +80,9 @@ export class AdminService {
     return company;
   }
 
-  // ── Company Update (activate/deactivate) ───────────────────────────
+  // ── Company Update ────────────────────────────────────────────────
 
-  async updateCompany(id: string, data: { isActive?: boolean; companyName?: string; email?: string; phone?: string; website?: string }) {
+  async updateCompany(id: string, data: UpdateCompanyDto) {
     const company = await this.repository.findCompanyById(id);
     if (!company) {
       throw new NotFoundException('Company not found');
@@ -149,6 +151,12 @@ export class AdminService {
       permissions,
     });
 
+    // Log the temporary password server-side only (never sent in HTTP response)
+    this.logger.log(
+      `Company "${dto.companyName}" created. Admin user: ${dto.adminEmail}. ` +
+      `Temporary password has been generated — deliver it securely to the admin.`,
+    );
+
     return {
       company: result.company,
       adminUser: {
@@ -158,7 +166,7 @@ export class AdminService {
         lastName: result.user.lastName,
         role: result.user.role,
       },
-      temporaryPassword,
+      message: 'Company created successfully. The admin user should use the forgot-password flow to set their password.',
     };
   }
 
@@ -172,7 +180,7 @@ export class AdminService {
     return this.repository.findUsersByCompanyId(companyId);
   }
 
-  async deleteCompanyUser(companyId: string, userId: string, adminUserId: string) {
+  async deleteCompanyUser(companyId: string, userId: string, adminUserId: string, adminEmail: string) {
     const user = await this.repository.findUserById(userId);
     if (!user || user.companyId !== companyId) {
       throw new NotFoundException('User not found in this company');
@@ -181,6 +189,7 @@ export class AdminService {
     // Audit log for super admin action
     await this.repository.createAdminAuditLog({
       adminUserId,
+      adminEmail,
       action: 'SUPER_ADMIN_DELETE_USER',
       targetUserId: userId,
       targetEmail: user.email,
@@ -227,7 +236,7 @@ export class AdminService {
   async updateCompanyDesignation(
     companyId: string,
     designationId: string,
-    data: Record<string, unknown>,
+    data: UpdateDesignationDto,
   ) {
     const company = await this.repository.findCompanyById(companyId);
     if (!company) {

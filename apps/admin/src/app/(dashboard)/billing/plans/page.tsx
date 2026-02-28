@@ -7,7 +7,7 @@ import { CreditCard, Plus, Pencil, Search, AlertCircle } from 'lucide-react';
 const TIERS = ['FREE', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE'];
 
 export default function BillingPlansPage() {
-  const [plans, setPlans] = useState<any[]>([]);
+  const [plans, setPlans] = useState<Array<Record<string, any>>>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -198,9 +198,9 @@ export default function BillingPlansPage() {
           <div className="bg-card rounded-xl shadow-2xl p-6 w-full max-w-lg border border-border" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold mb-4">Create Billing Plan</h2>
             {createError && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
                 <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                <p className="text-sm text-red-700">{createError}</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{createError}</p>
               </div>
             )}
             <form onSubmit={handleCreate} className="space-y-4">
@@ -329,9 +329,9 @@ export default function BillingPlansPage() {
           <div className="bg-card rounded-xl shadow-2xl p-6 w-full max-w-lg border border-border" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-semibold mb-4">Edit Billing Plan</h2>
             {editError && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
                 <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                <p className="text-sm text-red-700">{editError}</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{editError}</p>
               </div>
             )}
             <form onSubmit={handleEdit} className="space-y-4">
@@ -479,8 +479,8 @@ export default function BillingPlansPage() {
                   <span
                     className={`text-xs px-2 py-1 rounded-full font-medium ${
                       plan.isActive
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200'
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'
                     }`}
                   >
                     {plan.isActive ? 'Active' : 'Inactive'}
@@ -488,7 +488,7 @@ export default function BillingPlansPage() {
                 </div>
               </div>
               <div className="mb-4">
-                <span className="text-xs font-mono bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                <span className="text-xs font-mono bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-200 px-2 py-1 rounded">
                   {plan.tier}
                 </span>
               </div>

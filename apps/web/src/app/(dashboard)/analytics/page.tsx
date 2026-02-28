@@ -27,14 +27,178 @@ interface OverviewData {
   monthlyPayrollCost: number;
 }
 
-// ── Shared Components ───────────────────────────────────────────────
-function KpiCard({ label, value, subtitle, icon: Icon, trend }: {
+interface KpiCardProps {
   label: string;
   value: string | number;
   subtitle?: string;
-  icon?: any;
+  icon?: React.ComponentType<{ className?: string }>;
   trend?: 'up' | 'down' | 'neutral';
-}) {
+}
+
+interface ChartCardProps {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+interface TooltipPayloadItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+}
+
+interface HeadcountTrendItem {
+  month: number;
+  year: number;
+  count: number;
+}
+
+interface HeadcountDepartmentItem {
+  departmentName: string;
+  count: number;
+}
+
+interface HeadcountData {
+  current?: {
+    total?: number;
+    byDepartment?: HeadcountDepartmentItem[];
+  };
+  trends?: HeadcountTrendItem[];
+}
+
+interface AttritionTrendItem {
+  month: number;
+  year: number;
+  rate: number;
+  leavers: number;
+}
+
+interface AttritionData {
+  attritionRate?: number;
+  totalLeavers?: number;
+  totalEmployees?: number;
+  periodMonths?: number;
+  monthlyTrend?: AttritionTrendItem[];
+}
+
+interface LeaveUtilizationItem {
+  leaveType: string;
+  totalDays: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+}
+
+interface LeaveData {
+  pendingCount?: number;
+  utilizationByType?: LeaveUtilizationItem[];
+}
+
+interface AttendanceStatusItem {
+  status: string;
+  count: number;
+}
+
+interface AttendanceData {
+  totalRecords?: number;
+  month?: number;
+  year?: number;
+  absentCount?: number;
+  absenteeismRate?: number;
+  avgHoursWorked?: number;
+  statusBreakdown?: AttendanceStatusItem[];
+}
+
+interface PayrollMonthlyCostItem {
+  month: number;
+  year: number;
+  totalDeductions: number;
+  totalEmployerContributions: number;
+}
+
+interface PayrollData {
+  totalRecords?: number;
+  monthlyCosts?: PayrollMonthlyCostItem[];
+}
+
+interface GenderDistributionItem {
+  gender: string;
+  count: number;
+  percentage: number;
+}
+
+interface DepartmentGenderItem {
+  departmentName: string;
+  gender: string;
+  count: number;
+}
+
+interface DiversityData {
+  totalEmployees?: number;
+  genderDistribution?: GenderDistributionItem[];
+  departmentBreakdown?: DepartmentGenderItem[];
+}
+
+interface RecruitmentStageItem {
+  stage: string;
+  count: number;
+}
+
+interface JobStatusItem {
+  status: string;
+  count: number;
+}
+
+interface RecruitmentData {
+  pipelineStats?: {
+    openPositions?: number;
+    totalApplicants?: number;
+    hiredCount?: number;
+    avgTimeToHireDays?: number;
+  };
+  applicantsByStage?: RecruitmentStageItem[];
+  jobPostingsByStatus?: JobStatusItem[];
+}
+
+interface CourseStatusItem {
+  status: string;
+  count: number;
+}
+
+interface EnrollmentStatusItem {
+  status: string;
+  count: number;
+}
+
+interface TrainingData {
+  enrollmentStats?: {
+    totalEnrollments?: number;
+    completedEnrollments?: number;
+    completionRate?: number;
+    avgScore?: number | null;
+  };
+  coursesByStatus?: CourseStatusItem[];
+  enrollmentsByStatus?: EnrollmentStatusItem[];
+}
+
+interface PieLabelProps {
+  name: string;
+  percent: number;
+}
+
+interface PieLabelWithValueProps {
+  name: string;
+  value: number;
+}
+
+// ── Shared Components ───────────────────────────────────────────────
+function KpiCard({ label, value, subtitle, icon: Icon, trend }: KpiCardProps) {
   const TrendIcon = trend === 'up' ? ArrowUp : trend === 'down' ? ArrowDown : Minus;
   const trendColor = trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
   return (
@@ -56,7 +220,7 @@ function KpiCard({ label, value, subtitle, icon: Icon, trend }: {
   );
 }
 
-function ChartCard({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+function ChartCard({ title, children, className = '' }: ChartCardProps) {
   return (
     <div className={`bg-card border border-border rounded-xl p-5 ${className}`}>
       <h3 className="text-sm font-semibold text-foreground mb-4">{title}</h3>
@@ -75,12 +239,12 @@ function EmptyState({ message = 'No data available' }: { message?: string }) {
 }
 
 // Custom tooltip for recharts
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm">
       <p className="font-medium text-foreground mb-1">{label}</p>
-      {payload.map((entry: any, i: number) => (
+      {payload.map((entry: TooltipPayloadItem, i: number) => (
         <p key={i} style={{ color: entry.color }} className="text-xs">
           {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
         </p>
@@ -109,10 +273,10 @@ function OverviewTab({ data }: { data: OverviewData }) {
 }
 
 // ── Headcount Tab ───────────────────────────────────────────────────
-function HeadcountTab({ data }: { data: any }) {
+function HeadcountTab({ data }: { data: HeadcountData | null }) {
   if (!data) return <EmptyState />;
   const deptData = data.current?.byDepartment || [];
-  const trendData = (data.trends || []).map((t: any) => ({
+  const trendData = (data.trends || []).map((t: HeadcountTrendItem) => ({
     ...t,
     label: `${MONTH_NAMES[t.month - 1]} ${t.year}`,
   }));
@@ -156,9 +320,9 @@ function HeadcountTab({ data }: { data: any }) {
 }
 
 // ── Attrition Tab ───────────────────────────────────────────────────
-function AttritionTab({ data }: { data: any }) {
+function AttritionTab({ data }: { data: AttritionData | null }) {
   if (!data) return <EmptyState />;
-  const trendData = (data.monthlyTrend || []).map((t: any) => ({
+  const trendData = (data.monthlyTrend || []).map((t: AttritionTrendItem) => ({
     ...t,
     label: `${MONTH_NAMES[t.month - 1]} ${t.year}`,
   }));
@@ -197,10 +361,10 @@ function AttritionTab({ data }: { data: any }) {
 }
 
 // ── Leave Tab ───────────────────────────────────────────────────────
-function LeaveTab({ data }: { data: any }) {
+function LeaveTab({ data }: { data: LeaveData | null }) {
   if (!data) return <EmptyState />;
   const utilization = data.utilizationByType || [];
-  const pieData = utilization.map((item: any) => ({
+  const pieData = utilization.map((item: LeaveUtilizationItem) => ({
     name: item.leaveType,
     value: item.totalDays,
   }));
@@ -210,7 +374,7 @@ function LeaveTab({ data }: { data: any }) {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiCard icon={Calendar} label="Pending Requests" value={data.pendingCount || 0} />
         <KpiCard icon={Calendar} label="Leave Types" value={utilization.length} />
-        <KpiCard icon={Calendar} label="Total Days Used" value={utilization.reduce((sum: number, u: any) => sum + (u.totalDays || 0), 0)} />
+        <KpiCard icon={Calendar} label="Total Days Used" value={utilization.reduce((sum: number, u: LeaveUtilizationItem) => sum + (u.totalDays || 0), 0)} />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard title="Leave Days by Type">
@@ -233,8 +397,8 @@ function LeaveTab({ data }: { data: any }) {
           {pieData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={2} dataKey="value" label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {pieData.map((_: any, i: number) => (
+                <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={2} dataKey="value" label={({ name, percent }: PieLabelProps) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {pieData.map((_: { name: string; value: number }, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
@@ -249,7 +413,7 @@ function LeaveTab({ data }: { data: any }) {
 }
 
 // ── Attendance Tab ──────────────────────────────────────────────────
-function AttendanceTab({ data }: { data: any }) {
+function AttendanceTab({ data }: { data: AttendanceData | null }) {
   if (!data) return <EmptyState />;
   const statusData = data.statusBreakdown || [];
 
@@ -270,7 +434,7 @@ function AttendanceTab({ data }: { data: any }) {
               <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="count" name="Count" radius={[4, 4, 0, 0]}>
-                {statusData.map((_: any, i: number) => (
+                {statusData.map((_: AttendanceStatusItem, i: number) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Bar>
@@ -283,9 +447,9 @@ function AttendanceTab({ data }: { data: any }) {
 }
 
 // ── Payroll Tab ─────────────────────────────────────────────────────
-function PayrollTab({ data }: { data: any }) {
+function PayrollTab({ data }: { data: PayrollData | null }) {
   if (!data) return <EmptyState />;
-  const monthlyCosts = (data.monthlyCosts || []).map((m: any) => ({
+  const monthlyCosts = (data.monthlyCosts || []).map((m: PayrollMonthlyCostItem) => ({
     ...m,
     label: `${MONTH_NAMES[m.month - 1]} ${m.year}`,
     total: (m.totalDeductions || 0) + (m.totalEmployerContributions || 0),
@@ -297,7 +461,7 @@ function PayrollTab({ data }: { data: any }) {
         <KpiCard icon={DollarSign} label="Total Records" value={data.totalRecords || 0} />
         <KpiCard icon={DollarSign} label="Months Covered" value={monthlyCosts.length} />
         <KpiCard icon={DollarSign} label="Total Costs"
-          value={`$${monthlyCosts.reduce((s: number, m: any) => s + m.total, 0).toLocaleString()}`}
+          value={`$${monthlyCosts.reduce((s: number, m: PayrollMonthlyCostItem & { total: number }) => s + m.total, 0).toLocaleString()}`}
         />
       </div>
       <ChartCard title="Monthly Payroll Costs">
@@ -327,26 +491,26 @@ function PayrollTab({ data }: { data: any }) {
 }
 
 // ── Diversity Tab ───────────────────────────────────────────────────
-function DiversityTab({ data }: { data: any }) {
+function DiversityTab({ data }: { data: DiversityData | null }) {
   if (!data) return <EmptyState />;
   const genderData = data.genderDistribution || [];
   const deptData = data.departmentBreakdown || [];
 
   // Group department breakdown by department for stacked bar
-  const deptMap = new Map<string, any>();
-  deptData.forEach((d: any) => {
+  const deptMap = new Map<string, Record<string, string | number>>();
+  deptData.forEach((d: DepartmentGenderItem) => {
     const name = d.departmentName || 'Unassigned';
     if (!deptMap.has(name)) deptMap.set(name, { departmentName: name });
     deptMap.get(name)![d.gender] = d.count;
   });
   const deptChartData = Array.from(deptMap.values());
-  const genders = [...new Set(deptData.map((d: any) => d.gender))] as string[];
+  const genders = [...new Set(deptData.map((d: DepartmentGenderItem) => d.gender))] as string[];
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiCard icon={Heart} label="Total Employees" value={data.totalEmployees || 0} />
-        {genderData.slice(0, 2).map((g: any) => (
+        {genderData.slice(0, 2).map((g: GenderDistributionItem) => (
           <KpiCard key={g.gender} icon={Users} label={g.gender} value={g.count} subtitle={`${g.percentage}%`} />
         ))}
       </div>
@@ -355,9 +519,9 @@ function DiversityTab({ data }: { data: any }) {
           {genderData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={genderData.map((g: any) => ({ name: g.gender, value: g.count }))} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={3} dataKey="value"
-                  label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {genderData.map((_: any, i: number) => (
+                <Pie data={genderData.map((g: GenderDistributionItem) => ({ name: g.gender, value: g.count }))} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={3} dataKey="value"
+                  label={({ name, percent }: PieLabelProps) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {genderData.map((_: GenderDistributionItem, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
@@ -389,7 +553,7 @@ function DiversityTab({ data }: { data: any }) {
 }
 
 // ── Recruitment Tab ─────────────────────────────────────────────────
-function RecruitmentTab({ data }: { data: any }) {
+function RecruitmentTab({ data }: { data: RecruitmentData | null }) {
   if (!data) return <EmptyState />;
   const pipeline = data.pipelineStats || {};
   const stages = data.applicantsByStage || [];
@@ -413,7 +577,7 @@ function RecruitmentTab({ data }: { data: any }) {
                 <YAxis dataKey="stage" type="category" width={100} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" name="Applicants" radius={[0, 4, 4, 0]}>
-                  {stages.map((_: any, i: number) => (
+                  {stages.map((_: RecruitmentStageItem, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Bar>
@@ -425,9 +589,9 @@ function RecruitmentTab({ data }: { data: any }) {
           {jobStatuses.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={jobStatuses.map((j: any) => ({ name: j.status, value: j.count }))} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={3} dataKey="value"
-                  label={({ name, value }: any) => `${name}: ${value}`}>
-                  {jobStatuses.map((_: any, i: number) => (
+                <Pie data={jobStatuses.map((j: JobStatusItem) => ({ name: j.status, value: j.count }))} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={3} dataKey="value"
+                  label={({ name, value }: PieLabelWithValueProps) => `${name}: ${value}`}>
+                  {jobStatuses.map((_: JobStatusItem, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
@@ -443,7 +607,7 @@ function RecruitmentTab({ data }: { data: any }) {
 }
 
 // ── Training Tab ────────────────────────────────────────────────────
-function TrainingTab({ data }: { data: any }) {
+function TrainingTab({ data }: { data: TrainingData | null }) {
   if (!data) return <EmptyState />;
   const courseStatuses = data.coursesByStatus || [];
   const enrollmentStatuses = data.enrollmentsByStatus || [];
@@ -467,7 +631,7 @@ function TrainingTab({ data }: { data: any }) {
                 <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" name="Courses" radius={[4, 4, 0, 0]}>
-                  {courseStatuses.map((_: any, i: number) => (
+                  {courseStatuses.map((_: CourseStatusItem, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Bar>
@@ -480,8 +644,8 @@ function TrainingTab({ data }: { data: any }) {
             <div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={enrollmentStatuses.map((e: any) => ({ name: e.status, value: e.count }))} cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={3} dataKey="value">
-                    {enrollmentStatuses.map((_: any, i: number) => (
+                  <Pie data={enrollmentStatuses.map((e: EnrollmentStatusItem) => ({ name: e.status, value: e.count }))} cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={3} dataKey="value">
+                    {enrollmentStatuses.map((_: EnrollmentStatusItem, i: number) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
@@ -491,8 +655,8 @@ function TrainingTab({ data }: { data: any }) {
               </ResponsiveContainer>
               {/* Progress bars */}
               <div className="mt-4 space-y-2">
-                {enrollmentStatuses.map((e: any, i: number) => {
-                  const pct = stats.totalEnrollments > 0 ? (e.count / stats.totalEnrollments) * 100 : 0;
+                {enrollmentStatuses.map((e: EnrollmentStatusItem, i: number) => {
+                  const pct = (stats.totalEnrollments ?? 0) > 0 ? (e.count / (stats.totalEnrollments ?? 1)) * 100 : 0;
                   return (
                     <div key={e.status} className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground w-24 truncate">{e.status}</span>
@@ -516,7 +680,7 @@ function TrainingTab({ data }: { data: any }) {
 export default function AnalyticsPage() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
-  const [tabData, setTabData] = useState<any>(null);
+  const [tabData, setTabData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -526,7 +690,7 @@ export default function AnalyticsPage() {
       setError('');
       const data = await apiClient.request('/analytics/overview');
       setOverview(data);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : 'An error occurred'); }
     finally { setLoading(false); }
   }, []);
 
@@ -547,7 +711,7 @@ export default function AnalyticsPage() {
       setError('');
       const data = await apiClient.request(endpoints[activeTab]);
       setTabData(data);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : 'An error occurred'); }
     finally { setLoading(false); }
   }, [activeTab]);
 
@@ -570,14 +734,14 @@ export default function AnalyticsPage() {
     if (loading) return <div className="flex items-center justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
     switch (activeTab) {
       case 'overview': return overview ? <OverviewTab data={overview} /> : <EmptyState />;
-      case 'headcount': return <HeadcountTab data={tabData} />;
-      case 'attrition': return <AttritionTab data={tabData} />;
-      case 'leave': return <LeaveTab data={tabData} />;
-      case 'attendance': return <AttendanceTab data={tabData} />;
-      case 'payroll': return <PayrollTab data={tabData} />;
-      case 'diversity': return <DiversityTab data={tabData} />;
-      case 'recruitment': return <RecruitmentTab data={tabData} />;
-      case 'training': return <TrainingTab data={tabData} />;
+      case 'headcount': return <HeadcountTab data={tabData as HeadcountData | null} />;
+      case 'attrition': return <AttritionTab data={tabData as AttritionData | null} />;
+      case 'leave': return <LeaveTab data={tabData as LeaveData | null} />;
+      case 'attendance': return <AttendanceTab data={tabData as AttendanceData | null} />;
+      case 'payroll': return <PayrollTab data={tabData as PayrollData | null} />;
+      case 'diversity': return <DiversityTab data={tabData as DiversityData | null} />;
+      case 'recruitment': return <RecruitmentTab data={tabData as RecruitmentData | null} />;
+      case 'training': return <TrainingTab data={tabData as TrainingData | null} />;
       default: return <EmptyState />;
     }
   };
