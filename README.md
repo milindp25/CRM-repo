@@ -133,8 +133,8 @@ cd apps/admin && yarn dev
 
 | App | URL | Credentials |
 |-----|-----|-------------|
-| Tenant Portal | http://localhost:3000 | `admin@demotech.com` / `Test@12345` |
-| Admin Portal | http://localhost:3001 | `superadmin@hrplatform.com` / `Admin@12345` |
+| Tenant Portal | http://localhost:3000 | `admin@demotech.com` / (set via `SEED_USER_PASSWORD` env) |
+| Admin Portal | http://localhost:3001 | `superadmin@hrplatform.com` / (set via `SEED_ADMIN_PASSWORD` env) |
 | Tenant API Health | http://localhost:4000/v1/health | — |
 | Admin API Health | http://localhost:4001/v1/health | — |
 | API Docs (Swagger) | http://localhost:4000/api-docs | — |

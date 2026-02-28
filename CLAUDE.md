@@ -161,7 +161,9 @@ dashboard, companies, features, subscription, addons, billing/plans, billing/rev
 
 ## Test Credentials
 
-| Portal | Email | Password | Role |
-|--------|-------|----------|------|
-| Tenant | `admin@demotech.com` | `Test@12345` | COMPANY_ADMIN (ENTERPRISE tier) |
-| Admin | `superadmin@hrplatform.com` | `Admin@12345` | SUPER_ADMIN |
+| Portal | Email | Role |
+|--------|-------|------|
+| Tenant | `admin@demotech.com` | COMPANY_ADMIN (ENTERPRISE tier) |
+| Admin | `superadmin@hrplatform.com` | SUPER_ADMIN |
+
+Passwords are set via environment variables `SEED_USER_PASSWORD` and `SEED_ADMIN_PASSWORD` during seeding. See `packages/database/.env`.

@@ -48,8 +48,8 @@ export default function CompaniesPage() {
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState<{
     company: Record<string, unknown>;
-    adminUser: { email: string; firstName: string; lastName: string };
-    message: string;
+    adminUser: { email: string; firstName: string; lastName: string; [key: string]: unknown };
+    message?: string;
   } | null>(null);
   const [createForm, setCreateForm] = useState({
     companyName: '',

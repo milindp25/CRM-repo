@@ -188,13 +188,13 @@ interface TrainingData {
 }
 
 interface PieLabelProps {
-  name: string;
-  percent: number;
+  name?: string;
+  percent?: number;
 }
 
 interface PieLabelWithValueProps {
-  name: string;
-  value: number;
+  name?: string;
+  value?: number;
 }
 
 // ── Shared Components ───────────────────────────────────────────────
@@ -262,7 +262,7 @@ function OverviewTab({ data }: { data: OverviewData }) {
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <KpiCard icon={Users} label="Total Employees" value={data.totalEmployees} />
       <KpiCard icon={Users} label="Active Employees" value={data.activeEmployees} trend="up" subtitle={`${((data.activeEmployees / Math.max(data.totalEmployees, 1)) * 100).toFixed(0)}% active`} />
-      <KpiCard icon={TrendingDown} label="Attrition Rate" value={`${(data.attritionRate || 0).toFixed(1)}%`} subtitle="Last 12 months" trend={data.attritionRate > 15 ? 'down' : 'neutral'} />
+      <KpiCard icon={TrendingDown} label="Attrition Rate" value={`${(data.attritionRate || 0).toFixed(1)}%`} subtitle="Last 12 months" trend={(data.attritionRate ?? 0) > 15 ? 'down' : 'neutral'} />
       <KpiCard icon={Clock} label="Avg Tenure" value={`${((data.avgTenureMonths || 0) / 12).toFixed(1)} yrs`} />
       <KpiCard icon={Calendar} label="Pending Leaves" value={data.pendingLeaves} />
       <KpiCard icon={Users} label="Today Attendance" value={attendance} />
@@ -330,7 +330,7 @@ function AttritionTab({ data }: { data: AttritionData | null }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={TrendingDown} label="Attrition Rate" value={`${(data.attritionRate || 0).toFixed(1)}%`} trend={data.attritionRate > 15 ? 'down' : 'neutral'} />
+        <KpiCard icon={TrendingDown} label="Attrition Rate" value={`${(data.attritionRate ?? 0).toFixed(1)}%`} trend={(data.attritionRate ?? 0) > 15 ? 'down' : 'neutral'} />
         <KpiCard icon={Users} label="Total Leavers" value={data.totalLeavers || 0} subtitle={`out of ${data.totalEmployees || 0}`} />
         <KpiCard icon={Users} label="Total Employees" value={data.totalEmployees || 0} />
         <KpiCard icon={Calendar} label="Period" value={`${data.periodMonths || 12} months`} />
@@ -397,7 +397,7 @@ function LeaveTab({ data }: { data: LeaveData | null }) {
           {pieData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={2} dataKey="value" label={({ name, percent }: PieLabelProps) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={2} dataKey="value" label={({ name, percent }: PieLabelProps) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                   {pieData.map((_: { name: string; value: number }, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
@@ -422,7 +422,7 @@ function AttendanceTab({ data }: { data: AttendanceData | null }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard icon={Clock} label="Total Records" value={data.totalRecords || 0} subtitle={`${MONTH_NAMES[(data.month || 1) - 1]} ${data.year || ''}`} />
         <KpiCard icon={Clock} label="Absent Count" value={data.absentCount || 0} />
-        <KpiCard icon={Clock} label="Absenteeism Rate" value={`${(data.absenteeismRate || 0).toFixed(1)}%`} trend={data.absenteeismRate > 10 ? 'down' : 'neutral'} />
+        <KpiCard icon={Clock} label="Absenteeism Rate" value={`${(data.absenteeismRate || 0).toFixed(1)}%`} trend={(data.absenteeismRate ?? 0) > 10 ? 'down' : 'neutral'} />
         <KpiCard icon={Clock} label="Avg Hours Worked" value={`${(data.avgHoursWorked || 0).toFixed(1)}h`} />
       </div>
       <ChartCard title="Attendance Status Breakdown">
@@ -520,7 +520,7 @@ function DiversityTab({ data }: { data: DiversityData | null }) {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={genderData.map((g: GenderDistributionItem) => ({ name: g.gender, value: g.count }))} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={3} dataKey="value"
-                  label={({ name, percent }: PieLabelProps) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  label={({ name, percent }: PieLabelProps) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                   {genderData.map((_: GenderDistributionItem, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
@@ -590,7 +590,7 @@ function RecruitmentTab({ data }: { data: RecruitmentData | null }) {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={jobStatuses.map((j: JobStatusItem) => ({ name: j.status, value: j.count }))} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={3} dataKey="value"
-                  label={({ name, value }: PieLabelWithValueProps) => `${name}: ${value}`}>
+                  label={({ name, value }: PieLabelWithValueProps) => `${name ?? ''}: ${value ?? 0}`}>
                   {jobStatuses.map((_: JobStatusItem, i: number) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
