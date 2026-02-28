@@ -1,8 +1,4 @@
-// Tenant API - used only for authentication (login)
-const AUTH_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/v1';
-
-// Admin API - used for all admin operations
+// Admin API - used for all operations including auth
 const ADMIN_API_BASE_URL =
   process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:4001/v1';
 
@@ -36,7 +32,6 @@ class AdminApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    useAuthApi = false,
   ): Promise<T> {
     const token = this.getToken();
     const headers: Record<string, string> = {
@@ -48,8 +43,7 @@ class AdminApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const baseUrl = useAuthApi ? AUTH_BASE_URL : ADMIN_API_BASE_URL;
-    const response = await fetch(`${baseUrl}${endpoint}`, {
+    const response = await fetch(`${ADMIN_API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
       credentials: 'include',
@@ -81,7 +75,7 @@ class AdminApiClient {
     return (json.data !== undefined ? json.data : json) as T;
   }
 
-  // ── Auth (uses tenant API) ─────────────────────────────────────────
+  // ── Auth ──────────────────────────────────────────────────────────
 
   async login(
     email: string,
@@ -93,11 +87,7 @@ class AdminApiClient {
     }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
-    }, true);
-
-    if (data.user?.role !== 'SUPER_ADMIN') {
-      throw new Error('Access denied. Super Admin privileges required.');
-    }
+    });
 
     this.setToken(data.accessToken);
     return data;

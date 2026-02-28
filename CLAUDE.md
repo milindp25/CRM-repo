@@ -1,5 +1,60 @@
 # CLAUDE.md — Project Context for Claude Code
 
+## Workflow Orchestration
+
+### 1. Plan Mode Default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately — don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+### 2. Subagent Strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One task per subagent for focused execution
+
+### 3. Self-Improvement Loop
+- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
+
+### 4. Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+### 5. Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes — don't over-engineer
+- Challenge your own work before presenting it
+
+### 6. Autonomous Bug Fixing
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests — then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
+
+## Task Management
+
+1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
+2. **Verify Plan**: Check in before starting implementation
+3. **Track Progress**: Mark items complete as you go
+4. **Explain Changes**: High-level summary at each step
+5. **Document Results**: Add review section to `tasks/todo.md`
+6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
+
+## Core Principles
+
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+
+---
+
 ## Project Overview
 
 HRPlatform is a multi-tenant SaaS HRIS (Human Resource Information System). It has 4 apps in a monorepo managed by Yarn 4 workspaces + Turborepo.
@@ -118,7 +173,7 @@ dashboard, companies, features, subscription, addons, billing/plans, billing/rev
 - **Prisma JSON fields:** Cast typed arrays to `any` when assigning to Prisma JSON input fields.
 - **Null/undefined coercion:** Use `?? undefined` when Prisma returns `string | null` but TS expects `string | undefined`.
 - **Dark mode:** Use semantic Tailwind tokens (`text-foreground`, `bg-card`, `border-border`) not hardcoded colors.
-- **Admin API auth:** No login endpoint — admin frontend authenticates via tenant API, then uses JWT for admin-api requests.
+- **Admin API auth:** Has its own `/v1/auth/login` endpoint (SUPER_ADMIN only). Admin frontend authenticates directly via admin API.
 - **Shared package:** Must run `cd packages/shared && npx tsc` before API/web can resolve new exports. Uses `dist/` for resolution.
 - **Worktree gotcha:** Run `yarn install` + `npx prisma generate` in worktree for proper resolution.
 
@@ -147,11 +202,11 @@ dashboard, companies, features, subscription, addons, billing/plans, billing/rev
 - `render.yaml` — Render Blueprint (both NestJS APIs)
 - `apps/web/vercel.json` — Vercel config for Tenant Portal
 - `apps/admin/vercel.json` — Vercel config for Admin Portal
-- `.github/workflows/ci.yml` — CI pipeline (builds all 4 apps on PR/push)
+- `.github/workflows/ci.yml` — CI pipeline (manual trigger only, disabled auto-run)
 - `.github/workflows/deploy-db.yml` — Manual migration deployment
 - `DEPLOYMENT.md` — Full deployment guide
 
-**CI/CD:** Auto-deploy via Render (APIs) and Vercel (frontends) on push to main. GitHub Actions validates builds on PRs.
+**CI/CD:** Auto-deploy via Render (APIs) and Vercel (frontends) on push to main. GitHub Actions CI is disabled (manual trigger only).
 
 **Key deployment notes:**
 - All localhost URLs in source use env-var-with-fallback pattern (`process.env.X || 'http://localhost:...'`)

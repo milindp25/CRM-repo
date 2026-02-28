@@ -575,7 +575,113 @@ async function main() {
   });
   console.log(`✅ Super admin created: ${superAdmin.email}\n`);
 
-  // 12. Create second company (FREE tier) for feature gating testing
+  // 12. Create billing plans (one per tier)
+  console.log('💳 Creating billing plans...');
+  await prisma.billingPlan.create({
+    data: {
+      name: 'Starter',
+      tier: 'FREE',
+      basePrice: 0,
+      yearlyBasePrice: 0,
+      pricePerEmployee: 0,
+      pricePerUser: 0,
+      includedEmployees: 10,
+      includedUsers: 5,
+      isActive: true,
+    },
+  });
+
+  await prisma.billingPlan.create({
+    data: {
+      name: 'Basic',
+      tier: 'BASIC',
+      basePrice: 49,
+      yearlyBasePrice: 470,
+      pricePerEmployee: 4,
+      pricePerUser: 8,
+      includedEmployees: 25,
+      includedUsers: 10,
+      isActive: true,
+    },
+  });
+
+  await prisma.billingPlan.create({
+    data: {
+      name: 'Professional',
+      tier: 'PROFESSIONAL',
+      basePrice: 149,
+      yearlyBasePrice: 1430,
+      pricePerEmployee: 3,
+      pricePerUser: 6,
+      includedEmployees: 100,
+      includedUsers: 25,
+      isActive: true,
+    },
+  });
+
+  await prisma.billingPlan.create({
+    data: {
+      name: 'Enterprise',
+      tier: 'ENTERPRISE',
+      basePrice: 499,
+      yearlyBasePrice: 4790,
+      pricePerEmployee: 2,
+      pricePerUser: 4,
+      includedEmployees: 500,
+      includedUsers: 100,
+      isActive: true,
+    },
+  });
+  console.log(`✅ Created 4 billing plans (Starter, Basic, Professional, Enterprise)\n`);
+
+  // 13. Create feature add-ons (purchasable extras)
+  console.log('🧩 Creating feature add-ons...');
+  await prisma.featureAddon.create({
+    data: {
+      feature: 'PAYSLIP_ARCHIVE',
+      name: 'Payslip Archive',
+      description: 'Store and access historical payslips for all employees with unlimited retention.',
+      price: 29,
+      yearlyPrice: 279,
+      isActive: true,
+    },
+  });
+
+  await prisma.featureAddon.create({
+    data: {
+      feature: 'ANALYTICS',
+      name: 'Advanced Analytics',
+      description: 'Unlock HR analytics dashboards with headcount, attrition, diversity, and payroll insights.',
+      price: 49,
+      yearlyPrice: 470,
+      isActive: true,
+    },
+  });
+
+  await prisma.featureAddon.create({
+    data: {
+      feature: 'SSO',
+      name: 'Single Sign-On (SSO)',
+      description: 'Enable SAML/OAuth SSO integration with Google, Microsoft, and Okta.',
+      price: 39,
+      yearlyPrice: 374,
+      isActive: true,
+    },
+  });
+
+  await prisma.featureAddon.create({
+    data: {
+      feature: 'API_ACCESS',
+      name: 'API & Webhooks',
+      description: 'Programmatic access to HR data via REST API with webhook event notifications.',
+      price: 59,
+      yearlyPrice: 566,
+      isActive: true,
+    },
+  });
+  console.log(`✅ Created 4 feature add-ons (Payslip Archive, Analytics, SSO, API & Webhooks)\n`);
+
+  // 14. Create second company (FREE tier) for feature gating testing
   console.log('📦 Creating second company (FREE tier)...');
   const startupCo = await prisma.company.upsert({
     where: { companyCode: 'STARTUP001' },
@@ -624,7 +730,9 @@ async function main() {
   console.log(`   - ${taxConfigCount} Tax configurations (India + US)`);
   console.log(`   - 1 Salary structure: ${salaryStructure.name}`);
   console.log(`   - 1 Payroll record`);
-  console.log(`   - 1 Audit log\n`);
+  console.log(`   - 1 Audit log`);
+  console.log(`   - 4 Billing plans (Starter, Basic, Professional, Enterprise)`);
+  console.log(`   - 4 Feature add-ons (Payslip Archive, Analytics, SSO, API & Webhooks)\n`);
 }
 
 main()
