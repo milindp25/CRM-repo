@@ -985,6 +985,12 @@ class ApiClient {
     });
   }
 
+  async deleteUser(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // ==================== Company Endpoints ====================
 
   async getCompany(): Promise<Company> {

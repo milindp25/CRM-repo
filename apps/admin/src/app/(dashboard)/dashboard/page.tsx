@@ -78,8 +78,8 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Platform overview and metrics</p>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">Platform overview and metrics</p>
       </div>
 
       {/* Stat Cards */}
@@ -107,8 +107,8 @@ export default function DashboardPage() {
       {/* Breakdowns */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* By Tier */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-4">
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h3 className="text-base font-semibold text-foreground mb-4">
             Companies by Tier
           </h3>
           <div className="space-y-3">
@@ -124,20 +124,20 @@ export default function DashboardPage() {
                 >
                   {tier}
                 </span>
-                <span className="text-sm font-semibold text-gray-900">
+                <span className="text-sm font-semibold text-foreground">
                   {count}
                 </span>
               </div>
             ))}
             {data.companiesByTier.length === 0 && (
-              <p className="text-sm text-gray-500">No data available</p>
+              <p className="text-sm text-muted-foreground">No data available</p>
             )}
           </div>
         </div>
 
         {/* By Status */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-4">
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h3 className="text-base font-semibold text-foreground mb-4">
             Companies by Status
           </h3>
           <div className="space-y-3">
@@ -153,58 +153,58 @@ export default function DashboardPage() {
                 >
                   {status}
                 </span>
-                <span className="text-sm font-semibold text-gray-900">
+                <span className="text-sm font-semibold text-foreground">
                   {count}
                 </span>
               </div>
             ))}
             {data.companiesByStatus.length === 0 && (
-              <p className="text-sm text-gray-500">No data available</p>
+              <p className="text-sm text-muted-foreground">No data available</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Recent Companies */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-base font-semibold text-gray-900">
+      <div className="bg-card rounded-xl border border-border">
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-base font-semibold text-foreground">
             Recent Companies
           </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <tr className="bg-muted">
+                <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Company
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Tier
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Created
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-border">
               {data.recentCompanies.map((company) => (
                 <tr
                   key={company.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="hover:bg-muted cursor-pointer"
                   onClick={() =>
                     (window.location.href = `/companies/${company.id}`)
                   }
                 >
                   <td className="px-6 py-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-foreground">
                         {company.companyName}
                       </p>
-                      <p className="text-xs text-gray-500">{company.companyCode}</p>
+                      <p className="text-xs text-muted-foreground">{company.companyCode}</p>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                       {company.subscriptionStatus}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm text-muted-foreground">
                     {new Date(company.createdAt).toLocaleDateString()}
                   </td>
                 </tr>
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                 <tr>
                   <td
                     colSpan={4}
-                    className="px-6 py-8 text-center text-sm text-gray-500"
+                    className="px-6 py-8 text-center text-sm text-muted-foreground"
                   >
                     No companies found
                   </td>
@@ -262,11 +262,11 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
+    <div className="bg-card rounded-xl border border-border p-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">
+          <p className="text-sm text-muted-foreground">{title}</p>
+          <p className="text-3xl font-bold text-foreground mt-1">
             {value.toLocaleString()}
           </p>
         </div>

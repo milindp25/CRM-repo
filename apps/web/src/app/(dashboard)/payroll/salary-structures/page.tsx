@@ -255,8 +255,8 @@ export default function SalaryStructuresPage() {
         {/* Modal */}
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 px-4">
-            <div className="fixed inset-0 bg-black/50" onClick={() => setShowModal(false)} />
-            <div className="relative bg-card rounded-lg shadow-xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowModal(false)} />
+            <div className="relative bg-card rounded-lg shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-border">
               <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between z-10">
                 <h2 className="text-lg font-semibold text-foreground">
                   {editingId ? 'Edit Salary Structure' : 'Create Salary Structure'}

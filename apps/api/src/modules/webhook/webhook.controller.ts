@@ -13,6 +13,7 @@ import {
   DefaultValuePipe,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiTags,
   ApiOperation,
@@ -163,6 +164,7 @@ export class WebhookController {
   }
 
   @Post(':id/test')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Send a test webhook event to the endpoint' })
   @ApiParam({ name: 'id', description: 'Webhook endpoint UUID' })
   @ApiResponse({

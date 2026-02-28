@@ -166,7 +166,7 @@ export class AdminRepository {
 
   // ── Company Update ─────────────────────────────────────────────────
 
-  async updateCompany(id: string, data: { isActive?: boolean }) {
+  async updateCompany(id: string, data: { isActive?: boolean; companyName?: string; email?: string; phone?: string; website?: string }) {
     return this.prisma.company.update({
       where: { id },
       data,
@@ -194,7 +194,7 @@ export class AdminRepository {
 
   async findUsersByCompanyId(companyId: string) {
     return this.prisma.user.findMany({
-      where: { companyId },
+      where: { companyId, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -208,6 +208,98 @@ export class AdminRepository {
         updatedAt: true,
       },
       orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async findUserById(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        companyId: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+      },
+    });
+  }
+
+  async softDeleteUser(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { deletedAt: new Date(), isActive: false },
+    });
+  }
+
+  async createAdminAuditLog(data: {
+    adminUserId: string;
+    action: string;
+    targetUserId: string;
+    targetEmail: string;
+    companyId: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    return this.prisma.auditLog.create({
+      data: {
+        userId: data.adminUserId,
+        userEmail: 'super-admin',
+        action: data.action,
+        resourceType: 'USER',
+        resourceId: data.targetUserId,
+        companyId: data.companyId,
+        success: true,
+        metadata: (data.metadata ?? {}) as any,
+      },
+    });
+  }
+
+  // ── Designations ─────────────────────────────────────────────────
+
+  async findDesignationsByCompanyId(companyId: string) {
+    return this.prisma.designation.findMany({
+      where: { companyId, deletedAt: null },
+      orderBy: { level: 'desc' },
+      include: { _count: { select: { employees: true } } },
+    });
+  }
+
+  async findDesignationByCode(companyId: string, code: string) {
+    return this.prisma.designation.findFirst({
+      where: { companyId, code, deletedAt: null },
+    });
+  }
+
+  async findDesignationById(id: string) {
+    return this.prisma.designation.findUnique({ where: { id } });
+  }
+
+  async createDesignation(companyId: string, data: {
+    title: string;
+    code: string;
+    level?: number;
+    description?: string;
+    minSalary?: number;
+    maxSalary?: number;
+    currency?: string;
+  }) {
+    return this.prisma.designation.create({
+      data: { companyId, ...data },
+    });
+  }
+
+  async updateDesignation(id: string, data: Record<string, unknown>) {
+    return this.prisma.designation.update({
+      where: { id },
+      data: data as any,
+    });
+  }
+
+  async softDeleteDesignation(id: string) {
+    return this.prisma.designation.update({
+      where: { id },
+      data: { deletedAt: new Date() },
     });
   }
 }

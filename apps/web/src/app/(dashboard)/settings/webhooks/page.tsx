@@ -205,8 +205,8 @@ export default function WebhooksPage() {
 
           {/* Delivery History Modal */}
           {selectedWebhook && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-card rounded-xl shadow-xl max-w-3xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50" onClick={() => setSelectedWebhook(null)}>
+              <div className="bg-card rounded-xl shadow-2xl max-w-3xl w-full mx-4 max-h-[80vh] overflow-y-auto border border-border" onClick={(e) => e.stopPropagation()}>
                 <div className="p-6 border-b flex items-center justify-between">
                   <h2 className="text-lg font-semibold">Delivery History</h2>
                   <button onClick={() => setSelectedWebhook(null)} className="text-muted-foreground hover:text-muted-foreground">✕</button>

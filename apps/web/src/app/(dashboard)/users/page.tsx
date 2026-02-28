@@ -33,6 +33,9 @@ export default function UsersPage() {
   const [actionSuccess, setActionSuccess] = useState<Record<string, string>>({});
   const { hasPermission } = usePermissions();
 
+  // Delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState<CompanyUser | null>(null);
+
   // Invite modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -129,6 +132,21 @@ export default function UsersPage() {
       setInviteError(err.message || 'Failed to send invitation');
     } finally {
       setInviteLoading(false);
+    }
+  };
+
+  const handleDelete = async (user: CompanyUser) => {
+    setActionLoading(user.id + '-delete');
+    try {
+      await apiClient.deleteUser(user.id);
+      setUsers(prev => prev.filter(u => u.id !== user.id));
+      showSuccess(user.id, 'User deleted');
+      setDeleteConfirm(null);
+    } catch (err: any) {
+      showError(user.id, err.message || 'Failed to delete user');
+      setDeleteConfirm(null);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -242,6 +260,17 @@ export default function UsersPage() {
                             ? '...'
                             : user.isActive ? 'Deactivate' : 'Activate'}
                         </button>
+
+                        {/* Delete button (COMPANY_ADMIN with DELETE_USERS) */}
+                        {hasPermission(Permission.DELETE_USERS) && (
+                          <button
+                            onClick={() => setDeleteConfirm(user)}
+                            disabled={!!actionLoading}
+                            className="text-sm px-3 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50 font-medium disabled:opacity-50"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
 
                       {/* Feedback messages */}
@@ -265,8 +294,8 @@ export default function UsersPage() {
       </div>
       {/* Invite User Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-card rounded-xl shadow-xl w-full max-w-md mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" onClick={resetInviteModal}>
+          <div className="bg-card rounded-xl shadow-2xl w-full max-w-md mx-4 border border-border" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h2 className="text-lg font-semibold text-foreground">Invite User</h2>
               <button onClick={resetInviteModal} className="p-1 rounded-lg hover:bg-muted transition-colors">
@@ -332,6 +361,36 @@ export default function UsersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-card rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 border border-border" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Delete User</h3>
+            <p className="text-sm text-muted-foreground mb-1">
+              Are you sure you want to delete <strong className="text-foreground">{deleteConfirm.firstName} {deleteConfirm.lastName}</strong>?
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">
+              {deleteConfirm.email} &middot; {ROLE_LABELS[deleteConfirm.role] || deleteConfirm.role}
+            </p>
+            <p className="text-xs text-red-600 mb-4">This action cannot be easily undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                disabled={actionLoading === deleteConfirm.id + '-delete'}
+                className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                {actionLoading === deleteConfirm.id + '-delete' ? 'Deleting...' : 'Delete User'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -24,7 +24,7 @@ export default function OrgChartPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'tree' | 'list'>('tree');
+  const [viewMode, setViewMode] = useState<'tree' | 'list' | 'reporting'>('tree');
 
   useEffect(() => {
     fetchData();
@@ -35,7 +35,7 @@ export default function OrgChartPage() {
       setLoading(true);
       const [deptRes, empRes] = await Promise.allSettled([
         apiClient.getDepartmentHierarchy(),
-        apiClient.getEmployees({ limit: 1000 }),
+        apiClient.getEmployees({ limit: 100 }),
       ]);
 
       if (deptRes.status === 'fulfilled') {
@@ -53,6 +53,20 @@ export default function OrgChartPage() {
 
   const getEmployeesByDept = (deptId: string): Employee[] => {
     return employees.filter(e => e.departmentId === deptId);
+  };
+
+  const buildReportingTree = (employees: Employee[]) => {
+    const byManager: Record<string, Employee[]> = {};
+    const roots: Employee[] = [];
+    employees.forEach(emp => {
+      if (emp.reportingManagerId) {
+        if (!byManager[emp.reportingManagerId]) byManager[emp.reportingManagerId] = [];
+        byManager[emp.reportingManagerId].push(emp);
+      } else {
+        roots.push(emp);
+      }
+    });
+    return { roots, byManager };
   };
 
   if (loading) {
@@ -108,6 +122,16 @@ export default function OrgChartPage() {
             >
               List
             </button>
+            <button
+              onClick={() => setViewMode('reporting')}
+              className={`px-3 py-2 text-xs font-medium transition-colors ${
+                viewMode === 'reporting'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-card text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              Reporting
+            </button>
           </div>
         </div>
       </div>
@@ -144,7 +168,7 @@ export default function OrgChartPage() {
               ))}
           </div>
         </div>
-      ) : (
+      ) : viewMode === 'list' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {departments
             .filter(d => !search || d.name.toLowerCase().includes(search.toLowerCase()))
@@ -156,6 +180,40 @@ export default function OrgChartPage() {
               />
             ))}
         </div>
+      ) : (
+        /* Reporting view */
+        (() => {
+          const { roots, byManager } = buildReportingTree(employees);
+          const filteredRoots = search
+            ? roots.filter(emp =>
+                `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(search.toLowerCase())
+              )
+            : roots;
+
+          return filteredRoots.length === 0 ? (
+            <div className="bg-card rounded-xl border border-border p-12 text-center">
+              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <h3 className="font-semibold text-foreground mb-1">No reporting hierarchy found</h3>
+              <p className="text-sm text-muted-foreground">
+                {search ? 'No employees match your search.' : 'No employees without a reporting manager found.'}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-card rounded-xl border border-border p-6">
+              <div className="space-y-1">
+                {filteredRoots.map((emp) => (
+                  <ReportingNode
+                    key={emp.id}
+                    employee={emp}
+                    byManager={byManager}
+                    level={0}
+                    search={search}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })()
       )}
     </div>
   );
@@ -278,6 +336,112 @@ function DepartmentCard({
           <span className="px-2 py-0.5 bg-muted rounded text-muted-foreground">Inactive</span>
         )}
       </div>
+    </div>
+  );
+}
+
+const LEVEL_BADGE_COLORS: Record<number, string> = {
+  0: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  1: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  2: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+  3: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+  4: 'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300',
+  5: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
+};
+
+function ReportingNode({
+  employee,
+  byManager,
+  level,
+  search,
+}: {
+  employee: Employee;
+  byManager: Record<string, Employee[]>;
+  level: number;
+  search: string;
+}) {
+  const reportees = byManager[employee.id] || [];
+  const hasReportees = reportees.length > 0;
+  const [expanded, setExpanded] = useState(level < 2);
+
+  const filteredReportees = search
+    ? reportees.filter(emp =>
+        `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(search.toLowerCase())
+      )
+    : reportees;
+
+  const designationLevel = employee.designation?.level ?? 0;
+  const badgeColor = LEVEL_BADGE_COLORS[designationLevel % Object.keys(LEVEL_BADGE_COLORS).length]
+    || LEVEL_BADGE_COLORS[0];
+
+  return (
+    <div style={{ marginLeft: level > 0 ? `${level * 24}px` : '0' }}>
+      <div
+        className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+          hasReportees ? 'cursor-pointer hover:bg-muted/50' : ''
+        } bg-muted/20`}
+        onClick={() => hasReportees && setExpanded(!expanded)}
+      >
+        {hasReportees ? (
+          expanded ? (
+            <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          )
+        ) : (
+          <div className="w-4 flex-shrink-0" />
+        )}
+
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <User className="w-4 h-4 text-primary" />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-foreground">
+              {employee.firstName} {employee.lastName}
+            </span>
+            {employee.designation && (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  {employee.designation.title}
+                </span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${badgeColor}`}>
+                  L{employee.designation.level}
+                </span>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+            {employee.department && (
+              <span className="flex items-center gap-1">
+                <Building2 className="w-3 h-3" />
+                {employee.department.name}
+              </span>
+            )}
+            {hasReportees && (
+              <span className="flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                {reportees.length} direct report{reportees.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {expanded && hasReportees && (
+        <div className="mt-1 space-y-1">
+          {filteredReportees.map((reportee) => (
+            <ReportingNode
+              key={reportee.id}
+              employee={reportee}
+              byManager={byManager}
+              level={level + 1}
+              search={search}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

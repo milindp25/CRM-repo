@@ -80,7 +80,7 @@ export class AdminService {
 
   // ── Company Update (activate/deactivate) ───────────────────────────
 
-  async updateCompany(id: string, data: { isActive?: boolean }) {
+  async updateCompany(id: string, data: { isActive?: boolean; companyName?: string; email?: string; phone?: string; website?: string }) {
     const company = await this.repository.findCompanyById(id);
     if (!company) {
       throw new NotFoundException('Company not found');
@@ -170,5 +170,85 @@ export class AdminService {
       throw new NotFoundException('Company not found');
     }
     return this.repository.findUsersByCompanyId(companyId);
+  }
+
+  async deleteCompanyUser(companyId: string, userId: string, adminUserId: string) {
+    const user = await this.repository.findUserById(userId);
+    if (!user || user.companyId !== companyId) {
+      throw new NotFoundException('User not found in this company');
+    }
+    await this.repository.softDeleteUser(userId);
+    // Audit log for super admin action
+    await this.repository.createAdminAuditLog({
+      adminUserId,
+      action: 'SUPER_ADMIN_DELETE_USER',
+      targetUserId: userId,
+      targetEmail: user.email,
+      companyId,
+      metadata: { role: user.role, email: user.email, firstName: user.firstName, lastName: user.lastName },
+    });
+    return { message: 'User deleted successfully' };
+  }
+
+  // ── Company Designations ─────────────────────────────────────────
+
+  async getCompanyDesignations(companyId: string) {
+    const company = await this.repository.findCompanyById(companyId);
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+    return this.repository.findDesignationsByCompanyId(companyId);
+  }
+
+  async createCompanyDesignation(
+    companyId: string,
+    data: {
+      title: string;
+      code: string;
+      level?: number;
+      description?: string;
+      minSalary?: number;
+      maxSalary?: number;
+      currency?: string;
+    },
+  ) {
+    const company = await this.repository.findCompanyById(companyId);
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+    // Check for duplicate code within company
+    const existing = await this.repository.findDesignationByCode(companyId, data.code);
+    if (existing) {
+      throw new ConflictException(`Designation code "${data.code}" already exists in this company`);
+    }
+    return this.repository.createDesignation(companyId, data);
+  }
+
+  async updateCompanyDesignation(
+    companyId: string,
+    designationId: string,
+    data: Record<string, unknown>,
+  ) {
+    const company = await this.repository.findCompanyById(companyId);
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+    const designation = await this.repository.findDesignationById(designationId);
+    if (!designation || designation.companyId !== companyId) {
+      throw new NotFoundException('Designation not found in this company');
+    }
+    return this.repository.updateDesignation(designationId, data);
+  }
+
+  async deleteCompanyDesignation(companyId: string, designationId: string) {
+    const company = await this.repository.findCompanyById(companyId);
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+    const designation = await this.repository.findDesignationById(designationId);
+    if (!designation || designation.companyId !== companyId) {
+      throw new NotFoundException('Designation not found in this company');
+    }
+    return this.repository.softDeleteDesignation(designationId);
   }
 }
