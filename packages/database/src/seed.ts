@@ -197,7 +197,9 @@ async function main() {
 
   // 5. Create users with different roles
   console.log('🔐 Creating users...');
-  const passwordHash = await bcrypt.hash('Test@12345', 12);
+  const userPassword = process.env.SEED_USER_PASSWORD;
+  if (!userPassword) throw new Error('SEED_USER_PASSWORD env var is required. Set it in packages/database/.env');
+  const passwordHash = await bcrypt.hash(userPassword, 12);
 
   const adminUser = await prisma.user.create({
     data: {
@@ -553,7 +555,9 @@ async function main() {
 
   // 11. Create SUPER_ADMIN user (for admin portal)
   console.log('🔑 Creating super admin user...');
-  const superAdminHash = await bcrypt.hash('Admin@12345', 12);
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword) throw new Error('SEED_ADMIN_PASSWORD env var is required. Set it in packages/database/.env');
+  const superAdminHash = await bcrypt.hash(adminPassword, 12);
   const superAdmin = await prisma.user.upsert({
     where: { companyId_email: { companyId: company.id, email: 'superadmin@hrplatform.com' } },
     update: {},
@@ -592,7 +596,7 @@ async function main() {
   });
   console.log(`✅ Company created: ${startupCo.companyName} (${startupCo.id})`);
 
-  const startupAdminHash = await bcrypt.hash('Test@12345', 12);
+  const startupAdminHash = await bcrypt.hash(userPassword, 12);
   const startupAdmin = await prisma.user.create({
     data: {
       companyId: startupCo.id,
