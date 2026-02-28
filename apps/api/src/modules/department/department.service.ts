@@ -29,6 +29,11 @@ export class DepartmentService {
     companyId: string,
     dto: CreateDepartmentDto,
   ): Promise<DepartmentResponseDto> {
+    // Auto-generate code if not provided
+    if (!dto.code) {
+      dto.code = await this.generateCode(companyId, dto.name);
+    }
+
     this.logger.log(`Creating department: ${dto.name} (${dto.code})`);
 
     // Validate unique code
@@ -209,6 +214,30 @@ export class DepartmentService {
       const parent = await this.repository.findById(currentId, companyId);
       currentId = parent?.parent?.id ?? null;
     }
+  }
+
+  /**
+   * Auto-generate a unique department code from name
+   */
+  private async generateCode(companyId: string, name: string): Promise<string> {
+    // Create abbreviation from name (e.g., "Engineering" -> "ENG", "Human Resources" -> "HR")
+    const words = name.trim().split(/\s+/);
+    let code: string;
+    if (words.length === 1) {
+      code = words[0].toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 5);
+    } else {
+      code = words.map(w => w[0]).join('').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 5);
+    }
+    if (!code) code = 'DEPT';
+
+    // Find unique code by appending number if needed
+    let candidate = code;
+    let suffix = 1;
+    while (await this.repository.existsByCode(companyId, candidate)) {
+      candidate = `${code}${suffix}`;
+      suffix++;
+    }
+    return candidate;
   }
 
   /**

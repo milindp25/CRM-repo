@@ -25,6 +25,7 @@ export default function DesignationsPage() {
     minSalary: '',
     maxSalary: '',
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +60,7 @@ export default function DesignationsPage() {
     e.preventDefault();
     try {
       setSubmitting(true);
+      setFormError(null);
       const data = {
         ...formData,
         minSalary: formData.minSalary ? Number(formData.minSalary) : undefined,
@@ -76,7 +78,7 @@ export default function DesignationsPage() {
       setFormData({ title: '', code: '', description: '', level: 1, minSalary: '', maxSalary: '' });
       loadDesignations();
     } catch (err: any) {
-      toast.error('Failed to save designation', err.message);
+      setFormError(err.message || 'Failed to save designation');
     } finally {
       setSubmitting(false);
     }
@@ -132,6 +134,7 @@ export default function DesignationsPage() {
             setShowForm(true);
             setEditingId(null);
             setFormData({ title: '', code: '', description: '', level: 1, minSalary: '', maxSalary: '' });
+            setFormError(null);
           }}
           className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
@@ -150,6 +153,11 @@ export default function DesignationsPage() {
             {editingId ? 'Edit Designation' : 'New Designation'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {formError && (
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-sm font-medium text-red-700 dark:text-red-300">{formError}</p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Title *</label>
@@ -163,14 +171,13 @@ export default function DesignationsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Code *</label>
+                <label className="block text-sm font-medium mb-1">Code</label>
                 <input
                   type="text"
-                  required
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="SSE"
+                  placeholder="Auto-generated (or enter manually)"
                 />
               </div>
             </div>
@@ -227,7 +234,7 @@ export default function DesignationsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => { setShowForm(false); setFormError(null); }}
                 disabled={submitting}
                 className="px-4 py-2 border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               >

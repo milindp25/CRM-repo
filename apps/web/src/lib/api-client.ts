@@ -128,7 +128,7 @@ export interface Employee {
 }
 
 export interface CreateEmployeeData {
-  employeeCode: string;
+  employeeCode?: string;
   firstName: string;
   middleName?: string;
   lastName: string;

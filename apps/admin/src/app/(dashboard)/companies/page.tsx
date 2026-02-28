@@ -356,9 +356,9 @@ export default function CompaniesPage() {
             ) : (
               <form onSubmit={handleCreateCompany} className="p-6 space-y-4">
                 {createError && (
-                  <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                    <p className="text-sm text-red-700 dark:text-red-300">{createError}</p>
+                  <div className="flex items-center gap-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 border-l-4 border-l-red-500 rounded-lg p-4">
+                    <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                    <p className="text-sm font-medium text-red-700 dark:text-red-300">{createError}</p>
                   </div>
                 )}
 

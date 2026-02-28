@@ -24,7 +24,7 @@ export interface Department {
 
 export interface CreateDepartmentData {
   name: string;
-  code: string;
+  code?: string;
   description?: string;
   parentId?: string;
   headEmployeeId?: string;
@@ -74,7 +74,7 @@ export interface Designation {
 
 export interface CreateDesignationData {
   title: string;
-  code: string;
+  code?: string;
   description?: string;
   level?: number;
   minSalary?: number;

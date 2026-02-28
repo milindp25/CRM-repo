@@ -13,7 +13,12 @@ export class DesignationService {
   ) {}
 
   async create(companyId: string, dto: CreateDesignationDto): Promise<DesignationResponseDto> {
-    this.logger.log(`Creating designation: ${dto.title}`);
+    // Auto-generate code if not provided
+    if (!dto.code) {
+      dto.code = await this.generateCode(companyId, dto.title);
+    }
+
+    this.logger.log(`Creating designation: ${dto.title} (${dto.code})`);
 
     const codeExists = await this.repository.existsByCode(companyId, dto.code);
     if (codeExists) {
@@ -93,6 +98,28 @@ export class DesignationService {
 
     this.cache.invalidateByPrefix(`desigs:${companyId}`);
     await this.repository.softDelete(id, companyId);
+  }
+
+  /**
+   * Auto-generate a unique designation code from title
+   */
+  private async generateCode(companyId: string, title: string): Promise<string> {
+    const words = title.trim().split(/\s+/);
+    let code: string;
+    if (words.length === 1) {
+      code = words[0].toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 5);
+    } else {
+      code = words.map(w => w[0]).join('').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 5);
+    }
+    if (!code) code = 'DESIG';
+
+    let candidate = code;
+    let suffix = 1;
+    while (await this.repository.existsByCode(companyId, candidate)) {
+      candidate = `${code}${suffix}`;
+      suffix++;
+    }
+    return candidate;
   }
 
   private formatDesignation(designation: any): DesignationResponseDto {

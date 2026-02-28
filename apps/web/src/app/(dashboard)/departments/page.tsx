@@ -18,6 +18,7 @@ export default function DepartmentsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '', description: '' });
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +53,7 @@ export default function DepartmentsPage() {
     e.preventDefault();
     try {
       setSubmitting(true);
+      setFormError(null);
       if (editingId) {
         await apiClient.updateDepartment(editingId, formData);
         toast.success('Department updated', 'Department has been updated successfully.');
@@ -64,7 +66,7 @@ export default function DepartmentsPage() {
       setFormData({ name: '', code: '', description: '' });
       loadDepartments();
     } catch (err: any) {
-      toast.error('Failed to save department', err.message);
+      setFormError(err.message || 'Failed to save department');
     } finally {
       setSubmitting(false);
     }
@@ -103,6 +105,7 @@ export default function DepartmentsPage() {
             setShowForm(true);
             setEditingId(null);
             setFormData({ name: '', code: '', description: '' });
+            setFormError(null);
           }}
           className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
@@ -121,6 +124,11 @@ export default function DepartmentsPage() {
             {editingId ? 'Edit Department' : 'New Department'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {formError && (
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-sm font-medium text-red-700 dark:text-red-300">{formError}</p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Name *</label>
@@ -134,14 +142,13 @@ export default function DepartmentsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Code *</label>
+                <label className="block text-sm font-medium mb-1">Code</label>
                 <input
                   type="text"
-                  required
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="ENG"
+                  placeholder="Auto-generated (or enter manually)"
                 />
               </div>
             </div>
@@ -165,7 +172,7 @@ export default function DepartmentsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => { setShowForm(false); setFormError(null); }}
                 disabled={submitting}
                 className="px-4 py-2 border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
               >

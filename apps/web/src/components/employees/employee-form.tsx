@@ -8,7 +8,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEmployee } from '@/hooks/use-employee';
+import { apiClient } from '@/lib/api-client';
 import type { CreateEmployeeData, Employee } from '@/lib/api-client';
+import type { Department, Designation } from '@/lib/api/types';
 import { Loader2, Save, X } from 'lucide-react';
 
 interface EmployeeFormProps {
@@ -53,6 +55,25 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [designations, setDesignations] = useState<Designation[]>([]);
+
+  // Fetch departments and designations for dropdowns
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const [deptRes, desigRes] = await Promise.all([
+          apiClient.getDepartments({ limit: 100 }),
+          apiClient.getDesignations({ limit: 100 }),
+        ]);
+        setDepartments(deptRes.data);
+        setDesignations(desigRes.data);
+      } catch {
+        // Silently fail — dropdowns will just be empty
+      }
+    };
+    loadOptions();
+  }, []);
 
   // Populate form when employee data is fetched (edit mode)
   useEffect(() => {
@@ -91,8 +112,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Required fields
-    if (!formData.employeeCode) newErrors.employeeCode = 'Employee code is required';
+    // Required fields (employeeCode is auto-generated if empty)
     if (!formData.firstName) newErrors.firstName = 'First name is required';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
     if (!formData.workEmail) newErrors.workEmail = 'Work email is required';
@@ -190,8 +210,8 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
       </div>
 
       {errors.submit && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">{errors.submit}</p>
+        <div className="mb-6 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-sm font-medium text-red-700 dark:text-red-300">{errors.submit}</p>
         </div>
       )}
 
@@ -202,20 +222,15 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
-                Employee Code <span className="text-red-500">*</span>
+                Employee Code
               </label>
               <input
                 type="text"
                 value={formData.employeeCode}
                 onChange={(e) => handleChange('employeeCode', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.employeeCode ? 'border-red-500' : 'border-border'
-                }`}
-                placeholder="EMP001"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Auto-generated (e.g., EMP-001)"
               />
-              {errors.employeeCode && (
-                <p className="mt-1 text-sm text-red-600">{errors.employeeCode}</p>
-              )}
             </div>
 
             <div>
@@ -476,6 +491,42 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 <option value="RESIGNED">Resigned</option>
                 <option value="TERMINATED">Terminated</option>
                 <option value="ON_LEAVE">On Leave</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Department
+              </label>
+              <select
+                value={formData.departmentId || ''}
+                onChange={(e) => handleChange('departmentId', e.target.value || undefined)}
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select Department</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name} ({dept.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Designation
+              </label>
+              <select
+                value={formData.designationId || ''}
+                onChange={(e) => handleChange('designationId', e.target.value || undefined)}
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select Designation</option>
+                {designations.map((desig) => (
+                  <option key={desig.id} value={desig.id}>
+                    {desig.title} ({desig.code})
+                  </option>
+                ))}
               </select>
             </div>
 

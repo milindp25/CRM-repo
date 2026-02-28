@@ -49,6 +49,11 @@ export class EmployeeService implements IEmployeeService {
     // Check subscription employee limit
     await this.checkEmployeeLimit(companyId);
 
+    // Auto-generate employee code if not provided
+    if (!dto.employeeCode) {
+      dto.employeeCode = await this.generateEmployeeCode(companyId);
+    }
+
     // Validate uniqueness
     await this.validateUniqueConstraints(companyId, dto);
 
@@ -256,16 +261,35 @@ export class EmployeeService implements IEmployeeService {
   }
 
   /**
+   * Auto-generate a sequential employee code (EMP-001, EMP-002, etc.)
+   */
+  private async generateEmployeeCode(companyId: string): Promise<string> {
+    const count = await this.prisma.employee.count({
+      where: { companyId, deletedAt: null },
+    });
+
+    let num = count + 1;
+    let code: string;
+    do {
+      code = `EMP-${String(num).padStart(3, '0')}`;
+      num++;
+    } while (await this.employeeRepository.existsByCode(companyId, code));
+
+    return code;
+  }
+
+  /**
    * Private: Validate unique constraints (employee code, work email)
    */
   private async validateUniqueConstraints(companyId: string, dto: CreateEmployeeDto): Promise<void> {
+    const employeeCode = dto.employeeCode!; // Always set by this point (auto-generated if not provided)
     const [codeExists, emailExists] = await Promise.all([
-      this.employeeRepository.existsByCode(companyId, dto.employeeCode),
+      this.employeeRepository.existsByCode(companyId, employeeCode),
       this.employeeRepository.existsByWorkEmail(companyId, dto.workEmail),
     ]);
 
     if (codeExists) {
-      throw new ConflictException(`Employee code ${dto.employeeCode} already exists`);
+      throw new ConflictException(`Employee code ${employeeCode} already exists`);
     }
 
     if (emailExists) {
