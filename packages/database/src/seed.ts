@@ -1,10 +1,10 @@
 /**
  * Database Seed Script
- * Creates test data for development
+ * Seeds only system infrastructure data (billing plans, tax configs, super admin).
+ * Customer data (companies, employees, etc.) is created via the app's registration flow.
  */
-import "dotenv/config"; // loads .env from current working dir
+import "dotenv/config";
 import { PrismaClient } from '@prisma/client';
-import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
 
 import * as dotenv from "dotenv";
@@ -14,405 +14,152 @@ import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../../apps/api/.env") });
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-
 const prisma = new PrismaClient();
-
-// Encryption for seed data (uses same key as the API for consistency)
-function simpleEncrypt(text: string): string {
-  const key = process.env.ENCRYPTION_KEY;
-  if (!key) throw new Error('ENCRYPTION_KEY env var is required. Set it in packages/database/.env or apps/api/.env');
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key.substring(0, 64), 'hex'), iv);
-  let encrypted = cipher.update(text, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  return `${iv.toString('hex')}:${encrypted}`;
-}
 
 async function main() {
   console.log('🌱 Starting database seed...\n');
 
-  // 1. Create test company
-  console.log('📦 Creating test company...');
-  const company = await prisma.company.upsert({
-    where: { companyCode: 'DEMO001' },
+  // ──────────────────────────────────────────────
+  // 1. System company + Super Admin (required for admin portal)
+  // ──────────────────────────────────────────────
+  console.log('🔑 Creating system company & super admin...');
+  const systemCompany = await prisma.company.upsert({
+    where: { companyCode: 'SYSTEM' },
     update: {},
     create: {
-      companyCode: 'DEMO001',
-      companyName: 'Demo Tech Solutions Pvt Ltd',
-      email: 'contact@demotech.com',
-      phone: '+91-9876543210',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      country: 'India',
-      postalCode: '560001',
+      companyCode: 'SYSTEM',
+      companyName: 'HRPlatform System',
       subscriptionTier: 'ENTERPRISE',
       subscriptionStatus: 'ACTIVE',
-      featuresEnabled: [
-        'ATTENDANCE', 'LEAVE', 'PAYROLL', 'PERFORMANCE', 'RECRUITMENT',
-        'TRAINING', 'ASSETS', 'EXPENSES', 'SHIFTS', 'POLICIES',
-        'CUSTOM_FIELDS', 'API_ACCESS', 'WEBHOOKS', 'AUDIT_LOGS',
-        'ADVANCED_REPORTS', 'SSO', 'OFFBOARDING', 'DIRECTORY',
-        'SOCIAL_FEED', 'SURVEYS', 'TIME_TRACKING', 'CONTRACTORS',
-        'ANALYTICS', 'GEOFENCING', 'LEAVE_POLICIES', 'DELEGATIONS',
-      ],
-      payrollCountry: 'IN',
-      payFrequency: 'MONTHLY',
-      pfEnabled: true,
-      esiEnabled: false,
-    },
-  });
-  console.log(`✅ Company created: ${company.companyName} (${company.id})\n`);
-
-  // 2. Create departments
-  console.log('🏢 Creating departments...');
-  const engineering = await prisma.department.create({
-    data: {
-      companyId: company.id,
-      name: 'Engineering',
-      code: 'ENG',
-      description: 'Software development and engineering',
+      featuresEnabled: [],
+      onboardingCompleted: true,
     },
   });
 
-  const hr = await prisma.department.create({
-    data: {
-      companyId: company.id,
-      name: 'Human Resources',
-      code: 'HR',
-      description: 'HR operations and people management',
-    },
-  });
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword) throw new Error('SEED_ADMIN_PASSWORD env var is required. Set it in packages/database/.env');
+  const superAdminHash = await bcrypt.hash(adminPassword, 12);
 
-  const sales = await prisma.department.create({
-    data: {
-      companyId: company.id,
-      name: 'Sales',
-      code: 'SALES',
-      description: 'Sales and business development',
-    },
-  });
-  console.log(`✅ Created ${3} departments\n`);
-
-  // 3. Create designations
-  console.log('👔 Creating designations...');
-  const seniorDev = await prisma.designation.create({
-    data: {
-      companyId: company.id,
-      title: 'Senior Software Engineer',
-      code: 'SSE',
-      level: 4,
-      minSalary: 800000,
-      maxSalary: 1500000,
-      currency: 'INR',
-    },
-  });
-
-  const hrManager = await prisma.designation.create({
-    data: {
-      companyId: company.id,
-      title: 'HR Manager',
-      code: 'HRM',
-      level: 6,
-      minSalary: 1000000,
-      maxSalary: 1800000,
-      currency: 'INR',
-    },
-  });
-
-  const salesExec = await prisma.designation.create({
-    data: {
-      companyId: company.id,
-      title: 'Sales Executive',
-      code: 'SE',
-      level: 3,
-      minSalary: 400000,
-      maxSalary: 800000,
-      currency: 'INR',
-    },
-  });
-  console.log(`✅ Created ${3} designations\n`);
-
-  // 4. Create employees
-  console.log('👥 Creating employees...');
-  
-  const emp1 = await prisma.employee.create({
-    data: {
-      companyId: company.id,
-      employeeCode: 'EMP001',
-      firstName: 'Rajesh',
-      lastName: 'Kumar',
-      workEmail: 'rajesh.kumar@demotech.com',
-      dateOfJoining: new Date('2023-01-15'),
-      departmentId: engineering.id,
-      designationId: seniorDev.id,
-      employmentType: 'FULL_TIME',
-      status: 'ACTIVE',
-      // Encrypted PII (in production, use proper encryption service)
-      aadhaarEncrypted: simpleEncrypt('123456789012'),
-      panEncrypted: simpleEncrypt('ABCDE1234F'),
-      personalEmailEncrypted: simpleEncrypt('rajesh@gmail.com'),
-      personalPhoneEncrypted: simpleEncrypt('+91-9876543210'),
-    },
-  });
-
-  const emp2 = await prisma.employee.create({
-    data: {
-      companyId: company.id,
-      employeeCode: 'EMP002',
-      firstName: 'Priya',
-      lastName: 'Sharma',
-      workEmail: 'priya.sharma@demotech.com',
-      dateOfJoining: new Date('2023-03-01'),
-      departmentId: hr.id,
-      designationId: hrManager.id,
-      employmentType: 'FULL_TIME',
-      status: 'ACTIVE',
-      aadhaarEncrypted: simpleEncrypt('987654321098'),
-      panEncrypted: simpleEncrypt('XYZAB5678C'),
-      personalEmailEncrypted: simpleEncrypt('priya@gmail.com'),
-      personalPhoneEncrypted: simpleEncrypt('+91-9876543211'),
-    },
-  });
-
-  const emp3 = await prisma.employee.create({
-    data: {
-      companyId: company.id,
-      employeeCode: 'EMP003',
-      firstName: 'Amit',
-      lastName: 'Patel',
-      workEmail: 'amit.patel@demotech.com',
-      dateOfJoining: new Date('2023-06-15'),
-      departmentId: sales.id,
-      designationId: salesExec.id,
-      employmentType: 'FULL_TIME',
-      status: 'ACTIVE',
-      reportingManagerId: emp1.id,
-      aadhaarEncrypted: simpleEncrypt('456789123456'),
-      panEncrypted: simpleEncrypt('PQRST9012D'),
-      personalEmailEncrypted: simpleEncrypt('amit@gmail.com'),
-      personalPhoneEncrypted: simpleEncrypt('+91-9876543212'),
-    },
-  });
-  console.log(`✅ Created ${3} employees\n`);
-
-  // 5. Create users with different roles
-  console.log('🔐 Creating users...');
-  const userPassword = process.env.SEED_USER_PASSWORD;
-  if (!userPassword) throw new Error('SEED_USER_PASSWORD env var is required. Set it in packages/database/.env');
-  const passwordHash = await bcrypt.hash(userPassword, 12);
-
-  const adminUser = await prisma.user.create({
-    data: {
-      companyId: company.id,
-      email: 'admin@demotech.com',
-      passwordHash: passwordHash,
-      firstName: 'Admin',
-      lastName: 'User',
-      role: 'COMPANY_ADMIN',
+  const superAdmin = await prisma.user.upsert({
+    where: { companyId_email: { companyId: systemCompany.id, email: 'superadmin@hrplatform.com' } },
+    update: { passwordHash: superAdminHash },
+    create: {
+      companyId: systemCompany.id,
+      email: 'superadmin@hrplatform.com',
+      passwordHash: superAdminHash,
+      firstName: 'Super',
+      lastName: 'Admin',
+      role: 'SUPER_ADMIN',
       permissions: ['ALL'],
       isActive: true,
       emailVerified: true,
     },
   });
-  console.log(`  COMPANY_ADMIN: ${adminUser.email}`);
+  console.log(`✅ Super admin: ${superAdmin.email}\n`);
 
-  const hrUser = await prisma.user.create({
-    data: {
-      companyId: company.id,
-      email: 'hr@demotech.com',
-      passwordHash: passwordHash,
-      firstName: 'Priya',
-      lastName: 'Sharma',
-      role: 'HR_ADMIN',
-      permissions: ['MANAGE_EMPLOYEES', 'VIEW_EMPLOYEES', 'MANAGE_ATTENDANCE', 'VIEW_ATTENDANCE', 'MANAGE_LEAVES', 'VIEW_LEAVES', 'MANAGE_PAYROLL', 'VIEW_PAYROLL', 'VIEW_USERS', 'CREATE_USERS', 'UPDATE_USERS', 'VIEW_REPORTS', 'VIEW_DEPARTMENTS', 'MANAGE_DEPARTMENTS', 'VIEW_DESIGNATIONS', 'MANAGE_DESIGNATIONS', 'VIEW_PERFORMANCE', 'MANAGE_PERFORMANCE', 'VIEW_RECRUITMENT', 'MANAGE_RECRUITMENT', 'VIEW_TRAINING', 'MANAGE_TRAINING', 'VIEW_ASSETS', 'MANAGE_ASSETS', 'VIEW_EXPENSES', 'MANAGE_EXPENSES', 'VIEW_SHIFTS', 'MANAGE_SHIFTS', 'VIEW_POLICIES', 'MANAGE_POLICIES', 'MANAGE_LEAVE_POLICIES', 'MANAGE_OFFBOARDING', 'VIEW_DIRECTORY', 'MANAGE_SURVEYS', 'VIEW_TIMESHEETS', 'VIEW_ANALYTICS', 'MANAGE_DASHBOARD_CONFIG'],
-      employeeId: emp2.id,
-      isActive: true,
-      emailVerified: true,
-    },
-  });
-  console.log(`  HR_ADMIN: ${hrUser.email}`);
+  // ──────────────────────────────────────────────
+  // 2. Billing Plans (required for subscription system)
+  // ──────────────────────────────────────────────
+  console.log('💳 Creating billing plans...');
+  const plans = [
+    { name: 'Starter', tier: 'FREE', basePrice: 0, yearlyBasePrice: 0, pricePerEmployee: 0, pricePerUser: 0, includedEmployees: 10, includedUsers: 5 },
+    { name: 'Basic', tier: 'BASIC', basePrice: 49, yearlyBasePrice: 470, pricePerEmployee: 4, pricePerUser: 8, includedEmployees: 25, includedUsers: 10 },
+    { name: 'Professional', tier: 'PROFESSIONAL', basePrice: 149, yearlyBasePrice: 1430, pricePerEmployee: 3, pricePerUser: 6, includedEmployees: 100, includedUsers: 25 },
+    { name: 'Enterprise', tier: 'ENTERPRISE', basePrice: 499, yearlyBasePrice: 4790, pricePerEmployee: 2, pricePerUser: 4, includedEmployees: 500, includedUsers: 100 },
+  ];
 
-  const mgrUser = await prisma.user.create({
-    data: {
-      companyId: company.id,
-      email: 'manager@demotech.com',
-      passwordHash: passwordHash,
-      firstName: 'Rajesh',
-      lastName: 'Kumar',
-      role: 'MANAGER',
-      permissions: ['VIEW_EMPLOYEES', 'VIEW_ATTENDANCE', 'MARK_ATTENDANCE', 'APPLY_LEAVE', 'APPROVE_LEAVE', 'VIEW_LEAVES', 'VIEW_PAYROLL', 'VIEW_OWN_PAYROLL', 'VIEW_DEPARTMENTS', 'VIEW_DESIGNATIONS', 'VIEW_PERFORMANCE', 'VIEW_OWN_PERFORMANCE', 'VIEW_TRAINING', 'ENROLL_TRAINING', 'SUBMIT_EXPENSE', 'APPROVE_EXPENSE', 'VIEW_SHIFTS', 'APPROVE_TIMESHEETS', 'VIEW_OWN_TIMESHEETS', 'SEND_KUDOS', 'VIEW_DIRECTORY', 'RESPOND_SURVEY', 'MANAGE_DASHBOARD_CONFIG', 'VIEW_USERS'],
-      employeeId: emp1.id,
-      isActive: true,
-      emailVerified: true,
-    },
-  });
-  console.log(`  MANAGER: ${mgrUser.email}`);
-
-  const empUser = await prisma.user.create({
-    data: {
-      companyId: company.id,
-      email: 'employee@demotech.com',
-      passwordHash: passwordHash,
-      firstName: 'Amit',
-      lastName: 'Patel',
-      role: 'EMPLOYEE',
-      permissions: ['VIEW_EMPLOYEES', 'VIEW_ATTENDANCE', 'MARK_ATTENDANCE', 'APPLY_LEAVE', 'VIEW_LEAVES', 'VIEW_OWN_PAYROLL', 'VIEW_OWN_PERFORMANCE', 'SUBMIT_SELF_REVIEW', 'ENROLL_TRAINING', 'VIEW_TRAINING', 'SUBMIT_EXPENSE', 'VIEW_OWN_TIMESHEETS', 'SEND_KUDOS', 'VIEW_DIRECTORY', 'RESPOND_SURVEY', 'ACKNOWLEDGE_POLICY'],
-      employeeId: emp3.id,
-      isActive: true,
-      emailVerified: true,
-    },
-  });
-  console.log(`  EMPLOYEE: ${empUser.email}`);
-  console.log(`✅ Created 4 users for DemoTech\n`);
-
-  // 6. Create sample attendance records (last 7 days)
-  console.log('📅 Creating attendance records...');
-  const today = new Date();
-  let attendanceCount = 0;
-
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    
-    // Skip weekends
-    if (date.getDay() === 0 || date.getDay() === 6) continue;
-
-    for (const emp of [emp1, emp2, emp3]) {
-      await prisma.attendance.create({
-        data: {
-          companyId: company.id,
-          employeeId: emp.id,
-          attendanceDate: date,
-          checkInTime: new Date(date.setHours(9, Math.floor(Math.random() * 30), 0)),
-          checkOutTime: new Date(date.setHours(18, Math.floor(Math.random() * 30), 0)),
-          totalHours: 8.5 + (Math.random() * 0.5),
-          status: 'PRESENT',
-          isWorkFromHome: Math.random() > 0.7, // 30% WFH
-        },
-      });
-      attendanceCount++;
+  // BillingPlan has no unique constraint on tier, so check existence first
+  const existingPlans = await prisma.billingPlan.count();
+  if (existingPlans === 0) {
+    for (const plan of plans) {
+      await prisma.billingPlan.create({ data: { ...plan, isActive: true } });
     }
+    console.log(`✅ Created ${plans.length} billing plans\n`);
+  } else {
+    console.log(`⏭️  Billing plans already exist (${existingPlans} found), skipping\n`);
   }
-  console.log(`✅ Created ${attendanceCount} attendance records\n`);
 
-  // 7. Create sample leave applications
-  console.log('🏖️ Creating leave applications...');
-  await prisma.leave.create({
-    data: {
-      companyId: company.id,
-      employeeId: emp1.id,
-      leaveType: 'CASUAL',
-      startDate: new Date('2025-02-20'),
-      endDate: new Date('2025-02-21'),
-      totalDays: 2,
-      reason: 'Personal work',
-      status: 'APPROVED',
-      approvedBy: adminUser.id,
-      approvedAt: new Date(),
-    },
-  });
+  // ──────────────────────────────────────────────
+  // 3. Feature Add-ons (required for addon purchase system)
+  // ──────────────────────────────────────────────
+  console.log('🧩 Creating feature add-ons...');
+  const addons = [
+    { feature: 'PAYSLIP_ARCHIVE', name: 'Payslip Archive', description: 'Store and access historical payslips for all employees with unlimited retention.', price: 29, yearlyPrice: 279 },
+    { feature: 'ANALYTICS', name: 'Advanced Analytics', description: 'Unlock HR analytics dashboards with headcount, attrition, diversity, and payroll insights.', price: 49, yearlyPrice: 470 },
+    { feature: 'SSO', name: 'Single Sign-On (SSO)', description: 'Enable SAML/OAuth SSO integration with Google, Microsoft, and Okta.', price: 39, yearlyPrice: 374 },
+    { feature: 'API_ACCESS', name: 'API & Webhooks', description: 'Programmatic access to HR data via REST API with webhook event notifications.', price: 59, yearlyPrice: 566 },
+  ];
 
-  await prisma.leave.create({
-    data: {
-      companyId: company.id,
-      employeeId: emp3.id,
-      leaveType: 'SICK',
-      startDate: new Date('2025-02-15'),
-      endDate: new Date('2025-02-15'),
-      totalDays: 1,
-      reason: 'Feeling unwell',
-      status: 'PENDING',
-    },
-  });
-  console.log(`✅ Created ${2} leave applications\n`);
+  for (const addon of addons) {
+    await prisma.featureAddon.upsert({
+      where: { feature: addon.feature },
+      update: { ...addon, isActive: true },
+      create: { ...addon, isActive: true },
+    });
+  }
+  console.log(`✅ Created ${addons.length} feature add-ons\n`);
 
-  // 8. Seed Tax Configurations (day-0 rates for India & US)
+  // ──────────────────────────────────────────────
+  // 4. Tax Configurations (required for payroll engine)
+  // ──────────────────────────────────────────────
   console.log('📊 Seeding tax configurations...');
   const taxConfigs = [
     {
-      country: 'IN',
-      configKey: 'IN_NEW_REGIME_BRACKETS',
+      country: 'IN', configKey: 'IN_NEW_REGIME_BRACKETS', fiscalYear: 2025,
       configValue: {
-        fiscalYear: 2025,
-        standardDeduction: 75000,
+        fiscalYear: 2025, standardDeduction: 75000,
         slabs: [
-          { min: 0, max: 400000, rate: 0 },
-          { min: 400000, max: 800000, rate: 5 },
-          { min: 800000, max: 1200000, rate: 10 },
-          { min: 1200000, max: 1600000, rate: 15 },
-          { min: 1600000, max: 2000000, rate: 20 },
-          { min: 2000000, max: 2400000, rate: 25 },
+          { min: 0, max: 400000, rate: 0 }, { min: 400000, max: 800000, rate: 5 },
+          { min: 800000, max: 1200000, rate: 10 }, { min: 1200000, max: 1600000, rate: 15 },
+          { min: 1600000, max: 2000000, rate: 20 }, { min: 2000000, max: 2400000, rate: 25 },
           { min: 2400000, max: null, rate: 30 },
         ],
-        rebate87A: { maxIncome: 1200000, maxRebate: 60000 },
-        cess: 4,
+        rebate87A: { maxIncome: 1200000, maxRebate: 60000 }, cess: 4,
       },
-      fiscalYear: 2025,
-      effectiveFrom: new Date('2025-04-01'),
-      effectiveTo: new Date('2026-03-31'),
+      effectiveFrom: new Date('2025-04-01'), effectiveTo: new Date('2026-03-31'),
     },
     {
-      country: 'IN',
-      configKey: 'IN_OLD_REGIME_BRACKETS',
+      country: 'IN', configKey: 'IN_OLD_REGIME_BRACKETS', fiscalYear: 2025,
       configValue: {
-        fiscalYear: 2025,
-        standardDeduction: 50000,
+        fiscalYear: 2025, standardDeduction: 50000,
         slabs: [
-          { min: 0, max: 250000, rate: 0 },
-          { min: 250000, max: 500000, rate: 5 },
-          { min: 500000, max: 1000000, rate: 20 },
-          { min: 1000000, max: null, rate: 30 },
+          { min: 0, max: 250000, rate: 0 }, { min: 250000, max: 500000, rate: 5 },
+          { min: 500000, max: 1000000, rate: 20 }, { min: 1000000, max: null, rate: 30 },
         ],
-        rebate87A: { maxIncome: 500000, maxRebate: 12500 },
-        cess: 4,
+        rebate87A: { maxIncome: 500000, maxRebate: 12500 }, cess: 4,
       },
-      fiscalYear: 2025,
-      effectiveFrom: new Date('2025-04-01'),
-      effectiveTo: new Date('2026-03-31'),
+      effectiveFrom: new Date('2025-04-01'), effectiveTo: new Date('2026-03-31'),
     },
     {
-      country: 'IN',
-      configKey: 'IN_PF_CONFIG',
+      country: 'IN', configKey: 'IN_PF_CONFIG', fiscalYear: 2025,
       configValue: { employeeRate: 12, employerEpfRate: 3.67, employerEpsRate: 8.33, ceilingMonthly: 15000 },
-      fiscalYear: 2025,
-      effectiveFrom: new Date('2025-04-01'),
-      effectiveTo: new Date('2026-03-31'),
+      effectiveFrom: new Date('2025-04-01'), effectiveTo: new Date('2026-03-31'),
     },
     {
-      country: 'IN',
-      configKey: 'IN_ESI_CONFIG',
+      country: 'IN', configKey: 'IN_ESI_CONFIG', fiscalYear: 2025,
       configValue: { employeeRate: 0.75, employerRate: 3.25, grossCeilingMonthly: 21000 },
-      fiscalYear: 2025,
-      effectiveFrom: new Date('2025-04-01'),
-      effectiveTo: new Date('2026-03-31'),
+      effectiveFrom: new Date('2025-04-01'), effectiveTo: new Date('2026-03-31'),
     },
     {
-      country: 'IN',
-      configKey: 'IN_PROFESSIONAL_TAX',
+      country: 'IN', configKey: 'IN_PROFESSIONAL_TAX', fiscalYear: 2025,
       configValue: {
         Karnataka: [{ minMonthly: 0, maxMonthly: 15000, tax: 0 }, { minMonthly: 15001, maxMonthly: null, tax: 200 }],
         Maharashtra: [{ minMonthly: 0, maxMonthly: 7500, tax: 0 }, { minMonthly: 7501, maxMonthly: 10000, tax: 175 }, { minMonthly: 10001, maxMonthly: null, tax: 200 }],
         'Tamil Nadu': [{ minMonthly: 0, maxMonthly: 21000, tax: 0 }, { minMonthly: 21001, maxMonthly: 30000, tax: 135 }, { minMonthly: 30001, maxMonthly: 45000, tax: 315 }, { minMonthly: 45001, maxMonthly: 60000, tax: 690 }, { minMonthly: 60001, maxMonthly: 75000, tax: 1025 }, { minMonthly: 75001, maxMonthly: null, tax: 1250 }],
         Telangana: [{ minMonthly: 0, maxMonthly: 15000, tax: 0 }, { minMonthly: 15001, maxMonthly: 20000, tax: 150 }, { minMonthly: 20001, maxMonthly: null, tax: 200 }],
       },
-      fiscalYear: 2025,
-      effectiveFrom: new Date('2025-04-01'),
-      effectiveTo: new Date('2026-03-31'),
+      effectiveFrom: new Date('2025-04-01'), effectiveTo: new Date('2026-03-31'),
     },
     {
-      country: 'US',
-      configKey: 'US_FICA_CONFIG',
+      country: 'US', configKey: 'US_FICA_CONFIG', fiscalYear: 2025,
       configValue: {
         socialSecurity: { employeeRate: 6.2, employerRate: 6.2, wageCap: 176100 },
         medicare: { employeeRate: 1.45, employerRate: 1.45, additionalMedicareRate: 0.9, additionalMedicareThreshold: 200000 },
       },
-      fiscalYear: 2025,
-      effectiveFrom: new Date('2025-01-01'),
-      effectiveTo: new Date('2025-12-31'),
+      effectiveFrom: new Date('2025-01-01'), effectiveTo: new Date('2025-12-31'),
     },
     {
-      country: 'US',
-      configKey: 'US_FEDERAL_TAX',
+      country: 'US', configKey: 'US_FEDERAL_TAX', fiscalYear: 2025,
       configValue: {
         standardDeduction: { SINGLE: 15750, MARRIED_FILING_JOINTLY: 31500, MARRIED_FILING_SEPARATELY: 15750, HEAD_OF_HOUSEHOLD: 23625 },
         brackets: {
@@ -430,13 +177,10 @@ async function main() {
           ],
         },
       },
-      fiscalYear: 2025,
-      effectiveFrom: new Date('2025-01-01'),
-      effectiveTo: new Date('2025-12-31'),
+      effectiveFrom: new Date('2025-01-01'), effectiveTo: new Date('2025-12-31'),
     },
     {
-      country: 'US',
-      configKey: 'US_STATE_TAX',
+      country: 'US', configKey: 'US_STATE_TAX', fiscalYear: 2025,
       configValue: {
         TX: { type: 'none' }, FL: { type: 'none' }, WA: { type: 'none' }, NV: { type: 'none' },
         IL: { type: 'flat', rate: 4.95 }, PA: { type: 'flat', rate: 3.07 }, CO: { type: 'flat', rate: 4.4 },
@@ -452,13 +196,10 @@ async function main() {
           { min: 215400, max: 1077550, rate: 6.85 }, { min: 1077550, max: null, rate: 10.9 },
         ]},
       },
-      fiscalYear: 2025,
-      effectiveFrom: new Date('2025-01-01'),
-      effectiveTo: new Date('2025-12-31'),
+      effectiveFrom: new Date('2025-01-01'), effectiveTo: new Date('2025-12-31'),
     },
   ];
 
-  let taxConfigCount = 0;
   for (const config of taxConfigs) {
     await prisma.taxConfiguration.upsert({
       where: {
@@ -471,283 +212,20 @@ async function main() {
       update: { configValue: config.configValue as any, effectiveFrom: config.effectiveFrom, effectiveTo: config.effectiveTo, isActive: true },
       create: { ...config, configValue: config.configValue as any, isActive: true },
     });
-    taxConfigCount++;
   }
-  console.log(`✅ Seeded ${taxConfigCount} tax configurations (India FY 2025-26 + US 2025)\n`);
+  console.log(`✅ Seeded ${taxConfigs.length} tax configurations\n`);
 
-  // 9. Create default salary structure for the company
-  console.log('💼 Creating salary structure...');
-  const seedStructureId = '00000000-0000-4000-a000-000000000001';
-  const salaryStructure = await prisma.salaryStructure.upsert({
-    where: { id: seedStructureId },
-    update: {},
-    create: {
-      id: seedStructureId,
-      companyId: company.id,
-      name: 'Standard CTC Structure (India)',
-      description: 'Default salary breakup: 50% Basic, 20% HRA, 10% Special Allowance, 20% Other',
-      country: 'IN',
-      components: [
-        { name: 'Basic Salary', type: 'EARNING', calculationType: 'PERCENTAGE_OF_GROSS', value: 50, isTaxable: true },
-        { name: 'HRA', type: 'EARNING', calculationType: 'PERCENTAGE_OF_BASIC', value: 40, isTaxable: true },
-        { name: 'Special Allowance', type: 'EARNING', calculationType: 'PERCENTAGE_OF_GROSS', value: 10, isTaxable: true },
-        { name: 'Other Allowances', type: 'EARNING', calculationType: 'PERCENTAGE_OF_GROSS', value: 20, isTaxable: false },
-      ] as any,
-      isActive: true,
-    },
-  });
-  console.log(`✅ Salary structure created: ${salaryStructure.name}\n`);
-
-  // Update employees with salary structure and annual CTC
-  await prisma.employee.update({
-    where: { id: emp1.id },
-    data: { salaryStructureId: salaryStructure.id, annualCtc: 1200000 },
-  });
-  await prisma.employee.update({
-    where: { id: emp2.id },
-    data: { salaryStructureId: salaryStructure.id, annualCtc: 1000000 },
-  });
-  await prisma.employee.update({
-    where: { id: emp3.id },
-    data: { salaryStructureId: salaryStructure.id, annualCtc: 600000 },
-  });
-  console.log(`✅ Linked 3 employees to salary structure with annual CTC\n`);
-
-  // 10. Create sample payroll record
-  console.log('💰 Creating payroll records...');
-  await prisma.payroll.create({
-    data: {
-      companyId: company.id,
-      employeeId: emp1.id,
-      payPeriodMonth: 1,
-      payPeriodYear: 2025,
-      country: 'IN',
-      payDate: new Date('2025-02-01'),
-      basicSalaryEncrypted: simpleEncrypt('50000'),
-      hraEncrypted: simpleEncrypt('20000'),
-      specialAllowanceEncrypted: simpleEncrypt('10000'),
-      otherAllowancesEncrypted: simpleEncrypt('20000'),
-      grossSalaryEncrypted: simpleEncrypt('100000'),
-      netSalaryEncrypted: simpleEncrypt('85200'),
-      earningsBreakdown: {
-        'Basic Salary': 50000,
-        'HRA': 20000,
-        'Special Allowance': 10000,
-        'Other Allowances': 20000,
-      } as any,
-      pfEmployee: 6000,
-      pfEmployer: 6000,
-      tds: 2800,
-      esiEmployee: 0,
-      esiEmployer: 0,
-      pt: 0,
-      daysWorked: 22,
-      daysInMonth: 22,
-      leaveDays: 0,
-      absentDays: 0,
-      status: 'PAID',
-      paidAt: new Date('2025-02-01'),
-    },
-  });
-  console.log(`✅ Created ${1} payroll record\n`);
-
-  // 9. Create audit log
-  console.log('📋 Creating audit log entry...');
-  await prisma.auditLog.create({
-    data: {
-      companyId: company.id,
-      userId: adminUser.id,
-      userEmail: adminUser.email,
-      action: 'CREATE',
-      resourceType: 'EMPLOYEE',
-      resourceId: emp1.id,
-      newValues: { employeeCode: emp1.employeeCode, name: `${emp1.firstName} ${emp1.lastName}` },
-      ipAddress: '192.168.1.1',
-      success: true,
-    },
-  });
-  console.log(`✅ Created audit log\n`);
-
-  // 11. Create SUPER_ADMIN user (for admin portal)
-  console.log('🔑 Creating super admin user...');
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-  if (!adminPassword) throw new Error('SEED_ADMIN_PASSWORD env var is required. Set it in packages/database/.env');
-  const superAdminHash = await bcrypt.hash(adminPassword, 12);
-  const superAdmin = await prisma.user.upsert({
-    where: { companyId_email: { companyId: company.id, email: 'superadmin@hrplatform.com' } },
-    update: {},
-    create: {
-      companyId: company.id,
-      email: 'superadmin@hrplatform.com',
-      passwordHash: superAdminHash,
-      firstName: 'Super',
-      lastName: 'Admin',
-      role: 'SUPER_ADMIN',
-      permissions: ['ALL'],
-      isActive: true,
-      emailVerified: true,
-    },
-  });
-  console.log(`✅ Super admin created: ${superAdmin.email}\n`);
-
-  // 12. Create billing plans (one per tier)
-  console.log('💳 Creating billing plans...');
-  await prisma.billingPlan.create({
-    data: {
-      name: 'Starter',
-      tier: 'FREE',
-      basePrice: 0,
-      yearlyBasePrice: 0,
-      pricePerEmployee: 0,
-      pricePerUser: 0,
-      includedEmployees: 10,
-      includedUsers: 5,
-      isActive: true,
-    },
-  });
-
-  await prisma.billingPlan.create({
-    data: {
-      name: 'Basic',
-      tier: 'BASIC',
-      basePrice: 49,
-      yearlyBasePrice: 470,
-      pricePerEmployee: 4,
-      pricePerUser: 8,
-      includedEmployees: 25,
-      includedUsers: 10,
-      isActive: true,
-    },
-  });
-
-  await prisma.billingPlan.create({
-    data: {
-      name: 'Professional',
-      tier: 'PROFESSIONAL',
-      basePrice: 149,
-      yearlyBasePrice: 1430,
-      pricePerEmployee: 3,
-      pricePerUser: 6,
-      includedEmployees: 100,
-      includedUsers: 25,
-      isActive: true,
-    },
-  });
-
-  await prisma.billingPlan.create({
-    data: {
-      name: 'Enterprise',
-      tier: 'ENTERPRISE',
-      basePrice: 499,
-      yearlyBasePrice: 4790,
-      pricePerEmployee: 2,
-      pricePerUser: 4,
-      includedEmployees: 500,
-      includedUsers: 100,
-      isActive: true,
-    },
-  });
-  console.log(`✅ Created 4 billing plans (Starter, Basic, Professional, Enterprise)\n`);
-
-  // 13. Create feature add-ons (purchasable extras)
-  console.log('🧩 Creating feature add-ons...');
-  await prisma.featureAddon.create({
-    data: {
-      feature: 'PAYSLIP_ARCHIVE',
-      name: 'Payslip Archive',
-      description: 'Store and access historical payslips for all employees with unlimited retention.',
-      price: 29,
-      yearlyPrice: 279,
-      isActive: true,
-    },
-  });
-
-  await prisma.featureAddon.create({
-    data: {
-      feature: 'ANALYTICS',
-      name: 'Advanced Analytics',
-      description: 'Unlock HR analytics dashboards with headcount, attrition, diversity, and payroll insights.',
-      price: 49,
-      yearlyPrice: 470,
-      isActive: true,
-    },
-  });
-
-  await prisma.featureAddon.create({
-    data: {
-      feature: 'SSO',
-      name: 'Single Sign-On (SSO)',
-      description: 'Enable SAML/OAuth SSO integration with Google, Microsoft, and Okta.',
-      price: 39,
-      yearlyPrice: 374,
-      isActive: true,
-    },
-  });
-
-  await prisma.featureAddon.create({
-    data: {
-      feature: 'API_ACCESS',
-      name: 'API & Webhooks',
-      description: 'Programmatic access to HR data via REST API with webhook event notifications.',
-      price: 59,
-      yearlyPrice: 566,
-      isActive: true,
-    },
-  });
-  console.log(`✅ Created 4 feature add-ons (Payslip Archive, Analytics, SSO, API & Webhooks)\n`);
-
-  // 14. Create second company (FREE tier) for feature gating testing
-  console.log('📦 Creating second company (FREE tier)...');
-  const startupCo = await prisma.company.upsert({
-    where: { companyCode: 'STARTUP001' },
-    update: {},
-    create: {
-      companyCode: 'STARTUP001',
-      companyName: 'StartupCo',
-      email: 'contact@startupco.com',
-      phone: '+91-9999999999',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      country: 'India',
-      postalCode: '400001',
-      subscriptionTier: 'FREE',
-      subscriptionStatus: 'ACTIVE',
-      featuresEnabled: [],
-    },
-  });
-  console.log(`✅ Company created: ${startupCo.companyName} (${startupCo.id})`);
-
-  const startupAdminHash = await bcrypt.hash(userPassword, 12);
-  const startupAdmin = await prisma.user.create({
-    data: {
-      companyId: startupCo.id,
-      email: 'admin@startupco.com',
-      passwordHash: startupAdminHash,
-      firstName: 'Startup',
-      lastName: 'Admin',
-      role: 'COMPANY_ADMIN',
-      permissions: ['ALL'],
-      isActive: true,
-      emailVerified: true,
-    },
-  });
-  console.log(`✅ StartupCo admin created: ${startupAdmin.email}\n`);
-
+  // ──────────────────────────────────────────────
+  // Summary
+  // ──────────────────────────────────────────────
   console.log('🎉 Database seeded successfully!\n');
   console.log('📊 Summary:');
-  console.log(`   - 2 Companies: ${company.companyName} (ENTERPRISE) + ${startupCo.companyName} (FREE)`);
-  console.log(`   - 3 Departments`);
-  console.log(`   - 3 Designations`);
-  console.log(`   - 3 Employees (with salary structure + annual CTC)`);
-  console.log(`   - 6 Users: admin, hr, manager, employee @demotech + superadmin + admin@startupco`);
-  console.log(`   - ${attendanceCount} Attendance records`);
-  console.log(`   - 2 Leave applications`);
-  console.log(`   - ${taxConfigCount} Tax configurations (India + US)`);
-  console.log(`   - 1 Salary structure: ${salaryStructure.name}`);
-  console.log(`   - 1 Payroll record`);
-  console.log(`   - 1 Audit log`);
-  console.log(`   - 4 Billing plans (Starter, Basic, Professional, Enterprise)`);
-  console.log(`   - 4 Feature add-ons (Payslip Archive, Analytics, SSO, API & Webhooks)\n`);
+  console.log('   - 1 System company (for super admin)');
+  console.log('   - 1 Super admin user (superadmin@hrplatform.com)');
+  console.log(`   - ${plans.length} Billing plans (Starter, Basic, Professional, Enterprise)`);
+  console.log(`   - ${addons.length} Feature add-ons (Payslip Archive, Analytics, SSO, API & Webhooks)`);
+  console.log(`   - ${taxConfigs.length} Tax configurations (India FY 2025-26 + US 2025)`);
+  console.log('\n💡 Real companies, employees, and users are created via the registration flow.\n');
 }
 
 main()
