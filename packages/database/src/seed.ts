@@ -84,10 +84,23 @@ async function main() {
   // ──────────────────────────────────────────────
   console.log('🧩 Creating feature add-ons...');
   const addons = [
+    // Growth Modules (Enterprise-only, purchasable by BASIC/PROFESSIONAL)
+    { feature: 'PERFORMANCE', name: 'Performance Management', description: 'Goals, OKRs, and performance review cycles with 360-degree feedback.', price: 39, yearlyPrice: 374 },
+    { feature: 'RECRUITMENT', name: 'Recruitment & ATS', description: 'Job postings, applicant tracking, interview scheduling, and hiring pipeline.', price: 49, yearlyPrice: 470 },
+    { feature: 'TRAINING', name: 'Training & LMS', description: 'Training courses, enrollment tracking, certifications, and completion reports.', price: 29, yearlyPrice: 279 },
+    { feature: 'ASSETS', name: 'Asset Management', description: 'Track company assets (laptops, phones, etc.) assigned to employees.', price: 19, yearlyPrice: 182 },
+    { feature: 'EXPENSES', name: 'Expense Management', description: 'Expense claims, receipt uploads, approval workflows, and reimbursement tracking.', price: 29, yearlyPrice: 279 },
+    { feature: 'SHIFTS', name: 'Shift Management', description: 'Shift scheduling, rotation management, and shift swap requests.', price: 19, yearlyPrice: 182 },
+    { feature: 'POLICIES', name: 'Policy Management', description: 'Company policies, handbooks, version control, and employee acknowledgment tracking.', price: 9, yearlyPrice: 86 },
+    { feature: 'SURVEYS', name: 'Pulse Surveys', description: 'Employee engagement surveys, pulse checks, and NPS scoring with analytics.', price: 19, yearlyPrice: 182 },
+    { feature: 'CONTRACTORS', name: 'Contractor Management', description: 'Contractor profiles, contracts, invoice management, and payment tracking.', price: 29, yearlyPrice: 279 },
+    // Integration & Compliance (Enterprise-only)
+    { feature: 'WEBHOOKS', name: 'Webhooks', description: 'Event-driven webhook notifications for third-party system integrations.', price: 29, yearlyPrice: 279 },
+    { feature: 'API_ACCESS', name: 'API Access', description: 'REST API keys for programmatic access to HR data and external integrations.', price: 59, yearlyPrice: 566 },
+    { feature: 'SSO', name: 'Single Sign-On (SSO)', description: 'SAML/OAuth SSO integration with Google, Microsoft, Okta, and more.', price: 39, yearlyPrice: 374 },
+    { feature: 'ANALYTICS', name: 'Advanced Analytics', description: 'HR analytics dashboards with headcount, attrition, diversity, and payroll insights.', price: 49, yearlyPrice: 470 },
+    // Pure add-on (not in any tier, always purchasable)
     { feature: 'PAYSLIP_ARCHIVE', name: 'Payslip Archive', description: 'Store and access historical payslips for all employees with unlimited retention.', price: 29, yearlyPrice: 279 },
-    { feature: 'ANALYTICS', name: 'Advanced Analytics', description: 'Unlock HR analytics dashboards with headcount, attrition, diversity, and payroll insights.', price: 49, yearlyPrice: 470 },
-    { feature: 'SSO', name: 'Single Sign-On (SSO)', description: 'Enable SAML/OAuth SSO integration with Google, Microsoft, and Okta.', price: 39, yearlyPrice: 374 },
-    { feature: 'API_ACCESS', name: 'API & Webhooks', description: 'Programmatic access to HR data via REST API with webhook event notifications.', price: 59, yearlyPrice: 566 },
   ];
 
   for (const addon of addons) {
@@ -269,7 +282,7 @@ async function main() {
   console.log('   - 1 System company (for super admin)');
   console.log('   - 1 Super admin user (superadmin@hrplatform.com)');
   console.log(`   - ${plans.length} Billing plans (Starter, Basic, Professional, Enterprise)`);
-  console.log(`   - ${addons.length} Feature add-ons (Payslip Archive, Analytics, SSO, API & Webhooks)`);
+  console.log(`   - ${addons.length} Feature add-ons (all Enterprise-only features purchasable a la carte)`);
   console.log(`   - ${taxConfigs.length} Tax configurations (India FY 2025-26: 7 states PT + US 2025-26: 25 states)`);
   console.log('\n💡 Real companies, employees, and users are created via the registration flow.\n');
 }
