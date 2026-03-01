@@ -33,7 +33,7 @@ export function DashboardHeader({ wsConnected, onMenuToggle }: DashboardHeaderPr
 
   if (!isAuthenticated || !user) {
     return (
-      <header className="bg-card border-b border-border sticky top-0 z-10">
+      <header className="bg-card/80 backdrop-blur-lg border-b border-border/50 sticky top-0 z-10 shadow-sm">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -55,7 +55,7 @@ export function DashboardHeader({ wsConnected, onMenuToggle }: DashboardHeaderPr
 
   return (
     <>
-      <header className="bg-card border-b border-border sticky top-0 z-10" data-tour="header">
+      <header className="bg-card/80 backdrop-blur-lg border-b border-border/50 sticky top-0 z-10 shadow-sm" data-tour="header">
         <div className="px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -80,7 +80,7 @@ export function DashboardHeader({ wsConnected, onMenuToggle }: DashboardHeaderPr
                 <h1 className="text-base font-semibold text-foreground sm:hidden">HRPlatform</h1>
               </div>
             </div>
-            <div className="flex items-center space-x-1.5" data-tour="header-actions">
+            <div className="flex items-center space-x-2" data-tour="header-actions">
               {/* WebSocket connection indicator */}
               {wsConnected !== undefined && (
                 <div
@@ -100,7 +100,7 @@ export function DashboardHeader({ wsConnected, onMenuToggle }: DashboardHeaderPr
               <HelpButton onClick={() => setHelpOpen(true)} />
               <NotificationBell />
 
-              <div className="relative group ml-2">
+              <div className="relative group ml-3">
                 <button className="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-ring rounded-lg p-1">
                   <div className="text-right hidden sm:block">
                     <p className="text-sm font-medium text-foreground">

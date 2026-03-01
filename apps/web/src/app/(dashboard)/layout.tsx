@@ -208,7 +208,7 @@ export default function DashboardLayout({
           </aside>
 
           {/* Desktop sidebar */}
-          <aside className="hidden lg:flex lg:flex-col w-64 bg-sidebar-bg border-r border-sidebar-border min-h-screen sticky top-0" data-tour="sidebar">
+          <aside className="hidden lg:flex lg:flex-col w-64 bg-sidebar-bg border-r border-sidebar-border/70 min-h-screen sticky top-0" data-tour="sidebar">
             <div className="flex-1 overflow-y-auto">
               {sidebarContent}
             </div>
