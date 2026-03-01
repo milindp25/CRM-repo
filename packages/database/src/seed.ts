@@ -147,6 +147,9 @@ async function main() {
         Maharashtra: [{ minMonthly: 0, maxMonthly: 7500, tax: 0 }, { minMonthly: 7501, maxMonthly: 10000, tax: 175 }, { minMonthly: 10001, maxMonthly: null, tax: 200 }],
         'Tamil Nadu': [{ minMonthly: 0, maxMonthly: 21000, tax: 0 }, { minMonthly: 21001, maxMonthly: 30000, tax: 135 }, { minMonthly: 30001, maxMonthly: 45000, tax: 315 }, { minMonthly: 45001, maxMonthly: 60000, tax: 690 }, { minMonthly: 60001, maxMonthly: 75000, tax: 1025 }, { minMonthly: 75001, maxMonthly: null, tax: 1250 }],
         Telangana: [{ minMonthly: 0, maxMonthly: 15000, tax: 0 }, { minMonthly: 15001, maxMonthly: 20000, tax: 150 }, { minMonthly: 20001, maxMonthly: null, tax: 200 }],
+        'Andhra Pradesh': [{ minMonthly: 0, maxMonthly: 15000, tax: 0 }, { minMonthly: 15001, maxMonthly: 20000, tax: 150 }, { minMonthly: 20001, maxMonthly: null, tax: 200 }],
+        Gujarat: [{ minMonthly: 0, maxMonthly: 5999, tax: 0 }, { minMonthly: 6000, maxMonthly: 8999, tax: 80 }, { minMonthly: 9000, maxMonthly: 11999, tax: 150 }, { minMonthly: 12000, maxMonthly: null, tax: 200 }],
+        'West Bengal': [{ minMonthly: 0, maxMonthly: 10000, tax: 0 }, { minMonthly: 10001, maxMonthly: 15000, tax: 110 }, { minMonthly: 15001, maxMonthly: 25000, tax: 130 }, { minMonthly: 25001, maxMonthly: 40000, tax: 150 }, { minMonthly: 40001, maxMonthly: null, tax: 200 }],
       },
       effectiveFrom: new Date('2025-04-01'), effectiveTo: new Date('2026-03-31'),
     },
@@ -156,7 +159,7 @@ async function main() {
         socialSecurity: { employeeRate: 6.2, employerRate: 6.2, wageCap: 176100 },
         medicare: { employeeRate: 1.45, employerRate: 1.45, additionalMedicareRate: 0.9, additionalMedicareThreshold: 200000 },
       },
-      effectiveFrom: new Date('2025-01-01'), effectiveTo: new Date('2025-12-31'),
+      effectiveFrom: new Date('2025-01-01'), effectiveTo: new Date('2026-12-31'),
     },
     {
       country: 'US', configKey: 'US_FEDERAL_TAX', fiscalYear: 2025,
@@ -175,28 +178,71 @@ async function main() {
             { min: 394600, max: 501050, rate: 32 }, { min: 501050, max: 751600, rate: 35 },
             { min: 751600, max: null, rate: 37 },
           ],
+          MARRIED_FILING_SEPARATELY: [
+            { min: 0, max: 11925, rate: 10 }, { min: 11925, max: 48475, rate: 12 },
+            { min: 48475, max: 103350, rate: 22 }, { min: 103350, max: 197300, rate: 24 },
+            { min: 197300, max: 250525, rate: 32 }, { min: 250525, max: 375800, rate: 35 },
+            { min: 375800, max: null, rate: 37 },
+          ],
+          HEAD_OF_HOUSEHOLD: [
+            { min: 0, max: 17000, rate: 10 }, { min: 17000, max: 64850, rate: 12 },
+            { min: 64850, max: 103350, rate: 22 }, { min: 103350, max: 197300, rate: 24 },
+            { min: 197300, max: 250500, rate: 32 }, { min: 250500, max: 626350, rate: 35 },
+            { min: 626350, max: null, rate: 37 },
+          ],
         },
       },
-      effectiveFrom: new Date('2025-01-01'), effectiveTo: new Date('2025-12-31'),
+      effectiveFrom: new Date('2025-01-01'), effectiveTo: new Date('2026-12-31'),
     },
     {
       country: 'US', configKey: 'US_STATE_TAX', fiscalYear: 2025,
       configValue: {
+        // No state income tax (9 states)
         TX: { type: 'none' }, FL: { type: 'none' }, WA: { type: 'none' }, NV: { type: 'none' },
-        IL: { type: 'flat', rate: 4.95 }, PA: { type: 'flat', rate: 3.07 }, CO: { type: 'flat', rate: 4.4 },
+        WY: { type: 'none' }, AK: { type: 'none' }, TN: { type: 'none' }, SD: { type: 'none' },
+        NH: { type: 'none' },
+        // Flat rate states (11 states)
+        IL: { type: 'flat', rate: 4.95 }, IN: { type: 'flat', rate: 3.05 },
+        MI: { type: 'flat', rate: 4.25 }, PA: { type: 'flat', rate: 3.07 },
+        CO: { type: 'flat', rate: 4.4 }, NC: { type: 'flat', rate: 4.5 },
+        UT: { type: 'flat', rate: 4.65 }, MA: { type: 'flat', rate: 5.0 },
+        AZ: { type: 'flat', rate: 2.5 }, KY: { type: 'flat', rate: 4.0 },
+        GA: { type: 'flat', rate: 5.39 },
+        // Bracket states (5 states)
         CA: { type: 'bracket', brackets: [
           { min: 0, max: 10412, rate: 1 }, { min: 10412, max: 24684, rate: 2 },
           { min: 24684, max: 38959, rate: 4 }, { min: 38959, max: 54081, rate: 6 },
           { min: 54081, max: 68350, rate: 8 }, { min: 68350, max: 349137, rate: 9.3 },
-          { min: 349137, max: null, rate: 12.3 },
+          { min: 349137, max: 418961, rate: 10.3 }, { min: 418961, max: 698271, rate: 11.3 },
+          { min: 698271, max: null, rate: 12.3 },
         ]},
         NY: { type: 'bracket', brackets: [
           { min: 0, max: 8500, rate: 4 }, { min: 8500, max: 11700, rate: 4.5 },
-          { min: 11700, max: 80650, rate: 5.5 }, { min: 80650, max: 215400, rate: 6 },
-          { min: 215400, max: 1077550, rate: 6.85 }, { min: 1077550, max: null, rate: 10.9 },
+          { min: 11700, max: 13900, rate: 5.25 }, { min: 13900, max: 80650, rate: 5.5 },
+          { min: 80650, max: 215400, rate: 6 }, { min: 215400, max: 1077550, rate: 6.85 },
+          { min: 1077550, max: 5000000, rate: 9.65 }, { min: 5000000, max: 25000000, rate: 10.3 },
+          { min: 25000000, max: null, rate: 10.9 },
+        ]},
+        NJ: { type: 'bracket', brackets: [
+          { min: 0, max: 20000, rate: 1.4 }, { min: 20000, max: 35000, rate: 1.75 },
+          { min: 35000, max: 40000, rate: 3.5 }, { min: 40000, max: 75000, rate: 5.525 },
+          { min: 75000, max: 500000, rate: 6.37 }, { min: 500000, max: 1000000, rate: 8.97 },
+          { min: 1000000, max: null, rate: 10.75 },
+        ]},
+        OH: { type: 'bracket', brackets: [
+          { min: 0, max: 26050, rate: 0 }, { min: 26050, max: 100000, rate: 2.75 },
+          { min: 100000, max: null, rate: 3.5 },
+        ]},
+        MN: { type: 'bracket', brackets: [
+          { min: 0, max: 31690, rate: 5.35 }, { min: 31690, max: 104090, rate: 6.8 },
+          { min: 104090, max: 183340, rate: 7.85 }, { min: 183340, max: null, rate: 9.85 },
+        ]},
+        OR: { type: 'bracket', brackets: [
+          { min: 0, max: 4050, rate: 4.75 }, { min: 4050, max: 10200, rate: 6.75 },
+          { min: 10200, max: 125000, rate: 8.75 }, { min: 125000, max: null, rate: 9.9 },
         ]},
       },
-      effectiveFrom: new Date('2025-01-01'), effectiveTo: new Date('2025-12-31'),
+      effectiveFrom: new Date('2025-01-01'), effectiveTo: new Date('2026-12-31'),
     },
   ];
 
@@ -224,7 +270,7 @@ async function main() {
   console.log('   - 1 Super admin user (superadmin@hrplatform.com)');
   console.log(`   - ${plans.length} Billing plans (Starter, Basic, Professional, Enterprise)`);
   console.log(`   - ${addons.length} Feature add-ons (Payslip Archive, Analytics, SSO, API & Webhooks)`);
-  console.log(`   - ${taxConfigs.length} Tax configurations (India FY 2025-26 + US 2025)`);
+  console.log(`   - ${taxConfigs.length} Tax configurations (India FY 2025-26: 7 states PT + US 2025-26: 25 states)`);
   console.log('\n💡 Real companies, employees, and users are created via the registration flow.\n');
 }
 
