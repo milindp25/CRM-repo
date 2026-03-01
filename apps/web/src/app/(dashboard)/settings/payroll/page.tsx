@@ -8,11 +8,13 @@ import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { PageContainer } from '@/components/ui/page-container';
-import { Loader2, Globe, ShieldCheck, Bell } from 'lucide-react';
+import { Loader2, Globe, ShieldCheck, Bell, Calendar, Info } from 'lucide-react';
 
 interface PayrollSettingsForm {
   payrollCountry: string;
   payFrequency: string;
+  payrollAutoGenerate: boolean;
+  payrollAutoDay: number;
   pfEnabled: boolean;
   esiEnabled: boolean;
   emailPayslipEnabled: boolean;
@@ -33,6 +35,8 @@ export default function PayrollSettingsPage() {
   const [form, setForm] = useState<PayrollSettingsForm>({
     payrollCountry: 'IN',
     payFrequency: 'MONTHLY',
+    payrollAutoGenerate: false,
+    payrollAutoDay: 25,
     pfEnabled: false,
     esiEnabled: false,
     emailPayslipEnabled: false,
@@ -54,6 +58,8 @@ export default function PayrollSettingsPage() {
           setForm({
             payrollCountry: (company as any).payrollCountry || 'IN',
             payFrequency: (company as any).payFrequency || 'MONTHLY',
+            payrollAutoGenerate: (company as any).payrollAutoGenerate || false,
+            payrollAutoDay: (company as any).payrollAutoDay || 25,
             pfEnabled: (company as any).pfEnabled || false,
             esiEnabled: (company as any).esiEnabled || false,
             emailPayslipEnabled: (company as any).emailPayslipEnabled || false,
@@ -80,9 +86,14 @@ export default function PayrollSettingsPage() {
     setSaving(true);
     setError('');
     try {
+      const isNonMonthly = ['BI_WEEKLY', 'WEEKLY'].includes(
+        form.payrollCountry === 'IN' ? 'MONTHLY' : form.payFrequency
+      );
       await apiClient.updateCompany({
         payrollCountry: form.payrollCountry,
         payFrequency: form.payrollCountry === 'IN' ? 'MONTHLY' : form.payFrequency,
+        payrollAutoGenerate: isNonMonthly ? false : form.payrollAutoGenerate,
+        payrollAutoDay: form.payrollAutoDay,
         pfEnabled: form.pfEnabled,
         esiEnabled: form.esiEnabled,
         emailPayslipEnabled: form.emailPayslipEnabled,
@@ -170,6 +181,82 @@ export default function PayrollSettingsPage() {
               </div>
             </div>
           </div>
+
+          {/* Automation */}
+          {(() => {
+            const effectiveFreq = isIndia ? 'MONTHLY' : form.payFrequency;
+            const isNonMonthly = ['BI_WEEKLY', 'WEEKLY'].includes(effectiveFreq);
+
+            return (
+              <div className={sectionClass}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold text-foreground">Automation</h2>
+                </div>
+
+                {isNonMonthly && (
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 mb-4">
+                    <Info className="h-4 w-4 mt-0.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                        Not available for {effectiveFreq === 'BI_WEEKLY' ? 'bi-weekly' : 'weekly'} payroll
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                        Automatic payroll generation currently supports monthly and semi-monthly schedules. For {effectiveFreq === 'BI_WEEKLY' ? 'bi-weekly' : 'weekly'} payroll, please run it manually from the Payroll page.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-start gap-3 p-4 border border-border rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="payrollAutoGenerate"
+                    checked={form.payrollAutoGenerate}
+                    onChange={(e) => setForm(prev => ({ ...prev, payrollAutoGenerate: e.target.checked }))}
+                    className={checkboxClass}
+                    disabled={isNonMonthly}
+                  />
+                  <div className="flex-1">
+                    <label
+                      htmlFor="payrollAutoGenerate"
+                      className={`text-sm font-medium cursor-pointer ${isNonMonthly ? 'text-muted-foreground' : 'text-foreground'}`}
+                    >
+                      Automatically Generate Payroll
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      When enabled, payroll will be generated automatically on the scheduled day each month. You can still review and approve before marking as paid.
+                    </p>
+
+                    {form.payrollAutoGenerate && !isNonMonthly && (
+                      <div className="mt-3">
+                        <label className={labelClass}>Day of Month</label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            min={1}
+                            max={28}
+                            value={form.payrollAutoDay}
+                            onChange={(e) => {
+                              const val = Math.min(28, Math.max(1, parseInt(e.target.value) || 1));
+                              setForm(prev => ({ ...prev, payrollAutoDay: val }));
+                            }}
+                            className={`${inputClass} !w-24`}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            Payroll will be generated on the {form.payrollAutoDay}{form.payrollAutoDay === 1 ? 'st' : form.payrollAutoDay === 2 ? 'nd' : form.payrollAutoDay === 3 ? 'rd' : 'th'} of each month
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          Choose a day between 1 and 28 to avoid month-end date issues.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* India-specific */}
           {isIndia && (

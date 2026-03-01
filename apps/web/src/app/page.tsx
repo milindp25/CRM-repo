@@ -24,6 +24,30 @@ import {
   Twitter,
   Linkedin,
   Github,
+  Building2,
+  Briefcase,
+  Fingerprint,
+  Palmtree,
+  Receipt,
+  Handshake,
+  Timer,
+  GraduationCap,
+  Target,
+  Search,
+  Laptop,
+  CalendarClock,
+  BookOpen,
+  ClipboardList,
+  MessageSquare,
+  MapPin,
+  ShieldCheck,
+  LineChart,
+  LayoutDashboard,
+  Key,
+  Webhook,
+  FormInput,
+  Workflow,
+  Lock,
 } from 'lucide-react';
 import { LandingNav } from '@/components/landing/landing-nav';
 import { detectRegion, getRegionData } from '@/lib/landing-data';
@@ -403,6 +427,224 @@ export default function Home() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== ALL FEATURES ===================== */}
+      <section id="all-features" className="relative py-24 lg:py-32">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-50/50 to-transparent dark:from-transparent dark:via-indigo-950/10 dark:to-transparent pointer-events-none" aria-hidden="true" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Section Header */}
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 mb-6">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                Full Platform
+              </span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4">
+              Everything You Need,{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                All in One Place
+              </span>
+            </h2>
+            <p className="text-lg text-slate-500 dark:text-slate-400">
+              28 features across HR, payroll, talent, and compliance — built for teams of every size.
+            </p>
+          </div>
+
+          {/* Feature Categories Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Core HR */}
+            <div className="rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] p-6 lg:p-8">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Core HR</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">Included free</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { icon: Users, name: 'Employee Directory', desc: 'Profiles, contacts, and org structure' },
+                  { icon: Building2, name: 'Departments', desc: 'Organize teams hierarchically' },
+                  { icon: Briefcase, name: 'Job Titles & Bands', desc: 'Define roles and salary levels' },
+                  { icon: Fingerprint, name: 'Attendance', desc: 'Daily check-in, work-from-home, geofencing' },
+                  { icon: Palmtree, name: 'Leave Management', desc: 'Request, approve, and track time off' },
+                ].map((f) => (
+                  <div key={f.name} className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                    <f.icon className="w-4 h-4 mt-0.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{f.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Payroll & Finance */}
+            <div className="rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] p-6 lg:p-8">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+                  <DollarSign className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Payroll & Finance</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                    Basic
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { icon: DollarSign, name: 'Payroll & Taxes', desc: 'Automated salary processing with tax compliance' },
+                  { icon: Receipt, name: 'Expense Claims', desc: 'Submit, approve, and reimburse expenses' },
+                  { icon: Handshake, name: 'Contractor Payments', desc: 'Manage contractors, invoices, and payments' },
+                  { icon: Timer, name: 'Timesheets', desc: 'Project time tracking and overtime calculations' },
+                ].map((f) => (
+                  <div key={f.name} className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                    <f.icon className="w-4 h-4 mt-0.5 text-emerald-500 dark:text-emerald-400 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{f.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Talent & Growth */}
+            <div className="rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] p-6 lg:p-8">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+                  <GraduationCap className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Talent & Growth</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">
+                    Pro
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { icon: Target, name: 'Performance Reviews', desc: 'Goals, OKRs, and review cycles' },
+                  { icon: Search, name: 'Recruitment / ATS', desc: 'Job postings, applicants, and hiring pipeline' },
+                  { icon: GraduationCap, name: 'Training / LMS', desc: 'Courses, enrollments, and certifications' },
+                ].map((f) => (
+                  <div key={f.name} className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                    <f.icon className="w-4 h-4 mt-0.5 text-purple-500 dark:text-purple-400 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{f.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Operations */}
+            <div className="rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] p-6 lg:p-8">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg">
+                  <ClipboardList className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Operations</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">
+                    Pro
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { icon: Laptop, name: 'Asset Tracking', desc: 'Track company devices and equipment' },
+                  { icon: CalendarClock, name: 'Shift Scheduling', desc: 'Rotations, swaps, and shift rules' },
+                  { icon: BookOpen, name: 'Company Policies', desc: 'Distribute and track acknowledgments' },
+                  { icon: ClipboardList, name: 'Offboarding', desc: 'Exit checklists and final settlement' },
+                  { icon: MessageSquare, name: 'Pulse Surveys', desc: 'Engagement surveys and NPS scoring' },
+                  { icon: Palmtree, name: 'Leave Policies', desc: 'Accrual rules, carryover, and balances' },
+                ].map((f) => (
+                  <div key={f.name} className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                    <f.icon className="w-4 h-4 mt-0.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{f.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Analytics & Compliance */}
+            <div className="rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] p-6 lg:p-8">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-lg">
+                  <LineChart className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Analytics & Compliance</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                    Basic
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { icon: BarChart3, name: 'Reports', desc: 'Generate and export HR reports' },
+                  { icon: LineChart, name: 'HR Analytics', desc: 'Headcount, attrition, and cost trends' },
+                  { icon: ShieldCheck, name: 'Audit Logs', desc: 'Full activity trail for compliance' },
+                  { icon: LayoutDashboard, name: 'Custom Dashboards', desc: 'Role-based layouts and widgets' },
+                ].map((f) => (
+                  <div key={f.name} className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                    <f.icon className="w-4 h-4 mt-0.5 text-cyan-500 dark:text-cyan-400 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{f.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Integrations & Admin */}
+            <div className="rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] p-6 lg:p-8">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 shadow-lg">
+                  <Key className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Integrations & Admin</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">
+                    Pro
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { icon: Lock, name: 'Single Sign-On', desc: 'SAML/OAuth for enterprise login' },
+                  { icon: Key, name: 'API Access', desc: 'REST API keys for integrations' },
+                  { icon: Webhook, name: 'Webhooks', desc: 'Event-driven notifications to external systems' },
+                  { icon: FormInput, name: 'Custom Fields', desc: 'Add your own data fields to any entity' },
+                  { icon: Workflow, name: 'Approval Workflows', desc: 'Multi-step approval chains' },
+                  { icon: MapPin, name: 'Geofencing', desc: 'Location-based attendance verification' },
+                ].map((f) => (
+                  <div key={f.name} className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
+                    <f.icon className="w-4 h-4 mt-0.5 text-rose-500 dark:text-rose-400 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{f.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
