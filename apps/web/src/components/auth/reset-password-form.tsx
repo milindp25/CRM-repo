@@ -30,7 +30,7 @@ export function ResetPasswordForm() {
         <div className="text-center text-sm text-gray-600">
           <Link
             href="/auth/forgot-password"
-            className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-1"
+            className="font-medium text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 rounded px-1"
           >
             Request a new reset link
           </Link>
@@ -98,7 +98,7 @@ export function ResetPasswordForm() {
         <div className="text-center">
           <Link
             href="/login"
-            className="inline-flex items-center justify-center w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-semibold transition-colors"
+            className="inline-flex items-center justify-center w-full bg-primary text-primary-foreground py-3 px-4 rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 font-semibold transition-colors"
           >
             Go to Login
           </Link>
@@ -143,7 +143,7 @@ export function ResetPasswordForm() {
           required
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          className="w-full px-4 py-3 border border-input rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background text-foreground transition-colors"
           placeholder="••••••••"
           aria-required="true"
           disabled={loading}
@@ -165,7 +165,7 @@ export function ResetPasswordForm() {
           required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          className="w-full px-4 py-3 border border-input rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary bg-background text-foreground transition-colors"
           placeholder="••••••••"
           aria-required="true"
           disabled={loading}
@@ -175,7 +175,7 @@ export function ResetPasswordForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-primary text-primary-foreground py-3 px-4 rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? (
           <span className="flex items-center justify-center">
@@ -193,7 +193,7 @@ export function ResetPasswordForm() {
       <div className="text-center text-sm text-gray-600">
         <Link
           href="/login"
-          className="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-1"
+          className="font-medium text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 rounded px-1"
         >
           Back to login
         </Link>

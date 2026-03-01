@@ -5,18 +5,30 @@ import { apiClient, type TrainingCourse, type TrainingEnrollment } from '@/lib/a
 import { RoleGate } from '@/components/common/role-gate';
 import { FeatureGate } from '@/components/common/feature-gate';
 import { Permission } from '@hrplatform/shared';
+import { PageContainer } from '@/components/ui/page-container';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { ErrorBanner } from '@/components/ui/error-banner';
+import { StatCard } from '@/components/ui/stat-card';
+import { TableLoader, PageLoader } from '@/components/ui/page-loader';
+import { useToast } from '@/components/ui/toast';
+import {
+  Plus, Loader2, AlertCircle, GraduationCap, BookOpen, Users,
+  Clock, CheckCircle2, UserPlus, Tag, Award,
+} from 'lucide-react';
 
 export default function TrainingPage() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'courses' | 'my-enrollments'>('courses');
   const [courses, setCourses] = useState<TrainingCourse[]>([]);
   const [enrollments, setEnrollments] = useState<TrainingEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const [showCreateCourse, setShowCreateCourse] = useState(false);
+  const [showCourseModal, setShowCourseModal] = useState(false);
   const [courseForm, setCourseForm] = useState({ title: '', description: '', category: 'TECHNICAL', instructor: '', duration: '', isMandatory: false });
   const [creating, setCreating] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'courses') fetchCourses();
@@ -26,6 +38,7 @@ export default function TrainingPage() {
   const fetchCourses = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await apiClient.getTrainingCourses();
       setCourses(Array.isArray(data) ? data : []);
     } catch (err: any) {
@@ -38,6 +51,7 @@ export default function TrainingPage() {
   const fetchEnrollments = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await apiClient.getMyEnrollments();
       setEnrollments(Array.isArray(data) ? data : []);
     } catch (err: any) {
@@ -50,16 +64,18 @@ export default function TrainingPage() {
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
+    setFormError(null);
     try {
       await apiClient.createTrainingCourse({
         ...courseForm,
         duration: courseForm.duration ? Number(courseForm.duration) : undefined,
       });
-      setShowCreateCourse(false);
+      setShowCourseModal(false);
       setCourseForm({ title: '', description: '', category: 'TECHNICAL', instructor: '', duration: '', isMandatory: false });
+      toast.success('Course created', 'New training course has been created successfully.');
       fetchCourses();
     } catch (err: any) {
-      setError(err.message);
+      setFormError(err.message || 'Failed to create course');
     } finally {
       setCreating(false);
     }
@@ -68,117 +84,176 @@ export default function TrainingPage() {
   const handleEnroll = async (courseId: string) => {
     try {
       await apiClient.enrollInCourse(courseId);
-      setSuccess('Successfully enrolled in course');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Enrolled successfully', 'You have been enrolled in the course.');
       fetchCourses();
     } catch (err: any) {
       setError(err.message);
     }
   };
 
-  const statusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      DRAFT: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
-      PUBLISHED: 'bg-green-100 text-green-800',
-      IN_PROGRESS: 'bg-yellow-100 text-yellow-800',
-      COMPLETED: 'bg-blue-100 text-blue-800',
-      ENROLLED: 'bg-blue-100 text-blue-800',
-      DROPPED: 'bg-red-100 text-red-800',
-      FAILED: 'bg-red-100 text-red-800',
-    };
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'}`}>{status.replace(/_/g, ' ')}</span>;
+  const openCourseModal = () => {
+    setShowCourseModal(true);
+    setCourseForm({ title: '', description: '', category: 'TECHNICAL', instructor: '', duration: '', isMandatory: false });
+    setFormError(null);
   };
+
+  const categoryVariant = (category: string) => {
+    switch (category) {
+      case 'TECHNICAL': return 'purple' as const;
+      case 'COMPLIANCE': return 'warning' as const;
+      case 'SOFT_SKILLS': return 'cyan' as const;
+      case 'ONBOARDING': return 'info' as const;
+      case 'LEADERSHIP': return 'orange' as const;
+      default: return 'neutral' as const;
+    }
+  };
+
+  // Stats
+  const publishedCourses = courses.filter(c => c.status === 'PUBLISHED').length;
+  const mandatoryCourses = courses.filter(c => c.isMandatory).length;
+  const completedEnrollments = enrollments.filter(e => e.status === 'COMPLETED').length;
+  const avgProgress = enrollments.length > 0 ? Math.round(enrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / enrollments.length) : 0;
+
+  if (loading && courses.length === 0 && enrollments.length === 0) return <PageLoader />;
 
   return (
     <FeatureGate feature="TRAINING">
       <RoleGate requiredPermissions={[Permission.VIEW_TRAINING, Permission.MANAGE_TRAINING, Permission.ENROLL_TRAINING]}>
-        <div className="p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Training & Learning</h1>
-              <p className="text-muted-foreground mt-1">Courses, enrollments, and skill development</p>
-            </div>
-          </div>
+        <PageContainer
+          title="Learning"
+          description="Browse courses, track progress, and develop your skills"
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Learning' },
+          ]}
+          actions={
+            activeTab === 'courses' ? (
+              <RoleGate requiredPermissions={[Permission.MANAGE_TRAINING]} hideOnly>
+                <button
+                  onClick={openCourseModal}
+                  className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> New Course
+                </button>
+              </RoleGate>
+            ) : undefined
+          }
+        >
+          {error && (
+            <ErrorBanner
+              message={error}
+              onDismiss={() => setError(null)}
+              onRetry={activeTab === 'courses' ? fetchCourses : fetchEnrollments}
+            />
+          )}
 
-          {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
-          {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
-
-          <div className="flex space-x-4 mb-6 border-b border-border">
-            <button onClick={() => setActiveTab('courses')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'courses' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}>
+          {/* Tabs */}
+          <div className="flex space-x-4 border-b border-border">
+            <button
+              onClick={() => setActiveTab('courses')}
+              className={`pb-3 px-1 font-medium text-sm transition-colors ${
+                activeTab === 'courses'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
               All Courses
             </button>
-            <button onClick={() => setActiveTab('my-enrollments')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'my-enrollments' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button
+              onClick={() => setActiveTab('my-enrollments')}
+              className={`pb-3 px-1 font-medium text-sm transition-colors ${
+                activeTab === 'my-enrollments'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
               My Enrollments
             </button>
           </div>
 
+          {/* Courses Tab */}
           {activeTab === 'courses' && (
-            <div>
-              <div className="flex justify-end mb-4">
-                <button onClick={() => setShowCreateCourse(!showCreateCourse)} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
-                  {showCreateCourse ? 'Cancel' : '+ New Course'}
-                </button>
+            <div className="space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard title="Total Courses" value={courses.length} icon={BookOpen} iconColor="blue" />
+                <StatCard title="Published" value={publishedCourses} icon={CheckCircle2} iconColor="green" />
+                <StatCard title="Mandatory" value={mandatoryCourses} icon={AlertCircle} iconColor="rose" />
               </div>
 
-              {showCreateCourse && (
-                <form onSubmit={handleCreateCourse} className="bg-card rounded-lg shadow-md p-6 mb-6">
-                  <h3 className="font-semibold text-foreground mb-4">Create Training Course</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-foreground mb-1">Title *</label>
-                      <input type="text" required value={courseForm.title} onChange={e => setCourseForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Category</label>
-                      <select value={courseForm.category} onChange={e => setCourseForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md">
-                        <option value="TECHNICAL">Technical</option>
-                        <option value="COMPLIANCE">Compliance</option>
-                        <option value="SOFT_SKILLS">Soft Skills</option>
-                        <option value="ONBOARDING">Onboarding</option>
-                        <option value="LEADERSHIP">Leadership</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Instructor</label>
-                      <input type="text" value={courseForm.instructor} onChange={e => setCourseForm(p => ({ ...p, instructor: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Duration (hours)</label>
-                      <input type="number" min="1" value={courseForm.duration} onChange={e => setCourseForm(p => ({ ...p, duration: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" id="mandatory" checked={courseForm.isMandatory} onChange={e => setCourseForm(p => ({ ...p, isMandatory: e.target.checked }))} className="rounded" />
-                      <label htmlFor="mandatory" className="text-sm text-foreground">Mandatory course</label>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-foreground mb-1">Description</label>
-                      <textarea value={courseForm.description} onChange={e => setCourseForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" rows={2} />
-                    </div>
-                  </div>
-                  <button type="submit" disabled={creating} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm">{creating ? 'Creating...' : 'Create Course'}</button>
-                </form>
-              )}
-
               {loading ? (
-                <div className="text-center py-12 text-muted-foreground">Loading courses...</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="rounded-xl border bg-card p-6 animate-pulse">
+                      <div className="h-5 bg-muted rounded w-3/4 mb-3" />
+                      <div className="h-3 bg-muted rounded w-full mb-2" />
+                      <div className="h-3 bg-muted rounded w-2/3 mb-4" />
+                      <div className="flex gap-2">
+                        <div className="h-5 bg-muted rounded w-16" />
+                        <div className="h-5 bg-muted rounded w-12" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : courses.length === 0 ? (
-                <div className="text-center py-12 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">No courses available</p></div>
+                <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border bg-card">
+                  <GraduationCap className="w-12 h-12 text-muted-foreground/40 mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground">No courses available</h3>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-sm">Create your first training course to start building skills.</p>
+                  <RoleGate requiredPermissions={[Permission.MANAGE_TRAINING]} hideOnly>
+                    <button
+                      onClick={openCourseModal}
+                      className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" /> Create Course
+                    </button>
+                  </RoleGate>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {courses.map(course => (
-                    <div key={course.id} className="bg-card rounded-lg shadow-md p-6">
+                    <div key={course.id} className="rounded-xl border bg-card p-5 hover:shadow-md transition-all group">
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-semibold text-foreground">{course.title}</h3>
-                        {statusBadge(course.status)}
+                        <StatusBadge variant={getStatusVariant(course.status)} size="sm">
+                          {course.status.replace(/_/g, ' ')}
+                        </StatusBadge>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{course.description || 'No description'}</p>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {course.description || 'No description'}
+                      </p>
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {course.category && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">{course.category}</span>}
-                        {course.isMandatory && <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Mandatory</span>}
-                        {course.duration && <span className="text-xs text-muted-foreground">{course.duration}h</span>}
+                        {course.category && (
+                          <StatusBadge variant={categoryVariant(course.category)} size="sm">
+                            <Tag className="w-3 h-3 mr-0.5" />
+                            {course.category.replace(/_/g, ' ')}
+                          </StatusBadge>
+                        )}
+                        {course.isMandatory && (
+                          <StatusBadge variant="error" size="sm">
+                            Mandatory
+                          </StatusBadge>
+                        )}
+                        {course.duration && (
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="w-3 h-3" />
+                            {course.duration}h
+                          </span>
+                        )}
                       </div>
-                      {course.instructor && <p className="text-xs text-muted-foreground mb-3">Instructor: {course.instructor}</p>}
-                      <button onClick={() => handleEnroll(course.id)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">Enroll</button>
+                      {course.instructor && (
+                        <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {course.instructor}
+                        </p>
+                      )}
+                      <button
+                        onClick={() => handleEnroll(course.id)}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Enroll
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -186,39 +261,66 @@ export default function TrainingPage() {
             </div>
           )}
 
+          {/* Enrollments Tab */}
           {activeTab === 'my-enrollments' && (
-            <div>
+            <div className="space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard title="My Enrollments" value={enrollments.length} icon={BookOpen} iconColor="blue" />
+                <StatCard title="Completed" value={completedEnrollments} icon={Award} iconColor="green" />
+                <StatCard title="Avg Progress" value={`${avgProgress}%`} icon={Clock} iconColor="purple" />
+              </div>
+
               {loading ? (
-                <div className="text-center py-12 text-muted-foreground">Loading enrollments...</div>
+                <div className="rounded-xl border bg-card overflow-hidden">
+                  <TableLoader rows={5} cols={5} />
+                </div>
               ) : enrollments.length === 0 ? (
-                <div className="text-center py-12 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">You are not enrolled in any courses</p></div>
+                <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border bg-card">
+                  <BookOpen className="w-12 h-12 text-muted-foreground/40 mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground">No enrollments yet</h3>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-sm">Browse courses and enroll to start learning.</p>
+                  <button
+                    onClick={() => setActiveTab('courses')}
+                    className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    <BookOpen className="w-4 h-4" /> Browse Courses
+                  </button>
+                </div>
               ) : (
-                <div className="bg-card rounded-lg shadow-md overflow-hidden">
-                  <table className="min-w-full divide-y divide-border">
-                    <thead className="bg-muted">
+                <div className="rounded-xl border bg-card overflow-hidden">
+                  <table className="min-w-full divide-y">
+                    <thead className="border-b bg-muted/30">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Course</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Progress</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Score</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Enrolled</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Course</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Progress</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Score</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Enrolled</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border">
+                    <tbody className="divide-y">
                       {enrollments.map(enrollment => (
-                        <tr key={enrollment.id} className="hover:bg-muted">
-                          <td className="px-6 py-4 text-sm font-medium text-foreground">{enrollment.courseId}</td>
-                          <td className="px-6 py-4">
+                        <tr key={enrollment.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3.5 text-sm font-medium text-foreground">{enrollment.courseId}</td>
+                          <td className="px-4 py-3.5">
                             <div className="flex items-center gap-2">
                               <div className="w-24 bg-muted rounded-full h-2">
-                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${enrollment.progress}%` }} />
+                                <div
+                                  className="bg-primary h-2 rounded-full transition-all"
+                                  style={{ width: `${enrollment.progress}%` }}
+                                />
                               </div>
                               <span className="text-xs text-muted-foreground">{enrollment.progress}%</span>
                             </div>
                           </td>
-                          <td className="px-6 py-4">{statusBadge(enrollment.status)}</td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground">{enrollment.score != null ? `${enrollment.score}%` : '-'}</td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(enrollment.enrolledAt).toLocaleDateString()}</td>
+                          <td className="px-4 py-3.5">
+                            <StatusBadge variant={getStatusVariant(enrollment.status)} dot>
+                              {enrollment.status.replace(/_/g, ' ')}
+                            </StatusBadge>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-muted-foreground">{enrollment.score != null ? `${enrollment.score}%` : '-'}</td>
+                          <td className="px-4 py-3.5 text-sm text-muted-foreground">{new Date(enrollment.enrolledAt).toLocaleDateString()}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -227,7 +329,113 @@ export default function TrainingPage() {
               )}
             </div>
           )}
-        </div>
+
+          {/* Create Course Modal */}
+          <Modal open={showCourseModal} onClose={() => setShowCourseModal(false)} size="lg">
+            <ModalHeader onClose={() => setShowCourseModal(false)}>
+              Create Training Course
+            </ModalHeader>
+            <form onSubmit={handleCreateCourse}>
+              <ModalBody>
+                <div className="space-y-4">
+                  {formError && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-sm text-red-700 dark:text-red-400">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {formError}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Title <span className="text-destructive">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      value={courseForm.title}
+                      onChange={e => setCourseForm(p => ({ ...p, title: e.target.value }))}
+                      className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                      placeholder="Introduction to React"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Category</label>
+                      <select
+                        value={courseForm.category}
+                        onChange={e => setCourseForm(p => ({ ...p, category: e.target.value }))}
+                        className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                      >
+                        <option value="TECHNICAL">Technical</option>
+                        <option value="COMPLIANCE">Compliance</option>
+                        <option value="SOFT_SKILLS">Soft Skills</option>
+                        <option value="ONBOARDING">Onboarding</option>
+                        <option value="LEADERSHIP">Leadership</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Instructor</label>
+                      <input
+                        type="text"
+                        value={courseForm.instructor}
+                        onChange={e => setCourseForm(p => ({ ...p, instructor: e.target.value }))}
+                        className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                        placeholder="Jane Smith"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Duration (hours)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={courseForm.duration}
+                        onChange={e => setCourseForm(p => ({ ...p, duration: e.target.value }))}
+                        className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                        placeholder="8"
+                      />
+                    </div>
+                    <div className="flex items-end pb-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={courseForm.isMandatory}
+                          onChange={e => setCourseForm(p => ({ ...p, isMandatory: e.target.checked }))}
+                          className="h-4 w-4 rounded border-input text-primary focus:ring-primary/30"
+                        />
+                        <span className="text-sm text-foreground">Mandatory course</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Description</label>
+                    <textarea
+                      value={courseForm.description}
+                      onChange={e => setCourseForm(p => ({ ...p, description: e.target.value }))}
+                      className="w-full min-h-[80px] px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-y"
+                      rows={2}
+                      placeholder="Describe the course content and objectives"
+                    />
+                  </div>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <button
+                  type="button"
+                  onClick={() => setShowCourseModal(false)}
+                  disabled={creating}
+                  className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Create Course
+                </button>
+              </ModalFooter>
+            </form>
+          </Modal>
+        </PageContainer>
       </RoleGate>
     </FeatureGate>
   );

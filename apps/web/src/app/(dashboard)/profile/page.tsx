@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
+import { PageContainer } from '@/components/ui/page-container';
+import { User, Lock, Loader2 } from 'lucide-react';
 
 export default function ProfilePage() {
   // Profile update state
@@ -60,104 +62,117 @@ export default function ProfilePage() {
     }
   };
 
-  return (
-    <div className="p-8 max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
-        <p className="text-muted-foreground mt-1">Update your personal information and password</p>
-      </div>
+  const inputClass = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
 
+  return (
+    <PageContainer
+      title="My Profile"
+      description="Update your personal information and password"
+      breadcrumbs={[
+        { label: 'Dashboard', href: '/' },
+        { label: 'Profile' },
+      ]}
+      className="max-w-2xl"
+    >
       {/* Update Profile */}
-      <div className="bg-card rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Update Profile</h2>
+      <div className="rounded-xl border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <User className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-foreground">Update Profile</h2>
+        </div>
 
         <form onSubmit={handleProfileSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">First Name</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">First Name</label>
             <input
               type="text"
               value={profileData.firstName}
               onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
-              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
               placeholder="Enter new first name"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Last Name</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Last Name</label>
             <input
               type="text"
               value={profileData.lastName}
               onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
-              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
               placeholder="Enter new last name"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Phone</label>
             <input
               type="text"
               value={profileData.phone}
               onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
               placeholder="Enter phone number"
             />
           </div>
           <button
             type="submit"
             disabled={profileSaving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium"
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            {profileSaving && <Loader2 className="h-4 w-4 animate-spin" />}
             {profileSaving ? 'Saving...' : 'Update Profile'}
           </button>
         </form>
       </div>
 
       {/* Change Password */}
-      <div className="bg-card rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Change Password</h2>
+      <div className="rounded-xl border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Lock className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-foreground">Change Password</h2>
+        </div>
 
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Current Password</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Current Password</label>
             <input
               type="password"
               required
               value={passwordData.currentPassword}
               onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">New Password</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">New Password</label>
             <input
               type="password"
               required
               minLength={8}
               value={passwordData.newPassword}
               onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
             />
             <p className="text-xs text-muted-foreground mt-1">Minimum 8 characters</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Confirm New Password</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Confirm New Password</label>
             <input
               type="password"
               required
               value={passwordData.confirmPassword}
               onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputClass}
             />
           </div>
           <button
             type="submit"
             disabled={passwordSaving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium"
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            {passwordSaving && <Loader2 className="h-4 w-4 animate-spin" />}
             {passwordSaving ? 'Changing...' : 'Change Password'}
           </button>
         </form>
       </div>
-    </div>
+    </PageContainer>
   );
 }

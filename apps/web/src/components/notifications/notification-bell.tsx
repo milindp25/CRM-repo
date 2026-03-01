@@ -32,8 +32,8 @@ function getNotificationIcon(type: string): string {
     INVITATION_RECEIVED: 'text-purple-500',
     INVITATION_ACCEPTED: 'text-green-500',
     DOCUMENT_UPLOADED: 'text-amber-500',
-    WELCOME: 'text-blue-600',
-    SYSTEM: 'text-gray-600',
+    WELCOME: 'text-primary',
+    SYSTEM: 'text-muted-foreground',
   };
   return iconMap[type] || 'text-muted-foreground';
 }
@@ -54,12 +54,12 @@ function NotificationItem({
         onClick(notification);
       }}
       className={`w-full text-left px-4 py-3 hover:bg-muted transition-colors border-b border-border last:border-0 ${
-        !notification.isRead ? 'bg-blue-50/50' : ''
+        !notification.isRead ? 'bg-primary/5' : ''
       }`}
     >
       <div className="flex items-start gap-3">
         <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${
-          notification.isRead ? 'bg-transparent' : 'bg-blue-500'
+          notification.isRead ? 'bg-transparent' : 'bg-primary'
         }`} />
         <div className="flex-1 min-w-0">
           <p className={`text-sm ${notification.isRead ? 'text-muted-foreground' : 'text-foreground font-medium'}`}>
@@ -122,7 +122,7 @@ export function NotificationBell() {
       {/* Bell Button */}
       <button
         onClick={handleToggle}
-        className="relative text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg p-2"
+        className="relative text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-lg p-2"
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,7 +134,7 @@ export function NotificationBell() {
           />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+          <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -149,7 +149,7 @@ export function NotificationBell() {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                className="text-xs text-primary hover:text-primary/80 font-medium"
               >
                 Mark all as read
               </button>
@@ -179,7 +179,7 @@ export function NotificationBell() {
                   <button
                     onClick={loadMore}
                     disabled={loading}
-                    className="w-full px-4 py-2 text-xs text-blue-600 hover:bg-muted font-medium disabled:opacity-50"
+                    className="w-full px-4 py-2 text-xs text-primary hover:bg-muted font-medium disabled:opacity-50"
                   >
                     {loading ? 'Loading...' : 'Load more'}
                   </button>
@@ -188,7 +188,7 @@ export function NotificationBell() {
             )}
             {loading && notifications.length === 0 && (
               <div className="px-4 py-8 text-center">
-                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
                 <p className="text-sm text-muted-foreground mt-2">Loading...</p>
               </div>
             )}

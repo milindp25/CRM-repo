@@ -74,7 +74,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'DEPARTMENTS',
   },
   {
-    name: 'Designations',
+    name: 'Job Titles',
     nameKey: 'nav.designations',
     href: '/designations',
     icon: Award,
@@ -90,7 +90,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'ATTENDANCE',
   },
   {
-    name: 'Leave',
+    name: 'Time Off',
     nameKey: 'nav.leave',
     href: '/leave',
     icon: Briefcase,
@@ -98,7 +98,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'LEAVE',
   },
   {
-    name: 'Leave Balance',
+    name: 'Leave Balances',
     nameKey: 'nav.leaveBalance',
     href: '/leave/balance',
     icon: ClipboardList,
@@ -114,7 +114,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'PAYROLL',
   },
   {
-    name: 'Salary Structures',
+    name: 'Pay Structures',
     nameKey: 'nav.salaryStructures',
     href: '/payroll/salary-structures',
     icon: ClipboardList,
@@ -130,7 +130,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'PAYROLL',
   },
   {
-    name: 'Compliance Reports',
+    name: 'Payroll Reports',
     nameKey: 'nav.complianceReports',
     href: '/payroll/reports',
     icon: FileBarChart,
@@ -146,7 +146,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'REPORTS',
   },
   {
-    name: 'Performance',
+    name: 'Reviews',
     nameKey: 'nav.performance',
     href: '/performance',
     icon: Target,
@@ -154,7 +154,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'PERFORMANCE',
   },
   {
-    name: 'Recruitment',
+    name: 'Hiring',
     nameKey: 'nav.recruitment',
     href: '/recruitment',
     icon: UserPlus,
@@ -162,7 +162,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'RECRUITMENT',
   },
   {
-    name: 'Training',
+    name: 'Learning',
     nameKey: 'nav.training',
     href: '/training',
     icon: GraduationCap,
@@ -170,7 +170,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'TRAINING',
   },
   {
-    name: 'Assets',
+    name: 'Equipment',
     nameKey: 'nav.assets',
     href: '/assets',
     icon: Package,
@@ -202,7 +202,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'POLICIES',
   },
   {
-    name: 'Offboarding',
+    name: 'Exit Process',
     nameKey: 'nav.offboarding',
     href: '/offboarding',
     icon: UserMinus,
@@ -218,7 +218,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'DIRECTORY',
   },
   {
-    name: 'Social Feed',
+    name: 'Team Feed',
     nameKey: 'nav.socialFeed',
     href: '/social',
     icon: MessageSquare,
@@ -258,7 +258,7 @@ export const navigation: NavItem[] = [
     requiredFeature: 'ANALYTICS',
   },
   {
-    name: 'Org Chart',
+    name: 'Team Structure',
     nameKey: 'nav.orgChart',
     href: '/org-chart',
     icon: Network,
@@ -266,21 +266,21 @@ export const navigation: NavItem[] = [
     requiredFeature: 'DEPARTMENTS',
   },
   {
-    name: 'Users',
+    name: 'User Accounts',
     nameKey: 'nav.users',
     href: '/users',
     icon: Shield,
     requiredPermissions: [Permission.VIEW_USERS, Permission.MANAGE_USERS],
   },
   {
-    name: 'Import/Export',
+    name: 'Upload / Download',
     nameKey: 'nav.importExport',
     href: '/import-export',
     icon: ArrowUpDown,
     requiredPermissions: [Permission.VIEW_EMPLOYEES, Permission.MANAGE_EMPLOYEES],
   },
   {
-    name: 'Audit Logs',
+    name: 'Activity History',
     nameKey: 'nav.auditLogs',
     href: '/audit-logs',
     icon: ScrollText,

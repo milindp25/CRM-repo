@@ -41,6 +41,8 @@ export interface EmailTemplateContext {
 
   // Welcome
   loginUrl?: string;
+  tempPassword?: string;
+  loginEmail?: string;
 }
 
 @Injectable()
@@ -204,6 +206,16 @@ export class EmailService {
             <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 20px;">
               Welcome to <strong style="color:#1E293B;">${ctx.companyName || 'HR Platform'}</strong>! Your account has been set up successfully.
             </p>
+            ${ctx.tempPassword ? `
+            <div style="margin:16px 0 24px;padding:16px 20px;background-color:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;">
+              <p style="margin:0 0 8px;color:#166534;font-size:14px;font-weight:600;">Your Login Credentials</p>
+              ${this.renderDetailTable([
+                ['Email', ctx.loginEmail || ''],
+                ['Temporary Password', ctx.tempPassword],
+              ])}
+              <p style="margin:8px 0 0;color:#DC2626;font-size:13px;font-weight:500;">Please change your password after first login.</p>
+            </div>
+            ` : ''}
             <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px;">You can now access all the features available to you:</p>
             <ul style="color:#475569;font-size:14px;line-height:1.8;margin:0 0 24px;padding-left:20px;">
               <li>View and manage your profile</li>

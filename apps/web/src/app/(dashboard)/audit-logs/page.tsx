@@ -4,8 +4,31 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiClient, type AuditLog } from '@/lib/api-client';
 import { RoleGate } from '@/components/common/role-gate';
 import { Permission } from '@hrplatform/shared';
+import { PageContainer } from '@/components/ui/page-container';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { StatCard } from '@/components/ui/stat-card';
+import { ErrorBanner, EmptyState } from '@/components/ui/error-banner';
+import { TableLoader } from '@/components/ui/page-loader';
+import { formatDate } from '@/lib/format-date';
+import {
+  Download, ScrollText, CheckCircle2, XCircle, Filter,
+  ChevronLeft, ChevronRight, Loader2, FileText, ChevronDown,
+} from 'lucide-react';
 
 const RESOURCE_TYPES = ['USER', 'EMPLOYEE', 'DEPARTMENT', 'DESIGNATION', 'ATTENDANCE', 'LEAVE', 'PAYROLL', 'COMPANY', 'DOCUMENT', 'WORKFLOW'];
+
+const RESOURCE_TYPE_LABELS: Record<string, string> = {
+  USER: 'User Account',
+  EMPLOYEE: 'Employee',
+  DEPARTMENT: 'Department',
+  DESIGNATION: 'Job Title',
+  ATTENDANCE: 'Attendance',
+  LEAVE: 'Time Off',
+  PAYROLL: 'Payroll',
+  COMPANY: 'Company',
+  DOCUMENT: 'Document',
+  WORKFLOW: 'Approval',
+};
 
 const ACTION_TYPES = [
   'USER_LOGIN', 'USER_LOGOUT', 'USER_REGISTERED', 'USER_SSO_LOGIN',
@@ -20,17 +43,6 @@ function formatAction(action: string): string {
     .replace(/_/g, ' ')
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export default function AuditLogsPage() {
@@ -95,7 +107,6 @@ export default function AuditLogsPage() {
       const queryString = params.toString();
       const url = `/v1/audit-logs/export/csv${queryString ? `?${queryString}` : ''}`;
 
-      // Use fetch directly for file download
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
       const response = await fetch(`${baseUrl}${url}`, {
@@ -131,180 +142,221 @@ export default function AuditLogsPage() {
   const totalPages = Math.ceil(total / TAKE);
   const currentPage = Math.floor(skip / TAKE) + 1;
 
+  const successCount = logs.filter(l => l.success).length;
+  const failedCount = logs.filter(l => !l.success).length;
+
+  const [filtersOpen, setFiltersOpen] = useState(true);
+
+  const inputClass = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
+
   return (
     <RoleGate requiredPermissions={[Permission.VIEW_AUDIT_LOGS]}>
-      <div className="p-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Audit Logs</h1>
-            <p className="text-muted-foreground mt-1">Track all actions performed in your company</p>
-          </div>
+      <PageContainer
+        title="Activity History"
+        description="See what's been happening across your company"
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/' },
+          { label: 'Activity History' },
+        ]}
+        actions={
           <button
             onClick={handleExportCsv}
             disabled={exporting || total === 0}
-            className="px-4 py-2 bg-foreground text-background rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {exporting ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                Exporting...
-              </>
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <>Export CSV</>
+              <Download className="h-4 w-4" />
+            )}
+            {exporting ? 'Exporting...' : 'Export CSV'}
+          </button>
+        }
+      >
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard title="Total Activities" value={total} icon={ScrollText} iconColor="blue" loading={loading} />
+          <StatCard title="Successful" value={successCount} subtitle="on this page" icon={CheckCircle2} iconColor="green" loading={loading} />
+          <StatCard title="Failed" value={failedCount} subtitle="on this page" icon={XCircle} iconColor="rose" loading={loading} />
+        </div>
+
+        {/* Filters (collapsible on mobile) */}
+        <div className="rounded-xl border bg-card p-4">
+          <button
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className="flex items-center gap-2 w-full md:cursor-default"
+            aria-expanded={filtersOpen}
+          >
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Filters</span>
+            {hasActiveFilters && (
+              <span className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                {Object.values(filters).filter(v => v !== '').length}
+              </span>
+            )}
+            <ChevronDown className={`h-4 w-4 text-muted-foreground ml-auto transition-transform md:hidden ${filtersOpen ? 'rotate-180' : ''}`} />
+            {hasActiveFilters && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleClearFilters(); }}
+                className="ml-auto text-xs text-muted-foreground hover:text-foreground underline transition-colors hidden md:block"
+              >
+                Clear all
+              </button>
             )}
           </button>
-        </div>
-
-      {/* Filters */}
-      <div className="bg-card rounded-lg shadow-md p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Action</label>
-            <select
-              value={filters.action}
-              onChange={(e) => handleFilterChange('action', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
-            >
-              <option value="">All Actions</option>
-              {ACTION_TYPES.map(a => (
-                <option key={a} value={a}>{formatAction(a)}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Resource Type</label>
-            <select
-              value={filters.resourceType}
-              onChange={(e) => handleFilterChange('resourceType', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
-            >
-              <option value="">All Types</option>
-              {RESOURCE_TYPES.map(rt => (
-                <option key={rt} value={rt}>{rt}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">From Date</label>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange('startDate', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">To Date</label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange('endDate', e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">User ID</label>
-            <input
-              type="text"
-              value={filters.userId}
-              onChange={(e) => handleFilterChange('userId', e.target.value)}
-              placeholder="Filter by user ID"
-              className="w-full px-3 py-2 border border-border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-background"
-            />
-          </div>
-        </div>
-        {hasActiveFilters && (
-          <div className="mt-3 flex justify-end">
-            <button
-              onClick={handleClearFilters}
-              className="text-sm text-muted-foreground hover:text-foreground underline"
-            >
-              Clear all filters
-            </button>
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">{error}</div>
-      )}
-
-      {/* Table */}
-      <div className="bg-card rounded-lg shadow-md overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading audit logs...</div>
-        ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">No audit logs found</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted border-b">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Date & Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">User</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Action</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Resource</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Resource ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-muted">
-                    <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{formatDate(log.createdAt)}</td>
-                    <td className="px-4 py-3 text-sm text-foreground">{log.userEmail}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-foreground">{formatAction(log.action)}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded text-xs font-mono">
-                        {log.resourceType}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground font-mono text-xs">
-                      {log.resourceId ? log.resourceId.substring(0, 8) + '...' : '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {log.success ? (
-                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">Success</span>
-                      ) : (
-                        <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs font-medium rounded-full">Failed</span>
-                      )}
-                    </td>
-                  </tr>
+          <div className={`grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-3 ${filtersOpen ? '' : 'hidden md:grid'}`}>
+            <div>
+              <label htmlFor="audit-filter-action" className="block text-xs font-medium text-muted-foreground mb-1.5">Action</label>
+              <select
+                id="audit-filter-action"
+                value={filters.action}
+                onChange={(e) => handleFilterChange('action', e.target.value)}
+                className={inputClass}
+              >
+                <option value="">All Actions</option>
+                {ACTION_TYPES.map(a => (
+                  <option key={a} value={a}>{formatAction(a)}</option>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {!loading && total > 0 && (
-          <div className="px-4 py-3 border-t flex items-center justify-between">
-            <p className="text-sm text-foreground">
-              Showing {skip + 1}–{Math.min(skip + TAKE, total)} of {total} logs
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSkip(Math.max(0, skip - TAKE))}
-                disabled={skip === 0}
-                className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <span className="px-3 py-1 text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setSkip(skip + TAKE)}
-                disabled={skip + TAKE >= total}
-                className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
+              </select>
             </div>
+            <div>
+              <label htmlFor="audit-filter-category" className="block text-xs font-medium text-muted-foreground mb-1.5">Category</label>
+              <select
+                id="audit-filter-category"
+                value={filters.resourceType}
+                onChange={(e) => handleFilterChange('resourceType', e.target.value)}
+                className={inputClass}
+              >
+                <option value="">All Categories</option>
+                {RESOURCE_TYPES.map(rt => (
+                  <option key={rt} value={rt}>{RESOURCE_TYPE_LABELS[rt] || rt}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="audit-filter-from" className="block text-xs font-medium text-muted-foreground mb-1.5">From Date</label>
+              <input
+                id="audit-filter-from"
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="audit-filter-to" className="block text-xs font-medium text-muted-foreground mb-1.5">To Date</label>
+              <input
+                id="audit-filter-to"
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="audit-filter-user" className="block text-xs font-medium text-muted-foreground mb-1.5">User</label>
+              <input
+                id="audit-filter-user"
+                type="text"
+                value={filters.userId}
+                onChange={(e) => handleFilterChange('userId', e.target.value)}
+                placeholder="Filter by user"
+                className={inputClass}
+              />
+            </div>
+            {/* Mobile clear button */}
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearFilters}
+                className="text-xs text-muted-foreground hover:text-foreground underline transition-colors md:hidden"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+
+        {/* Error */}
+        {error && <ErrorBanner message={error} onRetry={fetchLogs} onDismiss={() => setError('')} />}
+
+        {/* Table */}
+        <div className="rounded-xl border bg-card overflow-hidden">
+          {loading ? (
+            <TableLoader rows={8} cols={6} />
+          ) : logs.length === 0 ? (
+            <EmptyState
+              icon={<FileText className="h-10 w-10" />}
+              title="No activity found"
+              description={hasActiveFilters ? 'Try adjusting your filters.' : 'Activity will show up here as your team starts using the platform.'}
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b bg-muted/30">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date & Time</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">User</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Action</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Record</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {logs.map((log) => (
+                    <tr key={log.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{formatDate(log.createdAt, { time: true })}</td>
+                      <td className="px-4 py-3 text-sm text-foreground">{log.userEmail}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-foreground">{formatAction(log.action)}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge variant="neutral">{RESOURCE_TYPE_LABELS[log.resourceType] || log.resourceType}</StatusBadge>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground font-mono text-xs">
+                        {log.resourceId ? log.resourceId.substring(0, 8) + '...' : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge variant={log.success ? 'success' : 'error'} dot>
+                          {log.success ? 'Success' : 'Failed'}
+                        </StatusBadge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && total > 0 && (
+            <div className="px-4 py-3 border-t flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {skip + 1}&ndash;{Math.min(skip + TAKE, total)} of {total} logs
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSkip(Math.max(0, skip - TAKE))}
+                  disabled={skip === 0}
+                  className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-sm font-medium border border-input bg-background text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                <span className="px-2 text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setSkip(skip + TAKE)}
+                  disabled={skip + TAKE >= total}
+                  className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-sm font-medium border border-input bg-background text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </PageContainer>
     </RoleGate>
   );
 }

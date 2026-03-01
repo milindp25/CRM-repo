@@ -8,11 +8,14 @@ import {
 } from 'recharts';
 import {
   Users, TrendingDown, Calendar, Clock, DollarSign, Heart, Briefcase, GraduationCap,
-  BarChart3, ArrowUp, ArrowDown, Minus,
+  BarChart3,
 } from 'lucide-react';
+import { PageContainer } from '@/components/ui/page-container';
+import { StatCard } from '@/components/ui/stat-card';
+import { ChartCard as DesignChartCard, chartColors, chartColorArray } from '@/components/ui/chart-card';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
-// ── Color palette ───────────────────────────────────────────────────
-const COLORS = ['#3b82f6', '#22c55e', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4', '#f97316', '#ec4899'];
+// ── Month names ─────────────────────────────────────────────────────
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -25,20 +28,6 @@ interface OverviewData {
   todayAttendance: { present: number; total: number } | number;
   openPositions: number;
   monthlyPayrollCost: number;
-}
-
-interface KpiCardProps {
-  label: string;
-  value: string | number;
-  subtitle?: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  trend?: 'up' | 'down' | 'neutral';
-}
-
-interface ChartCardProps {
-  title: string;
-  children: React.ReactNode;
-  className?: string;
 }
 
 interface TooltipPayloadItem {
@@ -198,38 +187,7 @@ interface PieLabelWithValueProps {
 }
 
 // ── Shared Components ───────────────────────────────────────────────
-function KpiCard({ label, value, subtitle, icon: Icon, trend }: KpiCardProps) {
-  const TrendIcon = trend === 'up' ? ArrowUp : trend === 'down' ? ArrowDown : Minus;
-  const trendColor = trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
-  return (
-    <div className="bg-card border border-border rounded-xl p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
-      {Icon && (
-        <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
-          <Icon className="w-5 h-5" />
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="text-sm text-muted-foreground truncate">{label}</p>
-        <div className="flex items-baseline gap-2 mt-1">
-          <p className="text-2xl font-bold text-foreground">{value}</p>
-          {trend && <TrendIcon className={`w-4 h-4 ${trendColor}`} />}
-        </div>
-        {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
-      </div>
-    </div>
-  );
-}
-
-function ChartCard({ title, children, className = '' }: ChartCardProps) {
-  return (
-    <div className={`bg-card border border-border rounded-xl p-5 ${className}`}>
-      <h3 className="text-sm font-semibold text-foreground mb-4">{title}</h3>
-      {children}
-    </div>
-  );
-}
-
-function EmptyState({ message = 'No data available' }: { message?: string }) {
+function AnalyticsEmptyState({ message = 'No data available' }: { message?: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
       <BarChart3 className="w-10 h-10 mb-3 opacity-40" />
@@ -238,7 +196,6 @@ function EmptyState({ message = 'No data available' }: { message?: string }) {
   );
 }
 
-// Custom tooltip for recharts
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
@@ -257,24 +214,30 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 function OverviewTab({ data }: { data: OverviewData }) {
   const attendance = typeof data.todayAttendance === 'object'
     ? `${data.todayAttendance.present}/${data.todayAttendance.total}`
-    : data.todayAttendance;
+    : String(data.todayAttendance);
+  const activePercent = data.totalEmployees > 0
+    ? ((data.activeEmployees / data.totalEmployees) * 100).toFixed(0)
+    : '0';
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <KpiCard icon={Users} label="Total Employees" value={data.totalEmployees} />
-      <KpiCard icon={Users} label="Active Employees" value={data.activeEmployees} trend="up" subtitle={`${((data.activeEmployees / Math.max(data.totalEmployees, 1)) * 100).toFixed(0)}% active`} />
-      <KpiCard icon={TrendingDown} label="Attrition Rate" value={`${(data.attritionRate || 0).toFixed(1)}%`} subtitle="Last 12 months" trend={(data.attritionRate ?? 0) > 15 ? 'down' : 'neutral'} />
-      <KpiCard icon={Clock} label="Avg Tenure" value={`${((data.avgTenureMonths || 0) / 12).toFixed(1)} yrs`} />
-      <KpiCard icon={Calendar} label="Pending Leaves" value={data.pendingLeaves} />
-      <KpiCard icon={Users} label="Today Attendance" value={attendance} />
-      <KpiCard icon={Briefcase} label="Open Positions" value={data.openPositions} />
-      <KpiCard icon={DollarSign} label="Monthly Payroll" value={`$${(data.monthlyPayrollCost || 0).toLocaleString()}`} />
+      <StatCard icon={Users} title="Total Employees" value={data.totalEmployees} iconColor="blue" />
+      <StatCard icon={Users} title="Active Employees" value={data.activeEmployees} iconColor="green"
+        trend={{ value: Number(activePercent) > 80 ? 5 : -2 }} subtitle={`${activePercent}% active`} />
+      <StatCard icon={TrendingDown} title="Attrition Rate" value={`${(data.attritionRate || 0).toFixed(1)}%`} iconColor="rose"
+        subtitle="Last 12 months" trend={{ value: (data.attritionRate ?? 0) > 15 ? -5 : 0 }} />
+      <StatCard icon={Clock} title="Avg Tenure" value={`${((data.avgTenureMonths || 0) / 12).toFixed(1)} yrs`} iconColor="purple" />
+      <StatCard icon={Calendar} title="Pending Leaves" value={data.pendingLeaves} iconColor="amber" />
+      <StatCard icon={Users} title="Today Attendance" value={attendance} iconColor="cyan" />
+      <StatCard icon={Briefcase} title="Open Positions" value={data.openPositions} iconColor="indigo" />
+      <StatCard icon={DollarSign} title="Monthly Payroll" value={`$${(data.monthlyPayrollCost || 0).toLocaleString()}`} iconColor="green" />
     </div>
   );
 }
 
 // ── Headcount Tab ───────────────────────────────────────────────────
 function HeadcountTab({ data }: { data: HeadcountData | null }) {
-  if (!data) return <EmptyState />;
+  if (!data) return <AnalyticsEmptyState />;
   const deptData = data.current?.byDepartment || [];
   const trendData = (data.trends || []).map((t: HeadcountTrendItem) => ({
     ...t,
@@ -284,11 +247,11 @@ function HeadcountTab({ data }: { data: HeadcountData | null }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <KpiCard icon={Users} label="Total Headcount" value={data.current?.total || 0} />
-        <KpiCard icon={Users} label="Departments" value={deptData.length} subtitle="with active employees" />
+        <StatCard icon={Users} title="Total Headcount" value={data.current?.total || 0} iconColor="blue" />
+        <StatCard icon={Users} title="Departments" value={deptData.length} subtitle="with active employees" iconColor="purple" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title="Headcount by Department">
+        <DesignChartCard title="Headcount by Department" height={300}>
           {deptData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={deptData} layout="vertical" margin={{ left: 20 }}>
@@ -296,12 +259,12 @@ function HeadcountTab({ data }: { data: HeadcountData | null }) {
                 <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                 <YAxis dataKey="departmentName" type="category" width={120} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="count" name="Employees" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="count" name="Employees" fill={chartColors.primary} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : <EmptyState />}
-        </ChartCard>
-        <ChartCard title="Headcount Trend">
+          ) : <AnalyticsEmptyState />}
+        </DesignChartCard>
+        <DesignChartCard title="Headcount Trend" height={300}>
           {trendData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={trendData}>
@@ -309,11 +272,11 @@ function HeadcountTab({ data }: { data: HeadcountData | null }) {
                 <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                 <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="count" name="Employees" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="count" name="Employees" stroke={chartColors.primary} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
-          ) : <EmptyState message="No trend data available" />}
-        </ChartCard>
+          ) : <AnalyticsEmptyState message="No trend data available" />}
+        </DesignChartCard>
       </div>
     </div>
   );
@@ -321,7 +284,7 @@ function HeadcountTab({ data }: { data: HeadcountData | null }) {
 
 // ── Attrition Tab ───────────────────────────────────────────────────
 function AttritionTab({ data }: { data: AttritionData | null }) {
-  if (!data) return <EmptyState />;
+  if (!data) return <AnalyticsEmptyState />;
   const trendData = (data.monthlyTrend || []).map((t: AttritionTrendItem) => ({
     ...t,
     label: `${MONTH_NAMES[t.month - 1]} ${t.year}`,
@@ -330,19 +293,20 @@ function AttritionTab({ data }: { data: AttritionData | null }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={TrendingDown} label="Attrition Rate" value={`${(data.attritionRate ?? 0).toFixed(1)}%`} trend={(data.attritionRate ?? 0) > 15 ? 'down' : 'neutral'} />
-        <KpiCard icon={Users} label="Total Leavers" value={data.totalLeavers || 0} subtitle={`out of ${data.totalEmployees || 0}`} />
-        <KpiCard icon={Users} label="Total Employees" value={data.totalEmployees || 0} />
-        <KpiCard icon={Calendar} label="Period" value={`${data.periodMonths || 12} months`} />
+        <StatCard icon={TrendingDown} title="Attrition Rate" value={`${(data.attritionRate ?? 0).toFixed(1)}%`} iconColor="rose"
+          trend={{ value: (data.attritionRate ?? 0) > 15 ? -5 : 0 }} />
+        <StatCard icon={Users} title="Total Leavers" value={data.totalLeavers || 0} subtitle={`out of ${data.totalEmployees || 0}`} iconColor="amber" />
+        <StatCard icon={Users} title="Total Employees" value={data.totalEmployees || 0} iconColor="blue" />
+        <StatCard icon={Calendar} title="Period" value={`${data.periodMonths || 12} months`} iconColor="purple" />
       </div>
-      <ChartCard title="Monthly Attrition Trend">
+      <DesignChartCard title="Monthly Attrition Trend" height={350}>
         {trendData.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
             <AreaChart data={trendData}>
               <defs>
                 <linearGradient id="attritionGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  <stop offset="5%" stopColor={chartColors.danger} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={chartColors.danger} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -350,19 +314,19 @@ function AttritionTab({ data }: { data: AttritionData | null }) {
               <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Area type="monotone" dataKey="rate" name="Attrition Rate %" stroke="#ef4444" fill="url(#attritionGradient)" strokeWidth={2} />
-              <Line type="monotone" dataKey="leavers" name="Leavers" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+              <Area type="monotone" dataKey="rate" name="Attrition Rate %" stroke={chartColors.danger} fill="url(#attritionGradient)" strokeWidth={2} />
+              <Line type="monotone" dataKey="leavers" name="Leavers" stroke={chartColors.warning} strokeWidth={2} dot={{ r: 3 }} />
             </AreaChart>
           </ResponsiveContainer>
-        ) : <EmptyState message="No attrition trend data" />}
-      </ChartCard>
+        ) : <AnalyticsEmptyState message="No attrition trend data" />}
+      </DesignChartCard>
     </div>
   );
 }
 
 // ── Leave Tab ───────────────────────────────────────────────────────
 function LeaveTab({ data }: { data: LeaveData | null }) {
-  if (!data) return <EmptyState />;
+  if (!data) return <AnalyticsEmptyState />;
   const utilization = data.utilizationByType || [];
   const pieData = utilization.map((item: LeaveUtilizationItem) => ({
     name: item.leaveType,
@@ -372,12 +336,12 @@ function LeaveTab({ data }: { data: LeaveData | null }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <KpiCard icon={Calendar} label="Pending Requests" value={data.pendingCount || 0} />
-        <KpiCard icon={Calendar} label="Leave Types" value={utilization.length} />
-        <KpiCard icon={Calendar} label="Total Days Used" value={utilization.reduce((sum: number, u: LeaveUtilizationItem) => sum + (u.totalDays || 0), 0)} />
+        <StatCard icon={Calendar} title="Pending Requests" value={data.pendingCount || 0} iconColor="amber" />
+        <StatCard icon={Calendar} title="Leave Types" value={utilization.length} iconColor="blue" />
+        <StatCard icon={Calendar} title="Total Days Used" value={utilization.reduce((sum: number, u: LeaveUtilizationItem) => sum + (u.totalDays || 0), 0)} iconColor="purple" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title="Leave Days by Type">
+        <DesignChartCard title="Leave Days by Type" height={300}>
           {utilization.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={utilization}>
@@ -386,27 +350,27 @@ function LeaveTab({ data }: { data: LeaveData | null }) {
                 <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                <Bar dataKey="approved" name="Approved" fill="#22c55e" stackId="a" />
-                <Bar dataKey="pending" name="Pending" fill="#f59e0b" stackId="a" />
-                <Bar dataKey="rejected" name="Rejected" fill="#ef4444" stackId="a" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="approved" name="Approved" fill={chartColors.success} stackId="a" />
+                <Bar dataKey="pending" name="Pending" fill={chartColors.warning} stackId="a" />
+                <Bar dataKey="rejected" name="Rejected" fill={chartColors.danger} stackId="a" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : <EmptyState />}
-        </ChartCard>
-        <ChartCard title="Distribution by Type">
+          ) : <AnalyticsEmptyState />}
+        </DesignChartCard>
+        <DesignChartCard title="Distribution by Type" height={300}>
           {pieData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={2} dataKey="value" label={({ name, percent }: PieLabelProps) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                   {pieData.map((_: { name: string; value: number }, i: number) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    <Cell key={i} fill={chartColorArray[i % chartColorArray.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-          ) : <EmptyState />}
-        </ChartCard>
+          ) : <AnalyticsEmptyState />}
+        </DesignChartCard>
       </div>
     </div>
   );
@@ -414,18 +378,19 @@ function LeaveTab({ data }: { data: LeaveData | null }) {
 
 // ── Attendance Tab ──────────────────────────────────────────────────
 function AttendanceTab({ data }: { data: AttendanceData | null }) {
-  if (!data) return <EmptyState />;
+  if (!data) return <AnalyticsEmptyState />;
   const statusData = data.statusBreakdown || [];
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={Clock} label="Total Records" value={data.totalRecords || 0} subtitle={`${MONTH_NAMES[(data.month || 1) - 1]} ${data.year || ''}`} />
-        <KpiCard icon={Clock} label="Absent Count" value={data.absentCount || 0} />
-        <KpiCard icon={Clock} label="Absenteeism Rate" value={`${(data.absenteeismRate || 0).toFixed(1)}%`} trend={(data.absenteeismRate ?? 0) > 10 ? 'down' : 'neutral'} />
-        <KpiCard icon={Clock} label="Avg Hours Worked" value={`${(data.avgHoursWorked || 0).toFixed(1)}h`} />
+        <StatCard icon={Clock} title="Total Records" value={data.totalRecords || 0} subtitle={`${MONTH_NAMES[(data.month || 1) - 1]} ${data.year || ''}`} iconColor="blue" />
+        <StatCard icon={Clock} title="Absent Count" value={data.absentCount || 0} iconColor="rose" />
+        <StatCard icon={Clock} title="Absenteeism Rate" value={`${(data.absenteeismRate || 0).toFixed(1)}%`} iconColor="amber"
+          trend={{ value: (data.absenteeismRate ?? 0) > 10 ? -3 : 0 }} />
+        <StatCard icon={Clock} title="Avg Hours Worked" value={`${(data.avgHoursWorked || 0).toFixed(1)}h`} iconColor="green" />
       </div>
-      <ChartCard title="Attendance Status Breakdown">
+      <DesignChartCard title="Attendance Status Breakdown" height={350}>
         {statusData.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={statusData}>
@@ -435,20 +400,20 @@ function AttendanceTab({ data }: { data: AttendanceData | null }) {
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="count" name="Count" radius={[4, 4, 0, 0]}>
                 {statusData.map((_: AttendanceStatusItem, i: number) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  <Cell key={i} fill={chartColorArray[i % chartColorArray.length]} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        ) : <EmptyState />}
-      </ChartCard>
+        ) : <AnalyticsEmptyState />}
+      </DesignChartCard>
     </div>
   );
 }
 
 // ── Payroll Tab ─────────────────────────────────────────────────────
 function PayrollTab({ data }: { data: PayrollData | null }) {
-  if (!data) return <EmptyState />;
+  if (!data) return <AnalyticsEmptyState />;
   const monthlyCosts = (data.monthlyCosts || []).map((m: PayrollMonthlyCostItem) => ({
     ...m,
     label: `${MONTH_NAMES[m.month - 1]} ${m.year}`,
@@ -458,20 +423,20 @@ function PayrollTab({ data }: { data: PayrollData | null }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <KpiCard icon={DollarSign} label="Total Records" value={data.totalRecords || 0} />
-        <KpiCard icon={DollarSign} label="Months Covered" value={monthlyCosts.length} />
-        <KpiCard icon={DollarSign} label="Total Costs"
+        <StatCard icon={DollarSign} title="Total Records" value={data.totalRecords || 0} iconColor="blue" />
+        <StatCard icon={DollarSign} title="Months Covered" value={monthlyCosts.length} iconColor="purple" />
+        <StatCard icon={DollarSign} title="Total Costs" iconColor="green"
           value={`$${monthlyCosts.reduce((s: number, m: PayrollMonthlyCostItem & { total: number }) => s + m.total, 0).toLocaleString()}`}
         />
       </div>
-      <ChartCard title="Monthly Payroll Costs">
+      <DesignChartCard title="Monthly Payroll Costs" height={350}>
         {monthlyCosts.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
             <AreaChart data={monthlyCosts}>
               <defs>
                 <linearGradient id="payrollGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%" stopColor={chartColors.primary} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={chartColors.primary} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -479,24 +444,23 @@ function PayrollTab({ data }: { data: PayrollData | null }) {
               <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Area type="monotone" dataKey="totalDeductions" name="Deductions" stroke="#ef4444" fill="url(#payrollGradient)" strokeWidth={2} />
-              <Area type="monotone" dataKey="totalEmployerContributions" name="Employer Contributions" stroke="#22c55e" fill="none" strokeWidth={2} />
-              <Line type="monotone" dataKey="total" name="Total Cost" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} />
+              <Area type="monotone" dataKey="totalDeductions" name="Deductions" stroke={chartColors.danger} fill="url(#payrollGradient)" strokeWidth={2} />
+              <Area type="monotone" dataKey="totalEmployerContributions" name="Employer Contributions" stroke={chartColors.success} fill="none" strokeWidth={2} />
+              <Line type="monotone" dataKey="total" name="Total Cost" stroke={chartColors.primary} strokeWidth={2.5} dot={{ r: 4 }} />
             </AreaChart>
           </ResponsiveContainer>
-        ) : <EmptyState message="No payroll data available" />}
-      </ChartCard>
+        ) : <AnalyticsEmptyState message="No payroll data available" />}
+      </DesignChartCard>
     </div>
   );
 }
 
 // ── Diversity Tab ───────────────────────────────────────────────────
 function DiversityTab({ data }: { data: DiversityData | null }) {
-  if (!data) return <EmptyState />;
+  if (!data) return <AnalyticsEmptyState />;
   const genderData = data.genderDistribution || [];
   const deptData = data.departmentBreakdown || [];
 
-  // Group department breakdown by department for stacked bar
   const deptMap = new Map<string, Record<string, string | number>>();
   deptData.forEach((d: DepartmentGenderItem) => {
     const name = d.departmentName || 'Unassigned';
@@ -509,29 +473,29 @@ function DiversityTab({ data }: { data: DiversityData | null }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <KpiCard icon={Heart} label="Total Employees" value={data.totalEmployees || 0} />
+        <StatCard icon={Heart} title="Total Employees" value={data.totalEmployees || 0} iconColor="rose" />
         {genderData.slice(0, 2).map((g: GenderDistributionItem) => (
-          <KpiCard key={g.gender} icon={Users} label={g.gender} value={g.count} subtitle={`${g.percentage}%`} />
+          <StatCard key={g.gender} icon={Users} title={g.gender} value={g.count} subtitle={`${g.percentage}%`} iconColor="blue" />
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title="Gender Distribution">
+        <DesignChartCard title="Gender Distribution" height={300}>
           {genderData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={genderData.map((g: GenderDistributionItem) => ({ name: g.gender, value: g.count }))} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={3} dataKey="value"
                   label={({ name, percent }: PieLabelProps) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                   {genderData.map((_: GenderDistributionItem, i: number) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    <Cell key={i} fill={chartColorArray[i % chartColorArray.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          ) : <EmptyState />}
-        </ChartCard>
-        <ChartCard title="Gender by Department">
+          ) : <AnalyticsEmptyState />}
+        </DesignChartCard>
+        <DesignChartCard title="Gender by Department" height={300}>
           {deptChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={deptChartData}>
@@ -541,12 +505,12 @@ function DiversityTab({ data }: { data: DiversityData | null }) {
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
                 {genders.map((g, i) => (
-                  <Bar key={g} dataKey={g} name={g} fill={COLORS[i % COLORS.length]} stackId="a" radius={i === genders.length - 1 ? [4, 4, 0, 0] : undefined} />
+                  <Bar key={g} dataKey={g} name={g} fill={chartColorArray[i % chartColorArray.length]} stackId="a" radius={i === genders.length - 1 ? [4, 4, 0, 0] : undefined} />
                 ))}
               </BarChart>
             </ResponsiveContainer>
-          ) : <EmptyState />}
-        </ChartCard>
+          ) : <AnalyticsEmptyState />}
+        </DesignChartCard>
       </div>
     </div>
   );
@@ -554,7 +518,7 @@ function DiversityTab({ data }: { data: DiversityData | null }) {
 
 // ── Recruitment Tab ─────────────────────────────────────────────────
 function RecruitmentTab({ data }: { data: RecruitmentData | null }) {
-  if (!data) return <EmptyState />;
+  if (!data) return <AnalyticsEmptyState />;
   const pipeline = data.pipelineStats || {};
   const stages = data.applicantsByStage || [];
   const jobStatuses = data.jobPostingsByStatus || [];
@@ -562,13 +526,13 @@ function RecruitmentTab({ data }: { data: RecruitmentData | null }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={Briefcase} label="Open Positions" value={pipeline.openPositions || 0} />
-        <KpiCard icon={Users} label="Total Applicants" value={pipeline.totalApplicants || 0} />
-        <KpiCard icon={Users} label="Hired" value={pipeline.hiredCount || 0} trend="up" />
-        <KpiCard icon={Clock} label="Avg Time to Hire" value={`${(pipeline.avgTimeToHireDays || 0).toFixed(0)} days`} />
+        <StatCard icon={Briefcase} title="Open Positions" value={pipeline.openPositions || 0} iconColor="indigo" />
+        <StatCard icon={Users} title="Total Applicants" value={pipeline.totalApplicants || 0} iconColor="blue" />
+        <StatCard icon={Users} title="Hired" value={pipeline.hiredCount || 0} iconColor="green" trend={{ value: 3 }} />
+        <StatCard icon={Clock} title="Avg Time to Hire" value={`${(pipeline.avgTimeToHireDays || 0).toFixed(0)} days`} iconColor="amber" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title="Recruitment Pipeline">
+        <DesignChartCard title="Recruitment Pipeline" height={300}>
           {stages.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={stages} layout="vertical" margin={{ left: 10 }}>
@@ -578,29 +542,29 @@ function RecruitmentTab({ data }: { data: RecruitmentData | null }) {
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" name="Applicants" radius={[0, 4, 4, 0]}>
                   {stages.map((_: RecruitmentStageItem, i: number) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    <Cell key={i} fill={chartColorArray[i % chartColorArray.length]} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          ) : <EmptyState />}
-        </ChartCard>
-        <ChartCard title="Job Postings by Status">
+          ) : <AnalyticsEmptyState />}
+        </DesignChartCard>
+        <DesignChartCard title="Job Postings by Status" height={300}>
           {jobStatuses.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={jobStatuses.map((j: JobStatusItem) => ({ name: j.status, value: j.count }))} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={3} dataKey="value"
                   label={({ name, value }: PieLabelWithValueProps) => `${name ?? ''}: ${value ?? 0}`}>
                   {jobStatuses.map((_: JobStatusItem, i: number) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    <Cell key={i} fill={chartColorArray[i % chartColorArray.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          ) : <EmptyState />}
-        </ChartCard>
+          ) : <AnalyticsEmptyState />}
+        </DesignChartCard>
       </div>
     </div>
   );
@@ -608,7 +572,7 @@ function RecruitmentTab({ data }: { data: RecruitmentData | null }) {
 
 // ── Training Tab ────────────────────────────────────────────────────
 function TrainingTab({ data }: { data: TrainingData | null }) {
-  if (!data) return <EmptyState />;
+  if (!data) return <AnalyticsEmptyState />;
   const courseStatuses = data.coursesByStatus || [];
   const enrollmentStatuses = data.enrollmentsByStatus || [];
   const stats = data.enrollmentStats || {};
@@ -616,13 +580,13 @@ function TrainingTab({ data }: { data: TrainingData | null }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={GraduationCap} label="Total Enrollments" value={stats.totalEnrollments || 0} />
-        <KpiCard icon={GraduationCap} label="Completed" value={stats.completedEnrollments || 0} trend="up" />
-        <KpiCard icon={GraduationCap} label="Completion Rate" value={`${(stats.completionRate || 0).toFixed(1)}%`} />
-        <KpiCard icon={GraduationCap} label="Avg Score" value={stats.avgScore != null ? `${stats.avgScore.toFixed(1)}%` : 'N/A'} />
+        <StatCard icon={GraduationCap} title="Total Enrollments" value={stats.totalEnrollments || 0} iconColor="blue" />
+        <StatCard icon={GraduationCap} title="Completed" value={stats.completedEnrollments || 0} iconColor="green" trend={{ value: 5 }} />
+        <StatCard icon={GraduationCap} title="Completion Rate" value={`${(stats.completionRate || 0).toFixed(1)}%`} iconColor="purple" />
+        <StatCard icon={GraduationCap} title="Avg Score" value={stats.avgScore != null ? `${stats.avgScore.toFixed(1)}%` : 'N/A'} iconColor="amber" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title="Courses by Status">
+        <DesignChartCard title="Courses by Status" height={300}>
           {courseStatuses.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={courseStatuses}>
@@ -632,28 +596,27 @@ function TrainingTab({ data }: { data: TrainingData | null }) {
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" name="Courses" radius={[4, 4, 0, 0]}>
                   {courseStatuses.map((_: CourseStatusItem, i: number) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    <Cell key={i} fill={chartColorArray[i % chartColorArray.length]} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          ) : <EmptyState />}
-        </ChartCard>
-        <ChartCard title="Enrollments by Status">
+          ) : <AnalyticsEmptyState />}
+        </DesignChartCard>
+        <DesignChartCard title="Enrollments by Status" height={300}>
           {enrollmentStatuses.length > 0 ? (
-            <div>
+            <div className="h-full flex flex-col">
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={enrollmentStatuses.map((e: EnrollmentStatusItem) => ({ name: e.status, value: e.count }))} cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={3} dataKey="value">
                     {enrollmentStatuses.map((_: EnrollmentStatusItem, i: number) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      <Cell key={i} fill={chartColorArray[i % chartColorArray.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
-              {/* Progress bars */}
               <div className="mt-4 space-y-2">
                 {enrollmentStatuses.map((e: EnrollmentStatusItem, i: number) => {
                   const pct = (stats.totalEnrollments ?? 0) > 0 ? (e.count / (stats.totalEnrollments ?? 1)) * 100 : 0;
@@ -661,7 +624,7 @@ function TrainingTab({ data }: { data: TrainingData | null }) {
                     <div key={e.status} className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground w-24 truncate">{e.status}</span>
                       <div className="flex-1 bg-muted rounded-full h-2">
-                        <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }} />
+                        <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: chartColorArray[i % chartColorArray.length] }} />
                       </div>
                       <span className="text-xs font-medium text-foreground w-10 text-right">{e.count}</span>
                     </div>
@@ -669,8 +632,8 @@ function TrainingTab({ data }: { data: TrainingData | null }) {
                 })}
               </div>
             </div>
-          ) : <EmptyState />}
-        </ChartCard>
+          ) : <AnalyticsEmptyState />}
+        </DesignChartCard>
       </div>
     </div>
   );
@@ -731,9 +694,13 @@ export default function AnalyticsPage() {
   ];
 
   const renderTab = () => {
-    if (loading) return <div className="flex items-center justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+    if (loading) return (
+      <div className="flex items-center justify-center py-16">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
     switch (activeTab) {
-      case 'overview': return overview ? <OverviewTab data={overview} /> : <EmptyState />;
+      case 'overview': return overview ? <OverviewTab data={overview} /> : <AnalyticsEmptyState />;
       case 'headcount': return <HeadcountTab data={tabData as HeadcountData | null} />;
       case 'attrition': return <AttritionTab data={tabData as AttritionData | null} />;
       case 'leave': return <LeaveTab data={tabData as LeaveData | null} />;
@@ -742,22 +709,25 @@ export default function AnalyticsPage() {
       case 'diversity': return <DiversityTab data={tabData as DiversityData | null} />;
       case 'recruitment': return <RecruitmentTab data={tabData as RecruitmentData | null} />;
       case 'training': return <TrainingTab data={tabData as TrainingData | null} />;
-      default: return <EmptyState />;
+      default: return <AnalyticsEmptyState />;
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">HR Analytics</h1>
-        <p className="text-muted-foreground">Data-driven insights across your organization</p>
-      </div>
-
+    <PageContainer
+      title="HR Analytics"
+      description="Data-driven insights across your organization"
+      breadcrumbs={[
+        { label: 'Dashboard', href: '/' },
+        { label: 'Analytics' },
+      ]}
+    >
       {error && (
-        <div className="p-3 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2">
-          <span className="text-sm">{error}</span>
-          <button onClick={() => activeTab === 'overview' ? fetchOverview() : fetchTabData()} className="text-xs underline ml-auto">Retry</button>
-        </div>
+        <ErrorBanner
+          message={error}
+          onRetry={() => activeTab === 'overview' ? fetchOverview() : fetchTabData()}
+          onDismiss={() => setError('')}
+        />
       )}
 
       <div className="flex gap-1 overflow-x-auto border-b border-border pb-px">
@@ -774,6 +744,6 @@ export default function AnalyticsPage() {
       </div>
 
       {renderTab()}
-    </div>
+    </PageContainer>
   );
 }

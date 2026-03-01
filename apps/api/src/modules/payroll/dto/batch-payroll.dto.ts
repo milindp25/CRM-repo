@@ -70,6 +70,7 @@ export class BatchStatusResponseDto {
   @ApiProperty() failedCount: number;
   @ApiPropertyOptional() errors?: Array<{ employeeId: string; error: string }>;
   @ApiProperty() initiatedBy: string;
+  @ApiPropertyOptional() approvalStatus?: string;
   @ApiPropertyOptional() completedAt?: Date;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;

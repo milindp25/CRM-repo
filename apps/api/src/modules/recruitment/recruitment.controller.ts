@@ -7,10 +7,12 @@ import {
   Body,
   Param,
   Query,
+  Res,
   UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -38,6 +40,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permission, UserRole } from '@hrplatform/shared';
 import { RecruitmentService } from './recruitment.service';
+import { OfferLetterService } from './pdf/offer-letter.service';
 import {
   CreateJobPostingDto,
   UpdateJobPostingDto,
@@ -159,7 +162,10 @@ class MoveStageDto {
 @RequireFeature('RECRUITMENT')
 @Controller({ path: 'recruitment', version: '1' })
 export class RecruitmentController {
-  constructor(private readonly recruitmentService: RecruitmentService) {}
+  constructor(
+    private readonly recruitmentService: RecruitmentService,
+    private readonly offerLetterService: OfferLetterService,
+  ) {}
 
   // ─── Job Postings ────────────────────────────────────────────────────────
 
@@ -397,6 +403,27 @@ export class RecruitmentController {
       user.companyId,
       user.userId,
     );
+  }
+
+  // ─── Offer Letter PDF ──────────────────────────────────────────────────
+
+  @Get('applicants/:id/offer-letter')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @RequirePermissions(Permission.MANAGE_APPLICANTS, Permission.MANAGE_RECRUITMENT)
+  @ApiOperation({ summary: 'Generate and download offer letter PDF for an applicant' })
+  @ApiParam({ name: 'id', description: 'Applicant UUID' })
+  @ApiResponse({ status: 200, description: 'Offer letter PDF stream' })
+  @ApiResponse({ status: 400, description: 'Applicant not in OFFER/HIRED stage' })
+  @ApiResponse({ status: 404, description: 'Applicant not found' })
+  async downloadOfferLetter(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.offerLetterService.generateOfferLetter(id, user.companyId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="offer_letter_${id}.pdf"`);
+    return res.send(buffer);
   }
 
   // ─── Interviews ──────────────────────────────────────────────────────────

@@ -1,15 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { apiClient, Department } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
-import { Building2, Plus, Edit, Trash2, Users, Loader2 } from 'lucide-react';
+import { PageContainer } from '@/components/ui/page-container';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Building2, Plus, Pencil, Trash2, Users, Loader2, FolderTree, AlertCircle } from 'lucide-react';
+import { RoleGate } from '@/components/common/role-gate';
+import { Permission } from '@hrplatform/shared';
 
 export default function DepartmentsPage() {
-  const router = useRouter();
   const toast = useToast();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +78,7 @@ export default function DepartmentsPage() {
   const handleEdit = (dept: Department) => {
     setEditingId(dept.id);
     setFormData({ name: dept.name, code: dept.code, description: dept.description || '' });
+    setFormError(null);
     setShowForm(true);
   };
 
@@ -89,164 +93,130 @@ export default function DepartmentsPage() {
     }
   };
 
-  if (loading) {
-    return <PageLoader />;
-  }
+  const openNewForm = () => {
+    setShowForm(true);
+    setEditingId(null);
+    setFormData({ name: '', code: '', description: '' });
+    setFormError(null);
+  };
+
+  if (loading) return <PageLoader />;
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Departments</h1>
-          <p className="mt-2 text-muted-foreground">Organize your company structure</p>
+    <PageContainer
+      title="Departments"
+      description="Organize your company structure"
+      breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Departments' }]}
+      actions={
+        <RoleGate requiredPermissions={[Permission.MANAGE_DEPARTMENTS]} hideOnly>
+          <button onClick={openNewForm} className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
+            <Plus className="w-4 h-4" /> New Department
+          </button>
+        </RoleGate>
+      }
+    >
+      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={loadDepartments} />}
+
+      {/* Department Grid Cards */}
+      {departments.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border bg-card">
+          <FolderTree className="w-12 h-12 text-muted-foreground/40 mb-4" />
+          <h3 className="text-lg font-semibold text-foreground">No departments yet</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">Create your first department to start organizing your company structure.</p>
+          <RoleGate requiredPermissions={[Permission.MANAGE_DEPARTMENTS]} hideOnly>
+            <button onClick={openNewForm} className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
+              <Plus className="w-4 h-4" /> Create Department
+            </button>
+          </RoleGate>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditingId(null);
-            setFormData({ name: '', code: '', description: '' });
-            setFormError(null);
-          }}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="h-5 w-5" />
-          New Department
-        </button>
-      </div>
-
-      {error && (
-        <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => loadDepartments()} className="mb-6" />
-      )}
-
-      {showForm && (
-        <div className="mb-6 bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            {editingId ? 'Edit Department' : 'New Department'}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {formError && (
-              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <p className="text-sm font-medium text-red-700 dark:text-red-300">{formError}</p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Engineering"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Code</label>
-                <input
-                  type="text"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Auto-generated (or enter manually)"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
-                rows={3}
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {editingId ? 'Update' : 'Create'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setShowForm(false); setFormError(null); }}
-                disabled={submitting}
-                className="px-4 py-2 border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="bg-card shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-muted">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Code
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Description
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Employees
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {departments.map((dept) => (
-              <tr key={dept.id} className="hover:bg-muted">
-                <td className="px-6 py-4 font-medium text-foreground">{dept.code}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                    {dept.name}
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {departments.map((dept) => (
+            <div key={dept.id} className="rounded-xl border bg-card p-5 hover:shadow-md transition-all group">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                </td>
-                <td className="px-6 py-4 text-muted-foreground max-w-md truncate">
-                  {dept.description || '-'}
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                    <Users className="h-3 w-3" />
-                    {dept.employeeCount || 0}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button
-                    onClick={() => handleEdit(dept)}
-                    className="mr-2 p-1 text-blue-600 hover:bg-blue-50 rounded"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(dept.id)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {departments.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            No departments found. Create your first one!
-          </div>
-        )}
-      </div>
-    </div>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{dept.name}</h3>
+                    <span className="text-xs font-mono text-muted-foreground">{dept.code}</span>
+                  </div>
+                </div>
+                <RoleGate requiredPermissions={[Permission.MANAGE_DEPARTMENTS]} hideOnly>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(dept)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors" aria-label="Edit">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => handleDelete(dept.id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-lg transition-colors" aria-label="Delete">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </RoleGate>
+              </div>
+              {dept.description && (
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{dept.description}</p>
+              )}
+              <div className="flex items-center gap-2 pt-2 border-t">
+                <StatusBadge variant="info" dot>
+                  <Users className="w-3 h-3 mr-0.5" />
+                  {dept.employeeCount || 0} employees
+                </StatusBadge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create/Edit Modal */}
+      <Modal open={showForm} onClose={() => setShowForm(false)} size="md">
+        <ModalHeader onClose={() => setShowForm(false)}>
+          {editingId ? 'Edit Department' : 'New Department'}
+        </ModalHeader>
+        <form onSubmit={handleSubmit}>
+          <ModalBody>
+            <div className="space-y-4">
+              {formError && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-sm text-red-700 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {formError}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Name <span className="text-red-500">*</span></label>
+                  <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full h-10 px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    placeholder="Engineering" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Code</label>
+                  <input type="text" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    className="w-full h-10 px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    placeholder="Auto-generated" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Description</label>
+                <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full min-h-[80px] px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-y"
+                  rows={3} placeholder="Brief description of this department" />
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <button type="button" onClick={() => setShowForm(false)} disabled={submitting}
+              className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting}
+              className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {editingId ? 'Update' : 'Create'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+    </PageContainer>
   );
 }

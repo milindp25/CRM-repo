@@ -26,9 +26,16 @@ import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole, Feature, TIER_FEATURES, SubscriptionTier } from '@hrplatform/shared';
 import {
+  CreatePayrollDto,
+  UpdatePayrollDto,
+  ProcessPayrollDto,
+  MarkPaidDto,
   BatchPayrollDto,
   ProcessBonusDto,
   SubmitApprovalDto,
+  RejectBatchDto,
+  RequestChangesDto,
+  AddAdjustmentsDto,
 } from './dto';
 import { PrismaService } from '../../database/prisma.service';
 import { CacheService } from '../../common/services/cache.service';
@@ -99,7 +106,7 @@ export class PayrollController {
   @ApiOperation({ summary: 'Create a new payroll entry (manual)' })
   @ApiResponse({ status: 201, description: 'Payroll created successfully' })
   async create(
-    @Body() createPayrollDto: any,
+    @Body() createPayrollDto: CreatePayrollDto,
     @CurrentUser() user: JwtPayload,
   ) {
     return this.payrollService.create(user.companyId, user.userId, createPayrollDto);
@@ -177,6 +184,56 @@ export class PayrollController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.payrollService.submitForApproval(id, user.companyId, user.userId, dto.notes);
+  }
+
+  @Post('batch/:id/approve')
+  @Roles(UserRole.COMPANY_ADMIN)
+  @ApiOperation({ summary: 'Approve a payroll batch' })
+  @ApiResponse({ status: 200, description: 'Batch approved' })
+  @ApiResponse({ status: 404, description: 'Batch not found' })
+  async approveBatch(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.payrollService.approveBatch(id, user.companyId, user.userId);
+  }
+
+  @Post('batch/:id/reject')
+  @Roles(UserRole.COMPANY_ADMIN)
+  @ApiOperation({ summary: 'Reject a payroll batch' })
+  @ApiResponse({ status: 200, description: 'Batch rejected' })
+  @ApiResponse({ status: 404, description: 'Batch not found' })
+  async rejectBatch(
+    @Param('id') id: string,
+    @Body() dto: RejectBatchDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.payrollService.rejectBatch(id, user.companyId, user.userId, dto.reason ?? '');
+  }
+
+  @Post('batch/:id/request-changes')
+  @Roles(UserRole.COMPANY_ADMIN)
+  @ApiOperation({ summary: 'Request changes on a payroll batch' })
+  @ApiResponse({ status: 200, description: 'Changes requested' })
+  @ApiResponse({ status: 404, description: 'Batch not found' })
+  async requestChanges(
+    @Param('id') id: string,
+    @Body() dto: RequestChangesDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.payrollService.requestChanges(id, user.companyId, user.userId, dto.comments);
+  }
+
+  @Post('batch/:id/mark-paid')
+  @Roles(UserRole.HR_ADMIN, UserRole.COMPANY_ADMIN)
+  @ApiOperation({ summary: 'Mark all eligible payrolls in a batch as paid' })
+  @ApiResponse({ status: 200, description: 'Batch marked as paid' })
+  @ApiResponse({ status: 404, description: 'Batch not found' })
+  async markBatchAsPaid(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.payrollService.markBatchAsPaid(id, user.companyId, user.userId);
   }
 
   @Get('batch/:id/bank-file')
@@ -478,7 +535,7 @@ export class PayrollController {
   @ApiResponse({ status: 200, description: 'Payroll updated successfully' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updatePayrollDto: any,
+    @Body() updatePayrollDto: UpdatePayrollDto,
     @CurrentUser() user: JwtPayload,
   ) {
     return this.payrollService.update(id, user.companyId, user.userId, updatePayrollDto);
@@ -502,7 +559,7 @@ export class PayrollController {
   @ApiResponse({ status: 200, description: 'Payroll processed successfully' })
   async processPayroll(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: any,
+    @Body() dto: ProcessPayrollDto,
     @CurrentUser() user: JwtPayload,
   ) {
     return this.payrollService.processPayroll(id, user.companyId, user.userId, dto);
@@ -514,7 +571,7 @@ export class PayrollController {
   @ApiResponse({ status: 200, description: 'Payroll marked as paid' })
   async markAsPaid(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: any,
+    @Body() dto: MarkPaidDto,
     @CurrentUser() user: JwtPayload,
   ) {
     return this.payrollService.markAsPaid(id, user.companyId, user.userId, dto);
@@ -529,6 +586,50 @@ export class PayrollController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.payrollService.recalculate(id, user.companyId, user.userId);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // ADJUSTMENTS (ad-hoc earnings/deductions on DRAFT payroll)
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  @Post(':id/adjustments')
+  @Roles(UserRole.HR_ADMIN, UserRole.COMPANY_ADMIN)
+  @ApiOperation({ summary: 'Add adjustments (earnings/deductions) to a DRAFT payroll' })
+  @ApiResponse({ status: 201, description: 'Adjustments added' })
+  @ApiResponse({ status: 404, description: 'Payroll not found' })
+  @ApiResponse({ status: 409, description: 'Payroll is not in DRAFT status' })
+  async addAdjustments(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AddAdjustmentsDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.payrollService.addAdjustments(id, dto, user.userId, user.companyId);
+  }
+
+  @Delete(':id/adjustments/:adjId')
+  @Roles(UserRole.HR_ADMIN, UserRole.COMPANY_ADMIN)
+  @ApiOperation({ summary: 'Remove an adjustment from a DRAFT payroll' })
+  @ApiResponse({ status: 200, description: 'Adjustment removed' })
+  @ApiResponse({ status: 404, description: 'Payroll or adjustment not found' })
+  @ApiResponse({ status: 409, description: 'Payroll is not in DRAFT status' })
+  async removeAdjustment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('adjId') adjId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.payrollService.removeAdjustment(id, adjId, user.companyId);
+  }
+
+  @Get(':id/adjustments')
+  @Roles(UserRole.HR_ADMIN, UserRole.MANAGER, UserRole.COMPANY_ADMIN)
+  @ApiOperation({ summary: 'Get adjustments for a payroll entry' })
+  @ApiResponse({ status: 200, description: 'Adjustments retrieved' })
+  @ApiResponse({ status: 404, description: 'Payroll not found' })
+  async getAdjustments(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.payrollService.getAdjustments(id, user.companyId);
   }
 
   @Get(':id/payslip')

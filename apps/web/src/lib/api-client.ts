@@ -123,6 +123,7 @@ export interface Employee {
     lastName: string;
     workEmail: string;
   };
+  photoUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -710,6 +711,29 @@ class ApiClient {
     });
   }
 
+  async bulkApproveLeave(leaveIds: string[], reason?: string): Promise<{ processed: number; skipped: number; errors: Array<{ leaveId: string; reason: string }> }> {
+    return this.request(`/leave/bulk-approve`, {
+      method: 'POST',
+      body: JSON.stringify({ leaveIds, reason }),
+    });
+  }
+
+  async bulkRejectLeave(leaveIds: string[], reason?: string): Promise<{ processed: number; skipped: number; errors: Array<{ leaveId: string; reason: string }> }> {
+    return this.request(`/leave/bulk-reject`, {
+      method: 'POST',
+      body: JSON.stringify({ leaveIds, reason }),
+    });
+  }
+
+  // ==================== Bulk Attendance ====================
+
+  async bulkMarkAttendance(date: string, records: Array<{ employeeId: string; status?: string; checkInTime?: string; checkOutTime?: string }>): Promise<{ created: number; skipped: number; errors: Array<{ employeeId: string; reason: string }> }> {
+    return this.request(`/attendance/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ date, records }),
+    });
+  }
+
   // ==================== Payroll Endpoints ====================
 
   async getPayroll(filters?: PayrollFilters): Promise<PayrollPaginationResponse> {
@@ -863,6 +887,19 @@ class ApiClient {
     return this.request(`/payroll/batch/${batchId}/reject`, {
       method: 'POST',
       body: JSON.stringify({ notes }),
+    });
+  }
+
+  async requestBatchChanges(batchId: string, comments: string): Promise<any> {
+    return this.request(`/payroll/batch/${batchId}/request-changes`, {
+      method: 'POST',
+      body: JSON.stringify({ comments }),
+    });
+  }
+
+  async markBatchAsPaid(batchId: string): Promise<any> {
+    return this.request(`/payroll/batch/${batchId}/mark-paid`, {
+      method: 'POST',
     });
   }
 
@@ -1851,6 +1888,72 @@ class ApiClient {
 
   async getMyAcknowledgments(): Promise<PolicyAcknowledgment[]> {
     return this.request<PolicyAcknowledgment[]>('/policies/acknowledgments/my');
+  }
+
+  // ==================== File Upload Endpoints ====================
+
+  /**
+   * Upload employee photo
+   */
+  async uploadEmployeePhoto(employeeId: string, file: File): Promise<{ photoUrl: string }> {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const authToken = this.accessToken;
+    const url = `${this.baseUrl}/employees/${employeeId}/photo`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+      credentials: 'include',
+      body: formData,
+    });
+
+    const data: ApiResponse<{ photoUrl: string }> = await response.json();
+
+    if (!response.ok || !data.success) {
+      const errorData = data as ApiErrorResponse;
+      const message = Array.isArray(errorData.error.message)
+        ? errorData.error.message.join(', ')
+        : errorData.error.message;
+      throw new ApiError(errorData.error.statusCode, message);
+    }
+
+    return (data as ApiSuccessResponse<{ photoUrl: string }>).data;
+  }
+
+  /**
+   * Upload company logo
+   */
+  async uploadCompanyLogo(file: File): Promise<{ logoUrl: string }> {
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    const authToken = this.accessToken;
+    const url = `${this.baseUrl}/company/logo`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+      credentials: 'include',
+      body: formData,
+    });
+
+    const data: ApiResponse<{ logoUrl: string }> = await response.json();
+
+    if (!response.ok || !data.success) {
+      const errorData = data as ApiErrorResponse;
+      const message = Array.isArray(errorData.error.message)
+        ? errorData.error.message.join(', ')
+        : errorData.error.message;
+      throw new ApiError(errorData.error.statusCode, message);
+    }
+
+    return (data as ApiSuccessResponse<{ logoUrl: string }>).data;
   }
 
   // ==================== Generic Request Methods ====================

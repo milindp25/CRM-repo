@@ -253,6 +253,9 @@ export interface Payroll {
   ifscCode?: string;
   bankName?: string;
   status: 'DRAFT' | 'PROCESSED' | 'PAID' | 'HOLD';
+  approvalStatus?: string;
+  adjustments?: Array<{ id: string; name: string; type: 'EARNING' | 'DEDUCTION'; amount: number; reason?: string }>;
+  batchId?: string;
   paidAt?: string;
   payslipPath?: string;
   notes?: string;

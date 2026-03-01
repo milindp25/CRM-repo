@@ -10,6 +10,8 @@ import { useRouter } from 'next/navigation';
 import { Edit, Trash2, Mail, Phone, Calendar, MapPin, Briefcase, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 interface EmployeeDetailProps {
   employeeId: string;
@@ -44,40 +46,6 @@ export function EmployeeDetail({ employeeId }: EmployeeDetailProps) {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'bg-green-100 text-green-800';
-      case 'ON_NOTICE':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'RESIGNED':
-        return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
-      case 'TERMINATED':
-        return 'bg-red-100 text-red-800';
-      case 'ON_LEAVE':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'Active';
-      case 'ON_NOTICE':
-        return 'On Notice';
-      case 'RESIGNED':
-        return 'Resigned';
-      case 'TERMINATED':
-        return 'Terminated';
-      case 'ON_LEAVE':
-        return 'On Leave';
-      default:
-        return status;
-    }
-  };
-
   const getEmploymentTypeLabel = (type: string) => {
     switch (type) {
       case 'FULL_TIME':
@@ -97,7 +65,7 @@ export function EmployeeDetail({ employeeId }: EmployeeDetailProps) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
           <span className="ml-3 text-muted-foreground">Loading employee details...</span>
         </div>
       </div>
@@ -107,24 +75,7 @@ export function EmployeeDetail({ employeeId }: EmployeeDetailProps) {
   if (error || !employee) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 className="text-red-800 font-semibold mb-2">Error Loading Employee</h3>
-          <p className="text-red-700 mb-4">{error || 'Employee not found'}</p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => refetch()}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={() => router.push('/employees')}
-              className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-            >
-              Back to List
-            </button>
-          </div>
-        </div>
+        <ErrorBanner message={error || 'Employee not found'} onRetry={() => refetch()} onDismiss={() => router.push('/employees')} />
       </div>
     );
   }
@@ -135,25 +86,31 @@ export function EmployeeDetail({ employeeId }: EmployeeDetailProps) {
       <div className="mb-8">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-6">
-            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-              {employee.firstName[0]}{employee.lastName[0]}
-            </div>
+            {employee.photoUrl ? (
+              <img
+                src={employee.photoUrl}
+                alt={`${employee.firstName} ${employee.lastName}`}
+                className="h-20 w-20 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">
+                {employee.firstName[0]}{employee.lastName[0]}
+              </div>
+            )}
             <div>
               <h1 className="text-3xl font-bold text-foreground">
                 {employee.firstName} {employee.middleName ? employee.middleName + ' ' : ''}{employee.lastName}
               </h1>
               <p className="mt-1 text-lg text-muted-foreground">{employee.employeeCode}</p>
               <div className="mt-2">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(employee.status)}`}>
-                  {getStatusLabel(employee.status)}
-                </span>
+                <StatusBadge variant={getStatusVariant(employee.status)}>{employee.status}</StatusBadge>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push(`/employees/${employeeId}/edit`)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               <Edit className="h-4 w-4" />
               Edit
@@ -161,7 +118,7 @@ export function EmployeeDetail({ employeeId }: EmployeeDetailProps) {
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="flex items-center gap-2 px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 border border-destructive text-destructive rounded-lg hover:bg-destructive/10 transition-colors disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
               {isDeleting ? 'Deleting...' : 'Delete'}

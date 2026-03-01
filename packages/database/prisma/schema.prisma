@@ -57,6 +57,10 @@ model Company {
   onboardingCompleted Boolean @default(false) @map("onboarding_completed")
   onboardingStep      Int     @default(0) @map("onboarding_step")
 
+  // Payroll auto-generation
+  payrollAutoGenerate Boolean @default(false) @map("payroll_auto_generate")
+  payrollAutoDay      Int     @default(25) @map("payroll_auto_day")
+
   // SSO Configuration (JSON)
   ssoConfig Json? @map("sso_config") @db.JsonB
   // Structure: { provider: 'google'|'saml', enabled: boolean, googleClientId?, googleClientSecret?, samlEntryPoint?, samlIssuer?, samlCert?, allowedDomains?: string[] }
@@ -77,6 +81,9 @@ model Company {
 
   // US Company Registration - ENCRYPTED
   einEncrypted        String? @map("ein_encrypted") @db.Text // US EIN
+
+  // Registration
+  registrationSource String @default("SELF_REGISTERED") @map("registration_source") @db.VarChar(50)
 
   // Status
   isActive  Boolean   @default(true) @map("is_active")
@@ -162,6 +169,7 @@ model User {
   // Status
   isActive       Boolean   @default(true) @map("is_active")
   emailVerified  Boolean   @default(false) @map("email_verified")
+  onboardingCompleted Boolean @default(false) @map("onboarding_completed")
   lastLoginAt    DateTime? @map("last_login_at") @db.Timestamptz
   passwordChangedAt DateTime? @map("password_changed_at") @db.Timestamptz
   
@@ -331,6 +339,9 @@ model Employee {
   uanEncrypted       String?  @map("uan_encrypted") @db.Text // India UAN for PF (encrypted)
   salaryStructureId  String?  @map("salary_structure_id") @db.Uuid // FK to SalaryStructure
   annualCtc          Decimal? @map("annual_ctc") @db.Decimal(15, 2) // Annual CTC for salary computation
+
+  // Photo
+  photoUrl           String?  @map("photo_url") @db.Text
 
   // Offboarding
   noticePeriodDays   Int?     @map("notice_period_days")
@@ -541,6 +552,9 @@ model Payroll {
   tds         Decimal @default(0) @db.Decimal(15, 2)
   pt          Decimal @default(0) @db.Decimal(15, 2) // Professional Tax
   otherDeductions Decimal @default(0) @map("other_deductions") @db.Decimal(15, 2)
+
+  // Adjustments (ad-hoc earnings/deductions added before processing)
+  adjustments Json? @db.JsonB
 
   // US Deductions
   ssEmployee       Decimal @default(0) @map("ss_employee") @db.Decimal(15, 2) // Social Security employee

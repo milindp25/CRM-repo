@@ -24,14 +24,14 @@ export function ErrorBanner({ message, onDismiss, onRetry, className = '' }: Err
   };
 
   return (
-    <div className={`flex items-center gap-3 p-4 rounded-lg border border-red-200 bg-red-50 ${className}`}>
-      <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
-      <p className="flex-1 text-sm text-red-700">{message}</p>
+    <div className={`flex items-center gap-3 p-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30 ${className}`}>
+      <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0" />
+      <p className="flex-1 text-sm text-red-700 dark:text-red-300">{message}</p>
       <div className="flex items-center gap-1 flex-shrink-0">
         {onRetry && (
           <button
             onClick={onRetry}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-md hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors"
           >
             <RefreshCw className="w-3 h-3" />
             Retry
@@ -39,7 +39,7 @@ export function ErrorBanner({ message, onDismiss, onRetry, className = '' }: Err
         )}
         <button
           onClick={handleDismiss}
-          className="p-1 text-red-400 hover:text-red-600 rounded-md hover:bg-red-100 transition-colors"
+          className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 rounded-md hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
           aria-label="Dismiss error"
         >
           <X className="w-4 h-4" />
@@ -73,7 +73,7 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
       {action && (
         <button
           onClick={action.onClick}
-          className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+          className="mt-4 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors"
         >
           {action.label}
         </button>

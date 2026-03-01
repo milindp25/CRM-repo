@@ -1,8 +1,11 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import * as bcrypt from 'bcryptjs';
 import { LoggerService } from '../../common/services/logger.service';
 import { CacheService } from '../../common/services/cache.service';
+import { StorageService } from '../../common/services/storage.service';
 import { EmployeeRepository } from './employee.repository';
 import { IEmployeeService } from './interfaces/employee.service.interface';
 import {
@@ -15,6 +18,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { TIER_LIMITS, SubscriptionTier } from '@hrplatform/shared';
+import { USER_REGISTERED } from '../../common/events/events';
 
 /**
  * Employee Service (Business Logic Layer)
@@ -32,6 +36,8 @@ export class EmployeeService implements IEmployeeService {
     private readonly logger: LoggerService,
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly storageService: StorageService,
   ) {
     // Get encryption key from environment
     const key = this.configService.get<string>('ENCRYPTION_KEY');
@@ -83,6 +89,9 @@ export class EmployeeService implements IEmployeeService {
     this.cache.invalidateByPrefix(`emps:${companyId}`);
 
     this.logger.log(`Employee created: ${employee.employeeCode} (${employee.workEmail})`, 'EmployeeService');
+
+    // Auto-create linked User account with temp password
+    await this.createLinkedUserAccount(employee, companyId);
 
     // Create audit log (fire and forget)
     this.employeeRepository.createAuditLog({
@@ -234,6 +243,48 @@ export class EmployeeService implements IEmployeeService {
   }
 
   /**
+   * Upload employee photo
+   */
+  async uploadPhoto(id: string, companyId: string, file: Express.Multer.File) {
+    const employee = await this.employeeRepository.findById(id, companyId);
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${id} not found`);
+    }
+
+    // Delete old photo if exists
+    if (employee.photoUrl) {
+      try {
+        await this.storageService.delete(employee.photoUrl);
+      } catch {
+        // Ignore deletion errors for old file
+      }
+    }
+
+    const result = await this.storageService.upload(
+      {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        buffer: file.buffer,
+      },
+      companyId,
+      'photos',
+    );
+
+    // Update employee record with photo path
+    await this.prisma.employee.update({
+      where: { id },
+      data: { photoUrl: result.filePath },
+    });
+
+    this.cache.invalidateByPrefix(`emps:${companyId}`);
+
+    this.logger.log(`Photo uploaded for employee ${employee.employeeCode}`, 'EmployeeService');
+
+    return { photoUrl: result.filePath };
+  }
+
+  /**
    * Private: Check if company has reached employee limit for its subscription tier
    */
   private async checkEmployeeLimit(companyId: string): Promise<void> {
@@ -256,6 +307,80 @@ export class EmployeeService implements IEmployeeService {
     if (currentCount >= limits.maxEmployees) {
       throw new ForbiddenException(
         `Employee limit reached (${limits.maxEmployees} for ${tier} plan). Please upgrade your subscription to add more employees.`,
+      );
+    }
+  }
+
+  /**
+   * Private: Auto-create a User account linked to the employee.
+   * Generates a temporary password and emits a welcome email event.
+   * Skips silently if a User with the same email already exists.
+   */
+  private async createLinkedUserAccount(employee: any, companyId: string): Promise<void> {
+    try {
+      // Check if a User already exists with this work email in this company
+      const existingUser = await this.prisma.user.findFirst({
+        where: { email: employee.workEmail, companyId },
+      });
+
+      if (existingUser) {
+        this.logger.log(
+          `User account already exists for ${employee.workEmail}, skipping auto-creation`,
+          'EmployeeService',
+        );
+        return;
+      }
+
+      // Generate a temporary password
+      const tempPassword = randomBytes(6).toString('base64url'); // ~8 chars, URL-safe
+
+      // Hash the password
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+      // Create the User record linked to this employee
+      const user = await this.prisma.user.create({
+        data: {
+          companyId,
+          email: employee.workEmail,
+          passwordHash,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          phone: employee.workPhone ?? undefined,
+          role: 'EMPLOYEE',
+          employeeId: employee.id,
+          isActive: true,
+          emailVerified: false,
+        },
+      });
+
+      // Fetch company name for the welcome email
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { companyName: true },
+      });
+
+      // Emit USER_REGISTERED event → triggers welcome email with temp password
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+      this.eventEmitter.emit(USER_REGISTERED, {
+        companyId,
+        companyName: company?.companyName || 'Your Company',
+        userId: user.id,
+        userName: `${employee.firstName} ${employee.lastName}`,
+        userEmail: employee.workEmail,
+        loginUrl: `${frontendUrl}/login`,
+        tempPassword,
+      });
+
+      this.logger.log(
+        `User account auto-created for employee ${employee.employeeCode} (${employee.workEmail})`,
+        'EmployeeService',
+      );
+    } catch (error) {
+      // Don't fail employee creation if user account creation fails
+      this.logger.error(
+        `Failed to auto-create user account for ${employee.workEmail}: ${(error as Error).message}`,
+        (error as Error).stack,
+        'EmployeeService',
       );
     }
   }
@@ -415,6 +540,7 @@ export class EmployeeService implements IEmployeeService {
       designationId: employee.designationId,
       reportingManagerId: employee.reportingManagerId,
       employmentType: employee.employmentType,
+      photoUrl: employee.photoUrl ?? undefined,
       status: employee.status,
       isActive: employee.isActive,
       createdAt: employee.createdAt,

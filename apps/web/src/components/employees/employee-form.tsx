@@ -5,13 +5,13 @@
  * Create and edit employee with validation
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEmployee } from '@/hooks/use-employee';
 import { apiClient } from '@/lib/api-client';
 import type { CreateEmployeeData, Employee } from '@/lib/api-client';
 import type { Department, Designation } from '@/lib/api/types';
-import { Loader2, Save, X } from 'lucide-react';
+import { Loader2, Save, X, Camera } from 'lucide-react';
 
 interface EmployeeFormProps {
   mode: 'create' | 'edit';
@@ -57,6 +57,9 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [departments, setDepartments] = useState<Department[]>([]);
   const [designations, setDesignations] = useState<Designation[]>([]);
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(effectiveData?.photoUrl);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch departments and designations for dropdowns
   useEffect(() => {
@@ -106,8 +109,28 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
         reportingManagerId: employee.reportingManager?.id || '',
         probationEndDate: employee.probationEndDate ? employee.probationEndDate.split('T')[0] : '',
       });
+      setPhotoUrl(employee.photoUrl);
     }
   }, [employee, mode]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !employeeId) return;
+
+    setUploadingPhoto(true);
+    try {
+      const result = await apiClient.uploadEmployeePhoto(employeeId, file);
+      setPhotoUrl(result.photoUrl);
+    } catch (error: any) {
+      setErrors((prev) => ({ ...prev, photo: error.message || 'Failed to upload photo' }));
+    } finally {
+      setUploadingPhoto(false);
+      // Reset file input so the same file can be re-selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -215,6 +238,72 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
         </div>
       )}
 
+      {mode === 'create' && (
+        <div className="mb-6 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-start gap-3">
+          <svg className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+          </svg>
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            A user account will be automatically created with the work email address. The employee will receive a welcome email with temporary login credentials.
+          </p>
+        </div>
+      )}
+
+      {/* Photo Upload (edit mode only) */}
+      {mode === 'edit' && employeeId && (
+        <div className="mb-8 bg-card shadow-md rounded-lg p-6 border border-border">
+          <h2 className="text-xl font-semibold text-foreground mb-4">Employee Photo</h2>
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt="Employee photo"
+                  className="h-24 w-24 rounded-full object-cover border-2 border-border"
+                />
+              ) : (
+                <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/70 to-primary flex items-center justify-center text-primary-foreground text-2xl font-bold border-2 border-border">
+                  {(formData.firstName?.[0] || '').toUpperCase()}{(formData.lastName?.[0] || '').toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadingPhoto ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Camera className="h-4 w-4" />
+                    Upload Photo
+                  </>
+                )}
+              </button>
+              <p className="mt-2 text-sm text-muted-foreground">
+                JPG, PNG or WebP. Max 5MB.
+              </p>
+              {errors.photo && (
+                <p className="mt-1 text-sm text-red-600">{errors.photo}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-8">
         {/* Basic Information */}
         <div className="bg-card shadow-md rounded-lg p-6 border border-border">
@@ -228,7 +317,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="text"
                 value={formData.employeeCode}
                 onChange={(e) => handleChange('employeeCode', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 placeholder="Auto-generated (e.g., EMP-001)"
               />
             </div>
@@ -241,7 +330,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="email"
                 value={formData.workEmail}
                 onChange={(e) => handleChange('workEmail', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary ${
                   errors.workEmail ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="john.doe@company.com"
@@ -259,7 +348,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => handleChange('firstName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary ${
                   errors.firstName ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="John"
@@ -277,7 +366,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="text"
                 value={formData.middleName}
                 onChange={(e) => handleChange('middleName', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 placeholder="Optional"
               />
             </div>
@@ -290,7 +379,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => handleChange('lastName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary ${
                   errors.lastName ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="Doe"
@@ -308,7 +397,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="date"
                 value={formData.dateOfBirth}
                 onChange={(e) => handleChange('dateOfBirth', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
             </div>
 
@@ -319,7 +408,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
               <select
                 value={formData.gender}
                 onChange={(e) => handleChange('gender', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
               >
                 <option value="">Select Gender</option>
                 <option value="MALE">Male</option>
@@ -342,7 +431,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="email"
                 value={formData.personalEmail}
                 onChange={(e) => handleChange('personalEmail', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary ${
                   errors.personalEmail ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="john@gmail.com"
@@ -360,7 +449,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="tel"
                 value={formData.workPhone}
                 onChange={(e) => handleChange('workPhone', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 placeholder="+91 1234567890"
               />
             </div>
@@ -373,7 +462,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="tel"
                 value={formData.personalPhone}
                 onChange={(e) => handleChange('personalPhone', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 placeholder="+91 9876543210"
               />
             </div>
@@ -392,7 +481,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="text"
                 value={formData.aadhaar}
                 onChange={(e) => handleChange('aadhaar', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary ${
                   errors.aadhaar ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="123456789012"
@@ -411,7 +500,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="text"
                 value={formData.pan}
                 onChange={(e) => handleChange('pan', e.target.value.toUpperCase())}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary ${
                   errors.pan ? 'border-red-500' : 'border-border'
                 }`}
                 placeholder="ABCDE1234F"
@@ -428,7 +517,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="text"
                 value={formData.passport}
                 onChange={(e) => handleChange('passport', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 placeholder="Optional"
               />
             </div>
@@ -447,7 +536,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="date"
                 value={formData.dateOfJoining}
                 onChange={(e) => handleChange('dateOfJoining', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary ${
                   errors.dateOfJoining ? 'border-red-500' : 'border-border'
                 }`}
               />
@@ -463,7 +552,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
               <select
                 value={formData.employmentType}
                 onChange={(e) => handleChange('employmentType', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary ${
                   errors.employmentType ? 'border-red-500' : 'border-border'
                 }`}
               >
@@ -484,7 +573,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
               <select
                 value={formData.status}
                 onChange={(e) => handleChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
               >
                 <option value="ACTIVE">Active</option>
                 <option value="ON_NOTICE">On Notice</option>
@@ -501,7 +590,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
               <select
                 value={formData.departmentId || ''}
                 onChange={(e) => handleChange('departmentId', e.target.value || undefined)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
               >
                 <option value="">Select Department</option>
                 {departments.map((dept) => (
@@ -519,7 +608,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
               <select
                 value={formData.designationId || ''}
                 onChange={(e) => handleChange('designationId', e.target.value || undefined)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
               >
                 <option value="">Select Designation</option>
                 {designations.map((desig) => (
@@ -538,7 +627,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="date"
                 value={formData.probationEndDate || ''}
                 onChange={(e) => handleChange('probationEndDate', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
             </div>
           </div>
@@ -556,7 +645,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="text"
                 value={formData.addressLine1}
                 onChange={(e) => handleChange('addressLine1', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 placeholder="Street address"
               />
             </div>
@@ -569,7 +658,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                 type="text"
                 value={formData.addressLine2}
                 onChange={(e) => handleChange('addressLine2', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 placeholder="Apartment, suite, etc."
               />
             </div>
@@ -583,7 +672,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                   type="text"
                   value={formData.city}
                   onChange={(e) => handleChange('city', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
 
@@ -595,7 +684,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                   type="text"
                   value={formData.state}
                   onChange={(e) => handleChange('state', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
 
@@ -607,7 +696,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                   type="text"
                   value={formData.postalCode}
                   onChange={(e) => handleChange('postalCode', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
 
@@ -619,7 +708,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
                   type="text"
                   value={formData.country}
                   onChange={(e) => handleChange('country', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
               </div>
             </div>
@@ -638,7 +727,7 @@ export function EmployeeForm({ mode, employeeId, initialData }: EmployeeFormProp
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>

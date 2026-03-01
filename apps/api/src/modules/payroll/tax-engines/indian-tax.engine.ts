@@ -10,6 +10,8 @@ import type {
  * Indian Tax Engine — FY 2025-26
  *
  * Computes: PF, ESI, TDS (New/Old Regime), Professional Tax
+ * Old Regime supports: 80C (₹1.5L), 80D (₹25K-₹1L), HRA exemption
+ * Surcharge for high-income taxpayers (both regimes)
  * Tax rates loaded from TaxConfiguration table at runtime.
  * Falls back to hardcoded defaults if DB config unavailable.
  */
@@ -40,6 +42,20 @@ export class IndianTaxEngine implements TaxEngine {
   private newRegimeRebate = { maxIncome: 1200000, maxRebate: 60000 };
   private oldRegimeRebate = { maxIncome: 500000, maxRebate: 12500 };
   private cess = 4; // %
+
+  // Old Regime deduction caps
+  private section80CCap = 150000; // ₹1.5L
+  private section80DSelfCap = 25000; // ₹25K (₹50K for senior citizens — not tracked here)
+  private section80DParentsCap = 50000; // ₹50K for senior citizen parents
+
+  // Surcharge slabs (both regimes, applied on income tax before cess)
+  private surchargeSlabs = [
+    { min: 5000000, max: Infinity, rate: 37 },
+    { min: 2000000, max: 5000000, rate: 25 },
+    { min: 1000000, max: 2000000, rate: 15 },
+    { min: 500000, max: 1000000, rate: 10 },
+  ];
+  private newRegimeMaxSurchargeRate = 25; // New regime caps surcharge at 25%
 
   private pfConfig = {
     employeeRate: 12,
@@ -142,6 +158,7 @@ export class IndianTaxEngine implements TaxEngine {
       isBonus = false,
       ytdTaxPaid = 0,
       monthsRemaining = 12,
+      investments,
     } = input;
 
     let pfEmployee = 0;
@@ -181,9 +198,11 @@ export class IndianTaxEngine implements TaxEngine {
     // TDS — always applies (including bonus, with different projection)
     const tds = this.calculateMonthlyTDS(
       annualCTC,
+      basicMonthly,
       taxRegime,
       ytdTaxPaid,
       monthsRemaining,
+      investments,
       isBonus ? grossMonthly : undefined,
     );
 
@@ -227,91 +246,201 @@ export class IndianTaxEngine implements TaxEngine {
   }
 
   getAnnualProjection(input: TaxComputationInput): AnnualProjection {
-    const { annualCTC, taxRegime = 'NEW' } = input;
+    const { annualCTC, basicMonthly, taxRegime = 'NEW', investments } = input;
 
-    const slabs =
-      taxRegime === 'NEW' ? this.newRegimeSlabs : this.oldRegimeSlabs;
-    const stdDeduction =
-      taxRegime === 'NEW'
-        ? this.newRegimeStdDeduction
-        : this.oldRegimeStdDeduction;
-    const rebate =
-      taxRegime === 'NEW' ? this.newRegimeRebate : this.oldRegimeRebate;
+    const result = this.computeAnnualTax(annualCTC, basicMonthly, taxRegime, investments);
 
-    const taxableIncome = Math.max(0, annualCTC - stdDeduction);
-    let tax = this.computeSlabTax(taxableIncome, slabs);
-
-    // Apply 87A rebate
-    if (taxableIncome <= rebate.maxIncome) {
-      tax = Math.max(0, tax - rebate.maxRebate);
-    }
-
-    // Add cess
-    const totalTax = Math.round(tax + (tax * this.cess) / 100);
-    const monthlyTax = Math.round(totalTax / 12);
-    const effectiveRate = annualCTC > 0 ? (totalTax / annualCTC) * 100 : 0;
+    const monthlyTax = Math.round(result.totalTax / 12);
+    const effectiveRate = annualCTC > 0 ? (result.totalTax / annualCTC) * 100 : 0;
 
     return {
       annualGross: annualCTC,
-      annualTaxableIncome: taxableIncome,
-      annualTaxLiability: totalTax,
+      annualTaxableIncome: result.taxableIncome,
+      annualTaxLiability: result.totalTax,
       monthlyTaxDeduction: monthlyTax,
       effectiveTaxRate: Math.round(effectiveRate * 100) / 100,
       breakdown: {
-        standardDeduction: stdDeduction,
-        taxBeforeRebate: Math.round(tax + (tax * this.cess) / 100),
-        rebateApplied: taxableIncome <= rebate.maxIncome,
-        cess: this.cess,
+        standardDeduction: result.standardDeduction,
+        section80C: result.section80C,
+        section80D: result.section80D,
+        hraExemption: result.hraExemption,
+        taxBeforeRebate: result.taxOnIncome,
+        surcharge: result.surcharge,
+        rebateApplied: result.rebate87A > 0,
+        rebate87A: result.rebate87A,
+        cess: result.cessAmount,
         slabsUsed: taxRegime,
       },
     };
   }
 
   /**
+   * Compute full annual tax with all deductions, surcharge, rebate, and cess.
+   * Public so Form 16 Part B can call it directly.
+   */
+  computeAnnualTax(
+    annualCTC: number,
+    basicMonthly: number,
+    taxRegime: string,
+    investments?: TaxComputationInput['investments'],
+  ): {
+    taxableIncome: number;
+    standardDeduction: number;
+    section80C: number;
+    section80D: number;
+    hraExemption: number;
+    taxOnIncome: number;
+    surcharge: number;
+    rebate87A: number;
+    cessAmount: number;
+    totalTax: number;
+  } {
+    const slabs = taxRegime === 'NEW' ? this.newRegimeSlabs : this.oldRegimeSlabs;
+    const stdDeduction = taxRegime === 'NEW' ? this.newRegimeStdDeduction : this.oldRegimeStdDeduction;
+    const rebate = taxRegime === 'NEW' ? this.newRegimeRebate : this.oldRegimeRebate;
+
+    let totalDeductions = stdDeduction;
+    let section80C = 0;
+    let section80D = 0;
+    let hraExemption = 0;
+
+    // Old Regime specific deductions (80C, 80D, HRA)
+    if (taxRegime === 'OLD' && investments) {
+      // Section 80C — max ₹1.5L
+      if (investments.section80C) {
+        section80C = Math.min(investments.section80C, this.section80CCap);
+        totalDeductions += section80C;
+      }
+
+      // Section 80D — medical insurance
+      if (investments.section80D) {
+        const selfDeduction = Math.min(investments.section80D, this.section80DSelfCap);
+        const parentsDeduction = investments.section80DSenior
+          ? Math.min(investments.section80DSenior, this.section80DParentsCap)
+          : 0;
+        section80D = selfDeduction + parentsDeduction;
+        totalDeductions += section80D;
+      }
+
+      // HRA exemption — min of (actual HRA, rent - 10% basic, 50%/40% of basic)
+      if (investments.hraReceived && investments.rentPaid) {
+        const annualHra = investments.hraReceived * 12;
+        const annualRent = investments.rentPaid * 12;
+        const annualBasic = basicMonthly * 12;
+        const metroPercent = investments.metroCity ? 50 : 40;
+
+        const hraOption1 = annualHra; // Actual HRA received
+        const hraOption2 = annualRent - (0.10 * annualBasic); // Rent paid - 10% of basic
+        const hraOption3 = (metroPercent / 100) * annualBasic; // 50%/40% of basic
+
+        hraExemption = Math.max(0, Math.min(hraOption1, hraOption2, hraOption3));
+        totalDeductions += hraExemption;
+      }
+    }
+
+    const taxableIncome = Math.max(0, annualCTC - totalDeductions);
+    let taxOnIncome = this.computeSlabTax(taxableIncome, slabs);
+
+    // Apply Section 87A rebate (before surcharge)
+    let rebate87A = 0;
+    if (taxableIncome <= rebate.maxIncome) {
+      rebate87A = Math.min(taxOnIncome, rebate.maxRebate);
+      taxOnIncome = Math.max(0, taxOnIncome - rebate87A);
+    }
+
+    // Apply surcharge for high-income taxpayers
+    const surcharge = this.calculateSurcharge(taxOnIncome, taxableIncome, taxRegime);
+
+    // Tax after surcharge
+    const taxAfterSurcharge = taxOnIncome + surcharge;
+
+    // Apply 4% Health & Education Cess on (tax + surcharge)
+    const cessAmount = Math.round((taxAfterSurcharge * this.cess) / 100);
+    const totalTax = Math.round(taxAfterSurcharge + cessAmount);
+
+    return {
+      taxableIncome,
+      standardDeduction: stdDeduction,
+      section80C,
+      section80D,
+      hraExemption,
+      taxOnIncome: Math.round(taxOnIncome),
+      surcharge: Math.round(surcharge),
+      rebate87A: Math.round(rebate87A),
+      cessAmount,
+      totalTax,
+    };
+  }
+
+  /**
+   * Calculate surcharge based on taxable income.
+   * New Regime caps surcharge at 25%.
+   * Includes marginal relief calculation.
+   */
+  private calculateSurcharge(tax: number, taxableIncome: number, taxRegime: string): number {
+    if (tax <= 0 || taxableIncome <= 5000000) return 0;
+
+    let surchargeRate = 0;
+    for (const slab of this.surchargeSlabs) {
+      if (taxableIncome > slab.min) {
+        surchargeRate = slab.rate;
+        break;
+      }
+    }
+
+    // New regime caps surcharge at 25%
+    if (taxRegime === 'NEW' && surchargeRate > this.newRegimeMaxSurchargeRate) {
+      surchargeRate = this.newRegimeMaxSurchargeRate;
+    }
+
+    let surcharge = Math.round((tax * surchargeRate) / 100);
+
+    // Marginal relief: surcharge should not exceed the excess income over the threshold
+    // Find the applicable threshold
+    let threshold = 5000000;
+    for (const slab of this.surchargeSlabs) {
+      if (taxableIncome > slab.min && slab.min >= 5000000) {
+        threshold = slab.min;
+        break;
+      }
+    }
+
+    const excessIncome = taxableIncome - threshold;
+    if (surcharge > excessIncome) {
+      surcharge = excessIncome; // Marginal relief
+    }
+
+    return surcharge;
+  }
+
+  /**
    * Calculate monthly TDS using annualization method:
    * 1. Project annual income
-   * 2. Apply standard deduction
+   * 2. Apply standard deduction + Old Regime deductions (80C/80D/HRA)
    * 3. Compute tax from slabs
    * 4. Apply 87A rebate
-   * 5. Add 4% cess
-   * 6. Divide by remaining months
-   * 7. Subtract YTD tax already paid
+   * 5. Apply surcharge for high income
+   * 6. Add 4% cess
+   * 7. Divide by remaining months
+   * 8. Subtract YTD tax already paid
    */
   private calculateMonthlyTDS(
     annualCTC: number,
+    basicMonthly: number,
     taxRegime: string,
     ytdTaxPaid: number,
     monthsRemaining: number,
+    investments?: TaxComputationInput['investments'],
     bonusAmount?: number,
   ): number {
-    const slabs =
-      taxRegime === 'NEW' ? this.newRegimeSlabs : this.oldRegimeSlabs;
-    const stdDeduction =
-      taxRegime === 'NEW'
-        ? this.newRegimeStdDeduction
-        : this.oldRegimeStdDeduction;
-    const rebate =
-      taxRegime === 'NEW' ? this.newRegimeRebate : this.oldRegimeRebate;
-
     // For bonus: add bonus to annual projection
-    const projectedAnnual = bonusAmount
-      ? annualCTC + bonusAmount
-      : annualCTC;
+    const projectedAnnual = bonusAmount ? annualCTC + bonusAmount : annualCTC;
 
-    const taxableIncome = Math.max(0, projectedAnnual - stdDeduction);
-    let tax = this.computeSlabTax(taxableIncome, slabs);
-
-    // Apply 87A rebate
-    if (taxableIncome <= rebate.maxIncome) {
-      tax = Math.max(0, tax - rebate.maxRebate);
-    }
-
-    // Add cess
-    const totalTax = tax + (tax * this.cess) / 100;
+    const result = this.computeAnnualTax(projectedAnnual, basicMonthly, taxRegime, investments);
 
     // Monthly TDS = (Total annual tax - YTD paid) / months remaining
     const remaining = Math.max(1, monthsRemaining);
-    const monthlyTDS = Math.max(0, (totalTax - ytdTaxPaid) / remaining);
+    const monthlyTDS = Math.max(0, (result.totalTax - ytdTaxPaid) / remaining);
 
     return Math.round(monthlyTDS);
   }

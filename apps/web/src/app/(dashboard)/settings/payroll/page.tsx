@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiClient, type Company } from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 import { RoleGate } from '@/components/common/role-gate';
 import { Permission } from '@hrplatform/shared';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
+import { PageContainer } from '@/components/ui/page-container';
+import { Loader2, Globe, ShieldCheck, Bell } from 'lucide-react';
 
 interface PayrollSettingsForm {
   payrollCountry: string;
@@ -104,27 +106,32 @@ export default function PayrollSettingsPage() {
   const isIndia = form.payrollCountry === 'IN';
   const isUS = form.payrollCountry === 'US';
 
-  const inputClass = 'w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent';
-  const labelClass = 'block text-sm font-medium text-foreground mb-1';
-  const sectionClass = 'bg-card rounded-lg shadow-md p-6 mb-6';
+  const inputClass = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
+  const labelClass = 'block text-sm font-medium text-foreground mb-1.5';
+  const sectionClass = 'rounded-xl border bg-card p-6';
+  const checkboxClass = 'mt-1 h-4 w-4 rounded border-input text-primary focus:ring-primary/30';
 
   return (
     <RoleGate requiredPermissions={[Permission.MANAGE_COMPANY]}>
-      <div className="p-8 max-w-4xl">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-1">
-            <a href="/settings" className="text-muted-foreground hover:text-foreground text-sm">&larr; Settings</a>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Payroll Settings</h1>
-          <p className="text-muted-foreground mt-1">Configure payroll region, tax compliance, and pay frequency</p>
-        </div>
+      <PageContainer
+        title="Payroll Settings"
+        description="Configure payroll region, tax compliance, and pay frequency"
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/' },
+          { label: 'Settings', href: '/settings' },
+          { label: 'Payroll' },
+        ]}
+        className="max-w-4xl"
+      >
+        {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
-        {error && <ErrorBanner message={error} onDismiss={() => setError('')} className="mb-6" />}
-
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Payroll Region */}
           <div className={sectionClass}>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Payroll Region</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold text-foreground">Payroll Region</h2>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Country *</label>
@@ -167,7 +174,10 @@ export default function PayrollSettingsPage() {
           {/* India-specific */}
           {isIndia && (
             <div className={sectionClass}>
-              <h2 className="text-lg font-semibold text-foreground mb-4">India Compliance</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold text-foreground">India Compliance</h2>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Company PAN *</label>
@@ -211,7 +221,7 @@ export default function PayrollSettingsPage() {
                     id="pfEnabled"
                     checked={form.pfEnabled}
                     onChange={(e) => setForm(prev => ({ ...prev, pfEnabled: e.target.checked }))}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className={checkboxClass}
                   />
                   <div className="flex-1">
                     <label htmlFor="pfEnabled" className="text-sm font-medium text-foreground cursor-pointer">
@@ -241,7 +251,7 @@ export default function PayrollSettingsPage() {
                     id="esiEnabled"
                     checked={form.esiEnabled}
                     onChange={(e) => setForm(prev => ({ ...prev, esiEnabled: e.target.checked }))}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className={checkboxClass}
                   />
                   <div className="flex-1">
                     <label htmlFor="esiEnabled" className="text-sm font-medium text-foreground cursor-pointer">
@@ -271,7 +281,10 @@ export default function PayrollSettingsPage() {
           {/* US-specific */}
           {isUS && (
             <div className={sectionClass}>
-              <h2 className="text-lg font-semibold text-foreground mb-4">US Compliance</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold text-foreground">US Compliance</h2>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Employer Identification Number (EIN) *</label>
@@ -290,14 +303,17 @@ export default function PayrollSettingsPage() {
 
           {/* Email Payslip */}
           <div className={sectionClass}>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Notifications</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <Bell className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
+            </div>
             <div className="flex items-start gap-3 p-4 border border-border rounded-lg">
               <input
                 type="checkbox"
                 id="emailPayslip"
                 checked={form.emailPayslipEnabled}
                 onChange={(e) => setForm(prev => ({ ...prev, emailPayslipEnabled: e.target.checked }))}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className={checkboxClass}
               />
               <div>
                 <label htmlFor="emailPayslip" className="text-sm font-medium text-foreground cursor-pointer">
@@ -315,13 +331,14 @@ export default function PayrollSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving ? 'Saving...' : 'Save Payroll Settings'}
             </button>
           </div>
         </form>
-      </div>
+      </PageContainer>
     </RoleGate>
   );
 }

@@ -322,6 +322,14 @@ export class AuthService implements IAuthService {
     }
   }
 
+  /**
+   * Check if a company with the given name already exists (case-insensitive)
+   */
+  async checkCompanyExists(name: string): Promise<{ exists: boolean }> {
+    const company = await this.authRepository.findCompanyByName(name);
+    return { exists: !!company };
+  }
+
   // ============================================================================
   // SSO / Google OAuth Methods
   // ============================================================================
@@ -497,6 +505,7 @@ export class AuthService implements IAuthService {
         permissions: (user.permissions as string[]) || [],
         companyId: user.companyId,
         companyName: user.company?.companyName,
+        onboardingCompleted: user.onboardingCompleted ?? user.company?.onboardingCompleted ?? false,
       },
       accessToken,
       refreshToken,

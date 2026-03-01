@@ -21,6 +21,7 @@ export class AuthRepository {
             subscriptionTier: true,
             subscriptionStatus: true,
             isActive: true,
+            onboardingCompleted: true,
           },
         },
       },
@@ -39,6 +40,7 @@ export class AuthRepository {
             subscriptionTier: true,
             subscriptionStatus: true,
             isActive: true,
+            onboardingCompleted: true,
           },
         },
       },
@@ -61,6 +63,7 @@ export class AuthRepository {
           companyCode: data.companyCode,
           subscriptionTier: 'FREE',
           subscriptionStatus: 'TRIAL',
+          registrationSource: 'SELF_REGISTERED',
           isActive: true,
         },
       });
@@ -129,6 +132,16 @@ export class AuthRepository {
     success: boolean;
   }) {
     return this.prisma.auditLog.create({ data });
+  }
+
+  /**
+   * Find a company by name (case-insensitive)
+   */
+  async findCompanyByName(name: string) {
+    return this.prisma.company.findFirst({
+      where: { companyName: { equals: name, mode: 'insensitive' } },
+      select: { id: true, companyName: true },
+    });
   }
 
   // ============================================================================

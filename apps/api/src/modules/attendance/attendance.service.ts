@@ -9,6 +9,8 @@ import {
   AttendanceFilterDto,
   AttendanceResponseDto,
   AttendancePaginationResponseDto,
+  BulkMarkAttendanceDto,
+  BulkAttendanceResponseDto,
 } from './dto';
 
 @Injectable()
@@ -214,6 +216,79 @@ export class AttendanceService {
       resourceId: id,
       oldValues: { employeeId: attendance.employeeId, date: attendance.attendanceDate },
     });
+  }
+
+  /**
+   * Bulk mark attendance for multiple employees on a given date.
+   * Skips employees who already have attendance for that date.
+   */
+  async bulkMark(
+    companyId: string,
+    userId: string,
+    dto: BulkMarkAttendanceDto,
+  ): Promise<BulkAttendanceResponseDto> {
+    this.logger.log(`Bulk marking attendance for ${dto.records.length} employees on ${dto.date}`);
+
+    const result: BulkAttendanceResponseDto = { created: 0, skipped: 0, errors: [] };
+
+    for (const record of dto.records) {
+      try {
+        // Check if already exists
+        const exists = await this.repository.existsByEmployeeAndDate(
+          companyId,
+          record.employeeId,
+          dto.date,
+        );
+
+        if (exists) {
+          result.skipped++;
+          continue;
+        }
+
+        // Calculate total hours if both times provided
+        let totalHours: number | undefined;
+        if (record.checkInTime && record.checkOutTime) {
+          const checkIn = new Date(record.checkInTime);
+          const checkOut = new Date(record.checkOutTime);
+          const diffMs = checkOut.getTime() - checkIn.getTime();
+          totalHours = Number((diffMs / (1000 * 60 * 60)).toFixed(2));
+        }
+
+        const createData: Prisma.AttendanceCreateInput = {
+          attendanceDate: new Date(dto.date),
+          ...(record.checkInTime && { checkInTime: new Date(record.checkInTime) }),
+          ...(record.checkOutTime && { checkOutTime: new Date(record.checkOutTime) }),
+          ...(totalHours !== undefined && { totalHours }),
+          status: record.status || 'PRESENT',
+          company: { connect: { id: companyId } },
+          employee: { connect: { id: record.employeeId } },
+        };
+
+        await this.repository.create(createData);
+        result.created++;
+      } catch (error) {
+        result.errors.push({
+          employeeId: record.employeeId,
+          reason: (error as Error).message,
+        });
+      }
+    }
+
+    // Invalidate cache after bulk operation
+    this.cache.invalidateByPrefix('attendance:');
+
+    // Audit log
+    await this.repository.createAuditLog({
+      userId,
+      companyId,
+      action: 'BULK_CREATE',
+      resourceType: 'ATTENDANCE',
+      resourceId: companyId, // Use companyId as resource since this is a bulk operation
+      newValues: { date: dto.date, created: result.created, skipped: result.skipped },
+    });
+
+    this.logger.log(`Bulk attendance complete: ${result.created} created, ${result.skipped} skipped, ${result.errors.length} errors`);
+    return result;
   }
 
   private formatAttendance(attendance: any): AttendanceResponseDto {

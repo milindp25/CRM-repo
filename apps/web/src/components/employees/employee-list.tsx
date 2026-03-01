@@ -1,16 +1,15 @@
 'use client';
 
-/**
- * Employee List Component
- * Table with search, filters, and pagination
- */
-
 import { useEmployees } from '@/hooks/use-employees';
 import { EmployeeFiltersComponent } from './employee-filters';
 import { EmployeeTableRow } from './employee-table-row';
 import { apiClient } from '@/lib/api-client';
-import { ChevronLeft, ChevronRight, UserPlus, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, UserPlus, Loader2, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { RoleGate } from '@/components/common/role-gate';
+import { Permission } from '@hrplatform/shared';
+import { PageContainer } from '@/components/ui/page-container';
+import { ErrorBanner } from '@/components/ui/error-banner';
 
 export function EmployeeList() {
   const router = useRouter();
@@ -32,44 +31,29 @@ export function EmployeeList() {
     await refetch();
   };
 
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 className="text-red-800 font-semibold mb-2">Error Loading Employees</h3>
-          <p className="text-red-700 mb-4">{error}</p>
-          <button
-            onClick={() => refetch()}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Employees</h1>
-            <p className="mt-2 text-muted-foreground">Manage your workforce</p>
-          </div>
+    <PageContainer
+      title="Employees"
+      description="Manage your workforce"
+      breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Employees' }]}
+      actions={
+        <RoleGate requiredPermissions={[Permission.MANAGE_EMPLOYEES]} hideOnly>
           <button
             onClick={() => router.push('/employees/new')}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl"
+            className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
           >
-            <UserPlus className="h-5 w-5" />
+            <UserPlus className="h-4 w-4" />
             New Employee
           </button>
-        </div>
-      </div>
+        </RoleGate>
+      }
+    >
+      {error && (
+        <ErrorBanner message={error} onDismiss={() => {}} onRetry={() => refetch()} />
+      )}
 
       {/* Filters */}
-      <div className="mb-6">
+      <div className="mb-1">
         <EmployeeFiltersComponent
           filters={filters}
           onFiltersChange={setFilters}
@@ -78,82 +62,86 @@ export function EmployeeList() {
       </div>
 
       {/* Table */}
-      <div className="bg-card shadow-md rounded-lg overflow-hidden border border-border overflow-x-auto">
+      <div className="rounded-xl border bg-card overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
             <span className="ml-3 text-muted-foreground">Loading employees...</span>
           </div>
         ) : employees.length === 0 ? (
-          <div className="text-center py-20">
-            <UserPlus className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-medium text-foreground">No employees found</h3>
-            <p className="mt-2 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Users className="h-12 w-12 text-muted-foreground/40 mb-4" />
+            <h3 className="text-lg font-semibold text-foreground">No employees found</h3>
+            <p className="mt-1 text-sm text-muted-foreground max-w-sm">
               {filters.search || filters.status || filters.employmentType
                 ? 'Try adjusting your filters'
                 : 'Get started by adding your first employee'}
             </p>
             {!filters.search && !filters.status && !filters.employmentType && (
-              <button
-                onClick={() => router.push('/employees/new')}
-                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <UserPlus className="h-5 w-5" />
-                Add Employee
-              </button>
+              <RoleGate requiredPermissions={[Permission.MANAGE_EMPLOYEES]} hideOnly>
+                <button
+                  onClick={() => router.push('/employees/new')}
+                  className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add Employee
+                </button>
+              </RoleGate>
             )}
           </div>
         ) : (
           <>
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    Employee Code
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap hidden md:table-cell">
-                    Department
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">
-                    Designation
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-card divide-y divide-border">
-                {employees.map((employee) => (
-                  <EmployeeTableRow
-                    key={employee.id}
-                    employee={employee}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/30">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                      Employee Code
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                      Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap hidden md:table-cell">
+                      Department
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">
+                      Designation
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {employees.map((employee) => (
+                    <EmployeeTableRow
+                      key={employee.id}
+                      employee={employee}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {/* Pagination */}
-            <div className="bg-card px-6 py-4 border-t border-border">
+            <div className="px-4 py-3 border-t border-border">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-foreground">
+                <div className="text-sm text-muted-foreground">
                   {pagination && (
                     <>
                       Showing{' '}
-                      <span className="font-medium">
+                      <span className="font-medium text-foreground">
                         {(pagination.currentPage - 1) * pagination.itemsPerPage + 1}
                       </span>{' '}
                       to{' '}
-                      <span className="font-medium">
+                      <span className="font-medium text-foreground">
                         {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}
                       </span>{' '}
-                      of <span className="font-medium">{pagination.totalItems}</span> employees
+                      of <span className="font-medium text-foreground">{pagination.totalItems}</span>
                     </>
                   )}
                 </div>
@@ -161,21 +149,21 @@ export function EmployeeList() {
                   <button
                     onClick={prevPage}
                     disabled={!pagination?.hasPreviousPage || loading}
-                    className="flex items-center gap-1 px-4 py-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center gap-1 h-9 px-3 text-sm font-medium border border-input rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-4 w-4" />
                     Previous
                   </button>
-                  <span className="px-4 py-2 text-sm text-foreground">
+                  <span className="px-3 text-sm text-muted-foreground">
                     Page {pagination?.currentPage} of {pagination?.totalPages}
                   </span>
                   <button
                     onClick={nextPage}
                     disabled={!pagination?.hasNextPage || loading}
-                    className="flex items-center gap-1 px-4 py-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center gap-1 h-9 px-3 text-sm font-medium border border-input rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
-                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -183,6 +171,6 @@ export function EmployeeList() {
           </>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

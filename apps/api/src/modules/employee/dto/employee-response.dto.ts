@@ -196,6 +196,11 @@ export class EmployeeResponseDto {
   })
   reportingManagerId?: string;
 
+  @ApiPropertyOptional({
+    description: 'Employee photo URL/path',
+  })
+  photoUrl?: string;
+
   @ApiProperty({
     enum: EmploymentType,
   })

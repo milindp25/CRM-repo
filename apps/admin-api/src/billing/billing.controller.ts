@@ -5,11 +5,14 @@ import {
   Patch,
   Param,
   Body,
+  Res,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { UserRole } from '@hrplatform/shared';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { BillingService } from './billing.service.js';
+import { BillingPdfService } from './pdf/billing-pdf.service.js';
 import {
   CreateBillingPlanDto,
   UpdateBillingPlanDto,
@@ -22,7 +25,10 @@ import {
 @Controller({ version: '1' })
 @Roles(UserRole.SUPER_ADMIN)
 export class BillingController {
-  constructor(private readonly billingService: BillingService) {}
+  constructor(
+    private readonly billingService: BillingService,
+    private readonly billingPdfService: BillingPdfService,
+  ) {}
 
   // ── Billing Plans ──────────────────────────────────────────────────
 
@@ -95,6 +101,20 @@ export class BillingController {
     @Body() dto: UpdateInvoiceStatusDto,
   ) {
     return this.billingService.updateInvoiceStatus(id, dto.status);
+  }
+
+  @Get('invoices/:id/pdf')
+  @ApiOperation({ summary: 'Download invoice as PDF' })
+  @ApiResponse({ status: 200, description: 'Invoice PDF stream' })
+  @ApiResponse({ status: 404, description: 'Invoice not found' })
+  async downloadInvoicePdf(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.billingPdfService.generateInvoicePdf(id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice_${id}.pdf"`);
+    return res.send(buffer);
   }
 
   // ── Revenue Dashboard ─────────────────────────────────────────────

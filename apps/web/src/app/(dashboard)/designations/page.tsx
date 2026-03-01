@@ -1,15 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { apiClient, Designation } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
-import { Award, Plus, Edit, Trash2, Users, Loader2 } from 'lucide-react';
+import { PageContainer } from '@/components/ui/page-container';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Award, Plus, Pencil, Trash2, Users, Loader2, Layers, AlertCircle } from 'lucide-react';
+import { RoleGate } from '@/components/common/role-gate';
+import { Permission } from '@hrplatform/shared';
 
 export default function DesignationsPage() {
-  const router = useRouter();
   const toast = useToast();
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,12 +21,7 @@ export default function DesignationsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    title: '',
-    code: '',
-    description: '',
-    level: 1,
-    minSalary: '',
-    maxSalary: '',
+    title: '', code: '', description: '', level: 1, minSalary: '', maxSalary: '',
   });
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -87,13 +85,12 @@ export default function DesignationsPage() {
   const handleEdit = (designation: Designation) => {
     setEditingId(designation.id);
     setFormData({
-      title: designation.title,
-      code: designation.code,
-      description: designation.description || '',
-      level: designation.level,
+      title: designation.title, code: designation.code,
+      description: designation.description || '', level: designation.level,
       minSalary: designation.minSalary?.toString() || '',
       maxSalary: designation.maxSalary?.toString() || '',
     });
+    setFormError(null);
     setShowForm(true);
   };
 
@@ -110,215 +107,184 @@ export default function DesignationsPage() {
 
   const getLevelLabel = (level: number) => {
     const labels = ['', 'Entry', 'Junior', 'Mid', 'Senior', 'Lead', 'Manager', 'Director', 'VP', 'C-Level'];
-    return labels[level] || level;
+    return labels[level] || `L${level}`;
+  };
+
+  const getLevelVariant = (level: number) => {
+    if (level <= 2) return 'neutral' as const;
+    if (level <= 4) return 'info' as const;
+    if (level <= 6) return 'purple' as const;
+    if (level <= 8) return 'cyan' as const;
+    return 'success' as const;
   };
 
   const formatSalary = (amount?: number) => {
-    if (!amount) return '-';
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
+    if (!amount) return '';
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
   };
 
-  if (loading) {
-    return <PageLoader />;
-  }
+  const openNewForm = () => {
+    setShowForm(true);
+    setEditingId(null);
+    setFormData({ title: '', code: '', description: '', level: 1, minSalary: '', maxSalary: '' });
+    setFormError(null);
+  };
+
+  if (loading) return <PageLoader />;
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Designations</h1>
-          <p className="mt-2 text-muted-foreground">Define job titles and salary bands</p>
+    <PageContainer
+      title="Job Titles"
+      description="Define roles and pay ranges for your team"
+      breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Job Titles' }]}
+      actions={
+        <RoleGate requiredPermissions={[Permission.MANAGE_DESIGNATIONS]} hideOnly>
+          <button onClick={openNewForm} className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
+            <Plus className="w-4 h-4" /> New Designation
+          </button>
+        </RoleGate>
+      }
+    >
+      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={loadDesignations} />}
+
+      {designations.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border bg-card">
+          <Layers className="w-12 h-12 text-muted-foreground/40 mb-4" />
+          <h3 className="text-lg font-semibold text-foreground">No designations yet</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">Create designations to define job titles and salary bands.</p>
+          <RoleGate requiredPermissions={[Permission.MANAGE_DESIGNATIONS]} hideOnly>
+            <button onClick={openNewForm} className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
+              <Plus className="w-4 h-4" /> Create Designation
+            </button>
+          </RoleGate>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditingId(null);
-            setFormData({ title: '', code: '', description: '', level: 1, minSalary: '', maxSalary: '' });
-            setFormError(null);
-          }}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="h-5 w-5" />
-          New Designation
-        </button>
-      </div>
-
-      {error && (
-        <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => loadDesignations()} className="mb-6" />
-      )}
-
-      {showForm && (
-        <div className="mb-6 bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            {editingId ? 'Edit Designation' : 'New Designation'}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {formError && (
-              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <p className="text-sm font-medium text-red-700 dark:text-red-300">{formError}</p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Senior Software Engineer"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Code</label>
-                <input
-                  type="text"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Auto-generated (or enter manually)"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
-                rows={2}
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Level (1-9)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="9"
-                  value={formData.level}
-                  onChange={(e) => setFormData({ ...formData, level: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Min Salary</label>
-                <input
-                  type="number"
-                  value={formData.minSalary}
-                  onChange={(e) => setFormData({ ...formData, minSalary: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="800000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Max Salary</label>
-                <input
-                  type="number"
-                  value={formData.maxSalary}
-                  onChange={(e) => setFormData({ ...formData, maxSalary: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="1200000"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {editingId ? 'Update' : 'Create'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setShowForm(false); setFormError(null); }}
-                disabled={submitting}
-                className="px-4 py-2 border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      <div className="bg-card shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-muted">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Code
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Title
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Level
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Salary Range
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                Employees
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {designations.map((designation) => (
-              <tr key={designation.id} className="hover:bg-muted">
-                <td className="px-6 py-4 font-medium text-foreground">{designation.code}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <Award className="h-5 w-5 text-muted-foreground" />
-                    {designation.title}
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-                    L{designation.level} - {getLevelLabel(designation.level)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  {designation.minSalary || designation.maxSalary
-                    ? `${formatSalary(designation.minSalary)} - ${formatSalary(designation.maxSalary)}`
-                    : '-'}
-                </td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                    <Users className="h-3 w-3" />
-                    {designation.employeeCount || 0}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button
-                    onClick={() => handleEdit(designation)}
-                    className="mr-2 p-1 text-blue-600 hover:bg-blue-50 rounded"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(designation.id)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {designations.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            No designations found. Create your first one!
+      ) : (
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/30">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Code</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Title</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Level</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">Salary Range</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Employees</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {designations.map((d) => (
+                  <tr key={d.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{d.code}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Award className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                        <span className="text-sm font-medium text-foreground">{d.title}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge variant={getLevelVariant(d.level)} size="sm">
+                        L{d.level} &middot; {getLevelLabel(d.level)}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">
+                      {d.minSalary || d.maxSalary
+                        ? `${formatSalary(d.minSalary)} – ${formatSalary(d.maxSalary)}`
+                        : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge variant="info" dot size="sm">
+                        {d.employeeCount || 0}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <RoleGate requiredPermissions={[Permission.MANAGE_DESIGNATIONS]} hideOnly>
+                        <div className="inline-flex gap-1">
+                          <button onClick={() => handleEdit(d)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors" aria-label="Edit">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDelete(d.id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-muted rounded-lg transition-colors" aria-label="Delete">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </RoleGate>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+
+      {/* Create/Edit Modal */}
+      <Modal open={showForm} onClose={() => setShowForm(false)} size="lg">
+        <ModalHeader onClose={() => setShowForm(false)}>
+          {editingId ? 'Edit Designation' : 'New Designation'}
+        </ModalHeader>
+        <form onSubmit={handleSubmit}>
+          <ModalBody>
+            <div className="space-y-4">
+              {formError && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-sm text-red-700 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" /> {formError}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Title <span className="text-red-500">*</span></label>
+                  <input type="text" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full h-10 px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    placeholder="Senior Software Engineer" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Code</label>
+                  <input type="text" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    className="w-full h-10 px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    placeholder="Auto-generated" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Description</label>
+                <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full min-h-[60px] px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-y" rows={2} />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Level (1-9)</label>
+                  <input type="number" min="1" max="9" value={formData.level} onChange={(e) => setFormData({ ...formData, level: Number(e.target.value) })}
+                    className="w-full h-10 px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Min Salary</label>
+                  <input type="number" value={formData.minSalary} onChange={(e) => setFormData({ ...formData, minSalary: e.target.value })}
+                    className="w-full h-10 px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    placeholder="800000" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Max Salary</label>
+                  <input type="number" value={formData.maxSalary} onChange={(e) => setFormData({ ...formData, maxSalary: e.target.value })}
+                    className="w-full h-10 px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    placeholder="1200000" />
+                </div>
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <button type="button" onClick={() => setShowForm(false)} disabled={submitting}
+              className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting}
+              className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {editingId ? 'Update' : 'Create'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+    </PageContainer>
   );
 }

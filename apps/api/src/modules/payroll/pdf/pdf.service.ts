@@ -2,6 +2,9 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { PayrollRepository } from '../payroll.repository';
+import { IndianTaxEngine } from '../tax-engines/indian-tax.engine';
+import { StorageService } from '../../../common/services/storage.service';
+import { PrismaService } from '../../../database/prisma.service';
 import { generatePayslipPdf, PayslipData } from './payslip.template';
 import { generateForm16Pdf, Form16Data } from './form16.template';
 import { generateW2Pdf, W2Data } from './w2.template';
@@ -15,6 +18,9 @@ export class PdfService {
   constructor(
     private readonly repository: PayrollRepository,
     private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
+    private readonly prisma: PrismaService,
+    private readonly indianTaxEngine: IndianTaxEngine,
   ) {
     const key = this.configService.get<string>('ENCRYPTION_KEY');
     if (!key) {
@@ -52,6 +58,22 @@ export class PdfService {
       throw new NotFoundException('Payroll record not found');
     }
 
+    // If payslip was previously generated and stored, serve from storage
+    if (payroll.payslipPath) {
+      try {
+        const stream = await this.storageService.getFileStreamAsync(payroll.payslipPath);
+        const chunks: Buffer[] = [];
+        for await (const chunk of stream) {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        this.logger.log(`Serving cached payslip for payroll ${payrollId}`);
+        return Buffer.concat(chunks);
+      } catch {
+        // If file not found (deleted, moved), fall through to regenerate
+        this.logger.warn(`Cached payslip not found for payroll ${payrollId}, regenerating`);
+      }
+    }
+
     const company = await this.repository.findCompany(companyId);
     if (!company) throw new NotFoundException('Company not found');
 
@@ -73,6 +95,9 @@ export class PdfService {
           earnings.push({ name: key, amount: val as number });
         }
       }
+      // Sort: Basic Salary first, then HRA, then rest alphabetically
+      const priority: Record<string, number> = { 'Basic Salary': 0, 'HRA': 1, 'Special Allowance': 2 };
+      earnings.sort((a, b) => (priority[a.name] ?? 99) - (priority[b.name] ?? 99));
     } else {
       // Fallback for manual payroll
       earnings.push({ name: 'Basic Salary', amount: this.safeDecrypt(payroll.basicSalaryEncrypted) });
@@ -148,12 +173,23 @@ export class PdfService {
 
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+    // Build company address
+    const addressParts: string[] = [];
+    if ((company as any).city) addressParts.push((company as any).city);
+    if ((company as any).state) addressParts.push((company as any).state);
+    if ((company as any).postalCode) addressParts.push((company as any).postalCode);
+    const companyAddress = addressParts.length > 0 ? addressParts.join(', ') : undefined;
+
     const payslipData: PayslipData = {
       companyName: company.companyName,
+      companyAddress,
       companyPan: this.safeDecryptStr(company.companyPanEncrypted),
+      companyTan: this.safeDecryptStr((company as any).tanEncrypted),
       companyEin: this.safeDecryptStr(company.einEncrypted),
       employeeName: `${employee.firstName} ${employee.lastName}`,
       employeeCode: employee.employeeCode,
+      designation: (employee as any).designation?.title ?? undefined,
+      department: (employee as any).department?.name ?? undefined,
       pan: this.safeDecryptStr(employee.panEncrypted),
       uan: this.safeDecryptStr(employee.uanEncrypted),
       ssn: this.safeDecryptStr(employee.ssnEncrypted),
@@ -177,7 +213,44 @@ export class PdfService {
     };
 
     const pdfDoc = generatePayslipPdf(payslipData);
-    return this.pdfToBuffer(pdfDoc);
+    const buffer = await this.pdfToBuffer(pdfDoc);
+
+    // Persist the generated payslip for future requests
+    this.persistPayslip(payrollId, companyId, buffer, employee.employeeCode, payroll.payPeriodMonth, payroll.payPeriodYear);
+
+    return buffer;
+  }
+
+  /**
+   * Persist a generated payslip PDF to storage (fire-and-forget).
+   * Updates the payroll record with the stored file path.
+   */
+  private persistPayslip(
+    payrollId: string,
+    companyId: string,
+    buffer: Buffer,
+    employeeCode: string,
+    month: number,
+    year: number,
+  ): void {
+    const fileName = `payslip_${employeeCode}_${year}-${String(month).padStart(2, '0')}.pdf`;
+
+    this.storageService
+      .upload(
+        { originalname: fileName, mimetype: 'application/pdf', size: buffer.length, buffer },
+        companyId,
+        'payslips',
+      )
+      .then(async (result) => {
+        await this.prisma.payroll.update({
+          where: { id: payrollId },
+          data: { payslipPath: result.filePath },
+        });
+        this.logger.log(`Payslip persisted for payroll ${payrollId}: ${result.filePath}`);
+      })
+      .catch((err) => {
+        this.logger.warn(`Failed to persist payslip for ${payrollId}: ${err.message}`);
+      });
   }
 
   // ─── Form 16 PDF (India) ────────────────────────────────────────────────────
@@ -221,8 +294,19 @@ export class PdfService {
     const annualIncome = this.safeDecrypt(ytd.grossEarningsEncrypted);
     const totalTds = parseFloat(ytd.tdsYtd?.toString() || '0');
     const taxRegime = employee.taxRegime || 'NEW';
-    const stdDeduction = taxRegime === 'NEW' ? 75000 : 50000;
-    const taxableIncome = Math.max(0, annualIncome - stdDeduction);
+
+    // Estimate monthly basic from the latest payroll record (or fallback)
+    const latestPayroll = fyPayrolls[fyPayrolls.length - 1];
+    const basicMonthly = latestPayroll
+      ? this.safeDecrypt(latestPayroll.basicSalaryEncrypted)
+      : annualIncome / 12;
+
+    // Re-run the Indian tax engine with annual data to get real Form 16 Part B values
+    const taxResult = this.indianTaxEngine.computeAnnualTax(
+      annualIncome,
+      basicMonthly,
+      taxRegime,
+    );
 
     const form16Data: Form16Data = {
       companyName: company.companyName,
@@ -236,12 +320,12 @@ export class PdfService {
       assessmentYear: `${fiscalYear + 1}-${(fiscalYear + 2).toString().slice(-2)}`,
       quarterlyTds,
       annualIncome,
-      standardDeduction: stdDeduction,
-      taxableIncome,
-      taxOnIncome: 0, // Simplified; in production, re-run slab calculation
-      rebate87A: 0,
-      cess: 0,
-      totalTaxLiability: totalTds,
+      standardDeduction: taxResult.standardDeduction,
+      taxableIncome: taxResult.taxableIncome,
+      taxOnIncome: taxResult.taxOnIncome,
+      rebate87A: taxResult.rebate87A,
+      cess: taxResult.cessAmount,
+      totalTaxLiability: taxResult.totalTax,
       totalTdsDeducted: totalTds,
       taxRegime,
     };

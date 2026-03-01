@@ -3,6 +3,14 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
+import { PageContainer } from '@/components/ui/page-container';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { EmptyState } from '@/components/ui/error-banner';
+import { TableLoader } from '@/components/ui/page-loader';
+import { MapPin, Plus, LocateFixed } from 'lucide-react';
+
+const INPUT_CLASS = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
 
 interface GeofenceZone {
   id: string;
@@ -82,8 +90,8 @@ export default function GeofencePage() {
         }),
       });
       setShowCreate(false);
+      toast.success('Location Added', `"${form.name}" has been added as an office location`);
       setForm({ name: '', latitude: '', longitude: '', radiusMeters: '100', allowedIpRanges: '' });
-      toast.success('Zone Created', `Geofence zone "${form.name}" has been created`);
       fetchZones();
     } catch (err: any) { toast.error('Failed to create zone', err.message); }
   };
@@ -103,74 +111,112 @@ export default function GeofencePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Geofence Zones</h1>
-          <p className="text-muted-foreground">Configure location-based attendance verification zones</p>
-        </div>
-        <button onClick={() => setShowCreate(!showCreate)} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">
-          {showCreate ? 'Cancel' : 'Add Zone'}
+    <PageContainer
+      title="Office Locations"
+      description="Set up work locations where employees can check in for attendance"
+      breadcrumbs={[
+        { label: 'Dashboard', href: '/' },
+        { label: 'Settings', href: '/settings' },
+        { label: 'Office Locations' },
+      ]}
+      actions={
+        <button onClick={() => setShowCreate(true)}
+          className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+          <Plus className="h-4 w-4" />
+          Add Zone
         </button>
-      </div>
-
-      {showCreate && (
-        <form onSubmit={handleCreate} className="bg-card border border-border rounded-lg p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Zone Name</label>
-              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g., Main Office" className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" required />
+      }
+    >
+      {/* Create Form Modal */}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} size="lg">
+        <ModalHeader onClose={() => setShowCreate(false)}>Add Office Location</ModalHeader>
+        <form onSubmit={handleCreate}>
+          <ModalBody className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Zone Name *</label>
+                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g., Main Office" className={INPUT_CLASS} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Radius (meters) *</label>
+                <input type="number" value={form.radiusMeters} onChange={(e) => setForm({ ...form, radiusMeters: e.target.value })}
+                  className={INPUT_CLASS} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Latitude *</label>
+                <input type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                  className={INPUT_CLASS} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Longitude *</label>
+                <input type="number" step="any" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                  className={INPUT_CLASS} required />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Radius (meters)</label>
-              <input type="number" value={form.radiusMeters} onChange={(e) => setForm({ ...form, radiusMeters: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" required />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Office Network Addresses (comma-separated, optional)</label>
+              <input type="text" value={form.allowedIpRanges} onChange={(e) => setForm({ ...form, allowedIpRanges: e.target.value })}
+                placeholder="e.g. 192.168.1.0/24" className={INPUT_CLASS} />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Latitude</label>
-              <input type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Longitude</label>
-              <input type="number" step="any" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" required />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Allowed IP Ranges (comma-separated)</label>
-            <input type="text" value={form.allowedIpRanges} onChange={(e) => setForm({ ...form, allowedIpRanges: e.target.value })} placeholder="192.168.1.0/24, 10.0.0.0/8" className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" />
-          </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={handleGetLocation} className="px-4 py-2 border border-border text-foreground rounded-lg hover:bg-muted">
+            <button type="button" onClick={handleGetLocation}
+              className="inline-flex items-center gap-2 border border-input bg-background text-foreground hover:bg-muted h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+              <LocateFixed className="h-4 w-4" />
               Use My Location
             </button>
-            <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">Create Zone</button>
-          </div>
+          </ModalBody>
+          <ModalFooter>
+            <button type="button" onClick={() => setShowCreate(false)}
+              className="border border-input bg-background text-foreground hover:bg-muted h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+              Cancel
+            </button>
+            <button type="submit"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+              Create Zone
+            </button>
+          </ModalFooter>
         </form>
-      )}
+      </Modal>
 
-      <div className="grid gap-4">
-        {loading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading...</div>
-        ) : zones.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No geofence zones configured</div>
-        ) : zones.map((z) => (
-          <div key={z.id} className="bg-card border border-border rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-foreground">{z.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Lat: {Number(z.latitude).toFixed(6)}, Lng: {Number(z.longitude).toFixed(6)} &middot; Radius: {z.radiusMeters}m
-                </p>
-                {z.allowedIpRanges && (z.allowedIpRanges as string[]).length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">IPs: {(z.allowedIpRanges as string[]).join(', ')}</p>
-                )}
+      {/* Zones List */}
+      {loading ? (
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <TableLoader rows={4} cols={3} />
+        </div>
+      ) : zones.length === 0 ? (
+        <div className="rounded-xl border bg-card">
+          <EmptyState
+            icon={<MapPin className="h-10 w-10" />}
+            title="No office locations set up"
+            description="Add your office locations so employees can check in when they arrive at work"
+            action={{ label: 'Add Zone', onClick: () => setShowCreate(true) }}
+          />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {zones.map((z) => (
+            <div key={z.id} className="rounded-xl border bg-card p-4 hover:shadow-sm transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="font-medium text-foreground">{z.name}</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Lat: {Number(z.latitude).toFixed(6)}, Lng: {Number(z.longitude).toFixed(6)} &middot; Radius: {z.radiusMeters}m
+                  </p>
+                  {z.allowedIpRanges && (z.allowedIpRanges as string[]).length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">IPs: {(z.allowedIpRanges as string[]).join(', ')}</p>
+                  )}
+                </div>
+                <StatusBadge variant={getStatusVariant(z.isActive ? 'ACTIVE' : 'INACTIVE')} dot>
+                  {z.isActive ? 'Active' : 'Inactive'}
+                </StatusBadge>
               </div>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${z.isActive ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                {z.isActive ? 'Active' : 'Inactive'}
-              </span>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>
+      )}
+    </PageContainer>
   );
 }

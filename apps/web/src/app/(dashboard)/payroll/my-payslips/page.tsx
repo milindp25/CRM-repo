@@ -151,7 +151,7 @@ export default function MyPayslipsPage() {
 
           <button
             onClick={() => handleDownload(latest.id)}
-            className="w-full mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium text-sm"
+            className="w-full mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 font-medium text-sm"
           >
             Download Payslip PDF
           </button>

@@ -22,7 +22,7 @@ function simpleEncrypt(text: string): string {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) throw new Error('ENCRYPTION_KEY env var is required. Set it in packages/database/.env or apps/api/.env');
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key.substring(0, 32)), iv);
+  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key.substring(0, 64), 'hex'), iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
   return `${iv.toString('hex')}:${encrypted}`;
@@ -521,15 +521,30 @@ async function main() {
       employeeId: emp1.id,
       payPeriodMonth: 1,
       payPeriodYear: 2025,
+      country: 'IN',
+      payDate: new Date('2025-02-01'),
       basicSalaryEncrypted: simpleEncrypt('50000'),
       hraEncrypted: simpleEncrypt('20000'),
-      grossSalaryEncrypted: simpleEncrypt('80000'),
-      netSalaryEncrypted: simpleEncrypt('71200'),
+      specialAllowanceEncrypted: simpleEncrypt('10000'),
+      otherAllowancesEncrypted: simpleEncrypt('20000'),
+      grossSalaryEncrypted: simpleEncrypt('100000'),
+      netSalaryEncrypted: simpleEncrypt('85200'),
+      earningsBreakdown: {
+        'Basic Salary': 50000,
+        'HRA': 20000,
+        'Special Allowance': 10000,
+        'Other Allowances': 20000,
+      } as any,
       pfEmployee: 6000,
       pfEmployer: 6000,
       tds: 2800,
+      esiEmployee: 0,
+      esiEmployer: 0,
+      pt: 0,
       daysWorked: 22,
       daysInMonth: 22,
+      leaveDays: 0,
+      absentDays: 0,
       status: 'PAID',
       paidAt: new Date('2025-02-01'),
     },

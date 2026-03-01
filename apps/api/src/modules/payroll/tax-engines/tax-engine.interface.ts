@@ -30,6 +30,16 @@ export interface TaxComputationInput {
   pfEnabled?: boolean; // Company-level PF toggle
   esiEnabled?: boolean; // Company-level ESI toggle
 
+  // India Old Regime investment declarations (annual amounts)
+  investments?: {
+    section80C?: number; // LIC, PPF, ELSS, etc. (max ₹1.5L)
+    section80D?: number; // Medical insurance self+family (max ₹25K/₹50K)
+    section80DSenior?: number; // Parents senior citizen insurance (max ₹50K)
+    hraReceived?: number; // Monthly HRA component
+    rentPaid?: number; // Monthly rent paid
+    metroCity?: boolean; // Metro city for HRA (50% vs 40% of basic)
+  };
+
   // US-specific
   filingStatus?: string; // SINGLE, MARRIED_FILING_JOINTLY, etc.
   w4Allowances?: number; // W-4 allowances

@@ -9,9 +9,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Prisma } from '@prisma/client';
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'crypto';
 import { LoggerService } from '../../common/services/logger.service';
 import { CacheService } from '../../common/services/cache.service';
+import { PrismaService } from '../../database/prisma.service';
 import { PayrollRepository } from './payroll.repository';
 import { TaxEngineFactory } from './tax-engines/tax-engine.factory';
 import type { TaxComputationInput, TaxComputationResult } from './tax-engines/tax-engine.interface';
@@ -27,6 +28,7 @@ import {
   ReconciliationResponseDto,
   MyPayslipResponseDto,
   MyPayslipHistoryResponseDto,
+  AddAdjustmentsDto,
 } from './dto';
 
 @Injectable()
@@ -37,6 +39,7 @@ export class PayrollService {
 
   constructor(
     private readonly repository: PayrollRepository,
+    private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
     private readonly configService: ConfigService,
     private readonly cache: CacheService,
@@ -47,7 +50,7 @@ export class PayrollService {
     if (!key) {
       throw new Error('ENCRYPTION_KEY is not configured');
     }
-    // Use first 32 bytes of the key for AES-256
+    // Use first 32 bytes (64 hex characters) of the key for AES-256
     this.encryptionKey = key.substring(0, 64);
   }
 
@@ -728,7 +731,28 @@ export class PayrollService {
     if (!batch || batch.companyId !== companyId) {
       throw new NotFoundException('Payroll batch not found');
     }
-    return this.formatBatch(batch);
+
+    // Derive aggregate approval status from payrolls
+    const payrolls = await this.repository.findPayrollsByBatch(batchId);
+    let approvalStatus: string | undefined;
+    if (payrolls.length > 0) {
+      const statuses = payrolls.map((p: any) => p.approvalStatus).filter(Boolean);
+      if (statuses.length > 0) {
+        if (statuses.every((s: string) => s === 'APPROVED')) {
+          approvalStatus = 'APPROVED';
+        } else if (statuses.every((s: string) => s === 'REJECTED')) {
+          approvalStatus = 'REJECTED';
+        } else if (statuses.some((s: string) => s === 'CHANGES_REQUESTED')) {
+          approvalStatus = 'CHANGES_REQUESTED';
+        } else if (statuses.some((s: string) => s === 'PENDING_APPROVAL')) {
+          approvalStatus = 'PENDING_APPROVAL';
+        } else {
+          approvalStatus = statuses[0];
+        }
+      }
+    }
+
+    return this.formatBatch(batch, approvalStatus);
   }
 
   async listBatches(companyId: string): Promise<BatchStatusResponseDto[]> {
@@ -1160,11 +1184,11 @@ export class PayrollService {
       };
     }
 
-    // Set approval status on all payrolls in the batch
-    const payrolls = await this.repository.findPayrollsByBatch(batchId);
-    for (const payroll of payrolls) {
-      await this.repository.update(payroll.id, { approvalStatus: 'PENDING_APPROVAL' });
-    }
+    // Set approval status on all payrolls in the batch (single query)
+    await this.prisma.payroll.updateMany({
+      where: { batchId, companyId },
+      data: { approvalStatus: 'PENDING_APPROVAL' },
+    });
 
     // Start workflow
     try {
@@ -1194,14 +1218,25 @@ export class PayrollService {
     if (event.entityType !== 'PAYROLL') return;
     this.serviceLogger.log(`Workflow approved for PAYROLL batch ${event.entityId}`);
 
+    // Fetch payrolls for employee user IDs (needed for notifications)
     const payrolls = await this.repository.findPayrollsByBatch(event.entityId);
-    for (const payroll of payrolls) {
-      await this.repository.update(payroll.id, { approvalStatus: 'APPROVED' });
-    }
+    const employeeIds = payrolls.map((p: any) => p.employeeId);
+    const users = await this.prisma.user.findMany({
+      where: { employeeId: { in: employeeIds }, isActive: true },
+      select: { id: true },
+    });
+    const employeeUserIds = users.map((u) => u.id);
+
+    // Batch update all payrolls in a single query
+    await this.prisma.payroll.updateMany({
+      where: { batchId: event.entityId, companyId: event.companyId },
+      data: { approvalStatus: 'APPROVED' },
+    });
 
     this.eventEmitter.emit('payroll.approval.approved', {
       companyId: event.companyId,
       batchId: event.entityId,
+      employeeUserIds,
     });
   }
 
@@ -1210,19 +1245,168 @@ export class PayrollService {
     if (event.entityType !== 'PAYROLL') return;
     this.serviceLogger.log(`Workflow rejected for PAYROLL batch ${event.entityId}`);
 
-    const payrolls = await this.repository.findPayrollsByBatch(event.entityId);
-    for (const payroll of payrolls) {
-      await this.repository.update(payroll.id, {
-        approvalStatus: 'REJECTED',
-        status: 'PROCESSED',
-      });
-    }
+    // Batch update all payrolls in a single query
+    await this.prisma.payroll.updateMany({
+      where: { batchId: event.entityId, companyId: event.companyId },
+      data: { approvalStatus: 'REJECTED', status: 'PROCESSED' },
+    });
 
     this.eventEmitter.emit('payroll.approval.rejected', {
       companyId: event.companyId,
       batchId: event.entityId,
       reason: event.reason,
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // BATCH APPROVAL ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  async requestChanges(
+    batchId: string,
+    companyId: string,
+    userId: string,
+    comments: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const batch = await this.repository.findBatchById(batchId);
+    if (!batch || batch.companyId !== companyId) {
+      throw new NotFoundException('Batch not found');
+    }
+
+    // Batch update all payrolls in a single query
+    await this.prisma.payroll.updateMany({
+      where: { batchId, companyId },
+      data: { approvalStatus: 'CHANGES_REQUESTED' },
+    });
+
+    this.eventEmitter.emit('payroll.changes.requested', {
+      companyId,
+      batchId,
+      comments,
+      requestedBy: userId,
+      month: batch.month,
+      year: batch.year,
+    });
+
+    return { success: true, message: 'Changes requested for payroll batch' };
+  }
+
+  async approveBatch(
+    batchId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const batch = await this.repository.findBatchById(batchId);
+    if (!batch || batch.companyId !== companyId) {
+      throw new NotFoundException('Batch not found');
+    }
+
+    // Fetch payrolls for employee user IDs (needed for notifications)
+    const payrolls = await this.repository.findPayrollsByBatch(batchId);
+    const employeeIds = payrolls.map((p: any) => p.employeeId);
+    const users = await this.prisma.user.findMany({
+      where: { employeeId: { in: employeeIds }, isActive: true },
+      select: { id: true },
+    });
+    const employeeUserIds = users.map((u) => u.id);
+
+    // Batch update all payrolls in a single query
+    await this.prisma.payroll.updateMany({
+      where: { batchId, companyId },
+      data: { approvalStatus: 'APPROVED' },
+    });
+
+    this.eventEmitter.emit('payroll.approval.approved', {
+      companyId,
+      batchId,
+      month: batch.month,
+      year: batch.year,
+      approvedBy: userId,
+      employeeUserIds,
+    });
+
+    return { success: true, message: 'Payroll batch approved' };
+  }
+
+  async rejectBatch(
+    batchId: string,
+    companyId: string,
+    userId: string,
+    reason: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const batch = await this.repository.findBatchById(batchId);
+    if (!batch || batch.companyId !== companyId) {
+      throw new NotFoundException('Batch not found');
+    }
+
+    // Batch update all payrolls in a single query
+    await this.prisma.payroll.updateMany({
+      where: { batchId, companyId },
+      data: { approvalStatus: 'REJECTED', status: 'PROCESSED' },
+    });
+
+    this.eventEmitter.emit('payroll.approval.rejected', {
+      companyId,
+      batchId,
+      reason,
+      rejectedBy: userId,
+      month: batch.month,
+      year: batch.year,
+    });
+
+    return { success: true, message: 'Payroll batch rejected' };
+  }
+
+  async markBatchAsPaid(
+    batchId: string,
+    companyId: string,
+    userId: string,
+  ): Promise<{ success: boolean; message: string; count: number }> {
+    const batch = await this.repository.findBatchById(batchId);
+    if (!batch || batch.companyId !== companyId) {
+      throw new NotFoundException('Batch not found');
+    }
+
+    // Fetch payrolls for employee user IDs (needed for notifications)
+    const payrolls = await this.repository.findPayrollsByBatch(batchId);
+    const eligiblePayrolls = payrolls.filter(
+      (p: any) => p.status === 'PROCESSED' && (p.approvalStatus === 'APPROVED' || p.approvalStatus === null),
+    );
+    const employeeIds = eligiblePayrolls.map((p: any) => p.employeeId);
+    const users = await this.prisma.user.findMany({
+      where: { employeeId: { in: employeeIds }, isActive: true },
+      select: { id: true },
+    });
+    const employeeUserIds = users.map((u) => u.id);
+
+    // Batch update eligible payrolls in a single transaction
+    const now = new Date();
+    const result = await this.prisma.$transaction(async (tx) => {
+      return tx.payroll.updateMany({
+        where: {
+          batchId,
+          companyId,
+          status: 'PROCESSED',
+          OR: [{ approvalStatus: 'APPROVED' }, { approvalStatus: null }],
+        },
+        data: { status: 'PAID', paidAt: now },
+      });
+    });
+    const paidCount = result.count;
+
+    this.eventEmitter.emit('payroll.paid', {
+      companyId,
+      batchId,
+      month: batch.month,
+      year: batch.year,
+      paidBy: userId,
+      count: paidCount,
+      employeeUserIds,
+    });
+
+    this.cache.invalidateByPrefix('payroll:');
+
+    return { success: true, message: `${paidCount} payrolls marked as paid`, count: paidCount };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -1386,7 +1570,7 @@ export class PayrollService {
     };
   }
 
-  private formatBatch(batch: any): BatchStatusResponseDto {
+  private formatBatch(batch: any, approvalStatus?: string): BatchStatusResponseDto {
     return {
       id: batch.id,
       companyId: batch.companyId,
@@ -1398,9 +1582,91 @@ export class PayrollService {
       failedCount: batch.failedCount,
       errors: batch.errors as any,
       initiatedBy: batch.initiatedBy,
+      approvalStatus,
       completedAt: batch.completedAt,
       createdAt: batch.createdAt,
       updatedAt: batch.updatedAt,
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // ADJUSTMENTS (ad-hoc earnings/deductions on DRAFT payroll)
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  async addAdjustments(
+    payrollId: string,
+    dto: AddAdjustmentsDto,
+    userId: string,
+    companyId: string,
+  ) {
+    const payroll = await this.repository.findById(payrollId);
+    if (!payroll || payroll.companyId !== companyId) {
+      throw new NotFoundException('Payroll record not found');
+    }
+
+    if (payroll.status !== 'DRAFT') {
+      throw new ConflictException('Adjustments can only be added to DRAFT payroll');
+    }
+
+    const existing = (payroll.adjustments as any[]) || [];
+
+    const newEntries = dto.adjustments.map((adj) => ({
+      id: randomUUID(),
+      name: adj.name,
+      type: adj.type,
+      amount: adj.amount,
+      reason: adj.reason ?? null,
+      addedBy: userId,
+      addedAt: new Date().toISOString(),
+    }));
+
+    const updatedAdjustments = [...existing, ...newEntries];
+
+    await this.repository.update(payrollId, {
+      adjustments: updatedAdjustments as any,
+    });
+
+    this.logger.log(`Added ${newEntries.length} adjustment(s) to payroll ${payrollId}`);
+
+    return updatedAdjustments;
+  }
+
+  async removeAdjustment(
+    payrollId: string,
+    adjustmentId: string,
+    companyId: string,
+  ) {
+    const payroll = await this.repository.findById(payrollId);
+    if (!payroll || payroll.companyId !== companyId) {
+      throw new NotFoundException('Payroll record not found');
+    }
+
+    if (payroll.status !== 'DRAFT') {
+      throw new ConflictException('Adjustments can only be removed from DRAFT payroll');
+    }
+
+    const existing = (payroll.adjustments as any[]) || [];
+    const updatedAdjustments = existing.filter((adj: any) => adj.id !== adjustmentId);
+
+    if (updatedAdjustments.length === existing.length) {
+      throw new NotFoundException('Adjustment not found');
+    }
+
+    await this.repository.update(payrollId, {
+      adjustments: updatedAdjustments.length > 0 ? (updatedAdjustments as any) : Prisma.JsonNull,
+    });
+
+    this.logger.log(`Removed adjustment ${adjustmentId} from payroll ${payrollId}`);
+
+    return updatedAdjustments;
+  }
+
+  async getAdjustments(payrollId: string, companyId: string) {
+    const payroll = await this.repository.findById(payrollId);
+    if (!payroll || payroll.companyId !== companyId) {
+      throw new NotFoundException('Payroll record not found');
+    }
+
+    return (payroll.adjustments as any[]) || [];
   }
 }
