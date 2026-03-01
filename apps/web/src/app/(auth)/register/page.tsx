@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { RegisterForm } from '@/components/auth/register-form';
 
 export const metadata = {
@@ -122,9 +123,9 @@ export default function RegisterPage() {
 
             <p className="text-center text-xs text-muted-foreground pt-2">
               By creating an account, you agree to our{' '}
-              <a href="#" className="text-primary hover:underline">Terms of Service</a>
+              <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>
               {' '}and{' '}
-              <a href="#" className="text-primary hover:underline">Privacy Policy</a>
+              <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
             </p>
           </div>
         </div>

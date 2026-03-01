@@ -365,10 +365,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
                   <Users className="w-5 h-5 text-white" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Core HR</h3>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">Included free</p>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Core HR</h3>
               </div>
               <div className="space-y-3">
                 {[
@@ -395,12 +392,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
                   <DollarSign className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Payroll & Finance</h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
-                    Basic
-                  </span>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Payroll & Finance</h3>
               </div>
               <div className="space-y-3">
                 {[
@@ -426,12 +418,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
                   <GraduationCap className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Talent & Growth</h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">
-                    Pro
-                  </span>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Talent & Growth</h3>
               </div>
               <div className="space-y-3">
                 {[
@@ -456,12 +443,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg">
                   <ClipboardList className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Operations</h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">
-                    Pro
-                  </span>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Operations</h3>
               </div>
               <div className="space-y-3">
                 {[
@@ -489,12 +471,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-lg">
                   <LineChart className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Analytics & Compliance</h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
-                    Basic
-                  </span>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Analytics & Compliance</h3>
               </div>
               <div className="space-y-3">
                 {[
@@ -520,12 +497,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 shadow-lg">
                   <Key className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Integrations & Admin</h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">
-                    Pro
-                  </span>
-                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Integrations & Admin</h3>
               </div>
               <div className="space-y-3">
                 {[
@@ -993,62 +965,60 @@ export default function Home() {
               </h4>
               <ul className="space-y-3">
                 {[
-                  'Features',
-                  'Pricing',
-                  'Integrations',
-                  'Changelog',
-                  'Documentation',
+                  { label: 'Features', href: '#features' },
+                  { label: 'How It Works', href: '#how-it-works' },
+                  { label: 'Pricing', href: '#pricing' },
+                  { label: 'Testimonials', href: '#testimonials' },
                 ].map((item) => (
-                  <li key={item}>
+                  <li key={item.label}>
                     <a
-                      href="#"
+                      href={item.href}
                       className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
                     >
-                      {item}
+                      {item.label}
                     </a>
                   </li>
                 ))}
               </ul>
             </div>
-            {/* Company */}
+            {/* Get Started */}
             <div>
               <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">
-                Company
-              </h4>
-              <ul className="space-y-3">
-                {['About Us', 'Careers', 'Blog', 'Press Kit', 'Contact'].map(
-                  (item) => (
-                    <li key={item}>
-                      <a
-                        href="#"
-                        className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
-                      >
-                        {item}
-                      </a>
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
-            {/* Resources */}
-            <div>
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">
-                Resources
+                Get Started
               </h4>
               <ul className="space-y-3">
                 {[
-                  'Help Center',
-                  'API Reference',
-                  'Status Page',
-                  'Community',
-                  'Partners',
+                  { label: 'Sign Up Free', href: '/register' },
+                  { label: 'Log In', href: '/login' },
+                  { label: 'Forgot Password', href: '/auth/forgot-password' },
                 ].map((item) => (
-                  <li key={item}>
-                    <a
-                      href="#"
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
                       className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
                     >
-                      {item}
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* Support */}
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">
+                Support
+              </h4>
+              <ul className="space-y-3">
+                {[
+                  { label: 'Contact Us', href: 'mailto:support@hrplatform.com' },
+                  { label: 'Report a Bug', href: 'mailto:bugs@hrplatform.com' },
+                ].map((item) => (
+                  <li key={item.label}>
+                    <a
+                      href={item.href}
+                      className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+                    >
+                      {item.label}
                     </a>
                   </li>
                 ))}
@@ -1059,19 +1029,16 @@ export default function Home() {
               <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Legal</h4>
               <ul className="space-y-3">
                 {[
-                  'Privacy Policy',
-                  'Terms of Service',
-                  'Cookie Policy',
-                  'GDPR',
-                  'Security',
+                  { label: 'Privacy Policy', href: '/privacy' },
+                  { label: 'Terms of Service', href: '/terms' },
                 ].map((item) => (
-                  <li key={item}>
-                    <a
-                      href="#"
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
                       className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
                     >
-                      {item}
-                    </a>
+                      {item.label}
+                    </Link>
                   </li>
                 ))}
               </ul>

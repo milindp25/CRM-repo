@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { LoginForm } from '@/components/auth/login-form';
 
 export const metadata = {
@@ -119,9 +120,9 @@ export default function LoginPage() {
 
             <p className="text-center text-xs text-muted-foreground pt-4">
               By signing in, you agree to our{' '}
-              <a href="#" className="text-primary hover:underline">Terms of Service</a>
+              <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>
               {' '}and{' '}
-              <a href="#" className="text-primary hover:underline">Privacy Policy</a>
+              <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
             </p>
           </div>
         </div>
