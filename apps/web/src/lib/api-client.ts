@@ -1221,6 +1221,93 @@ class ApiClient {
     return `${this.baseUrl}/documents/${id}/download`;
   }
 
+  // ==================== Workflow Endpoints ====================
+
+  async getWorkflowTemplates(filters?: { entityType?: string; isActive?: boolean; page?: number; limit?: number }): Promise<any> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+    }
+    const queryString = params.toString();
+    return this.request(queryString ? `/workflows/templates?${queryString}` : '/workflows/templates');
+  }
+
+  async getWorkflowTemplate(id: string): Promise<any> {
+    return this.request(`/workflows/templates/${id}`);
+  }
+
+  async createWorkflowTemplate(data: any): Promise<any> {
+    return this.request('/workflows/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateWorkflowTemplate(id: string, data: any): Promise<any> {
+    return this.request(`/workflows/templates/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteWorkflowTemplate(id: string): Promise<void> {
+    return this.request(`/workflows/templates/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getWorkflowInstances(filters?: { entityType?: string; status?: string; page?: number; limit?: number }): Promise<any> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+    }
+    const queryString = params.toString();
+    return this.request(queryString ? `/workflows/instances?${queryString}` : '/workflows/instances');
+  }
+
+  async getWorkflowInstance(id: string): Promise<any> {
+    return this.request(`/workflows/instances/${id}`);
+  }
+
+  async startWorkflow(data: { entityType: string; entityId: string }): Promise<any> {
+    return this.request('/workflows/start', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async cancelWorkflow(id: string): Promise<any> {
+    return this.request(`/workflows/instances/${id}/cancel`, {
+      method: 'POST',
+    });
+  }
+
+  async getMyApprovals(): Promise<any> {
+    return this.request('/workflows/my-approvals');
+  }
+
+  async approveWorkflowStep(id: string, comments?: string): Promise<any> {
+    return this.request(`/workflows/steps/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ comments }),
+    });
+  }
+
+  async rejectWorkflowStep(id: string, comments?: string): Promise<any> {
+    return this.request(`/workflows/steps/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ comments }),
+    });
+  }
+
   // ==================== API Key Endpoints ====================
 
   async getApiKeys(page?: number, limit?: number): Promise<ApiKeyPaginationResponse> {

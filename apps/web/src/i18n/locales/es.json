@@ -73,6 +73,8 @@
     "orgChart": "Organigrama",
     "users": "Usuarios",
     "importExport": "Importar/Exportar",
+    "documents": "Documentos",
+    "workflows": "Flujos de Trabajo",
     "auditLogs": "Registro de Auditoria",
     "settings": "Configuracion",
     "profile": "Perfil"

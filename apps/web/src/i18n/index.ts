@@ -5,8 +5,16 @@
 
 import en from './locales/en.json';
 import es from './locales/es.json';
+import hi from './locales/hi.json';
+import ta from './locales/ta.json';
+import te from './locales/te.json';
+import kn from './locales/kn.json';
+import ml from './locales/ml.json';
+import bn from './locales/bn.json';
+import mr from './locales/mr.json';
+import gu from './locales/gu.json';
 
-export type Locale = 'en' | 'es';
+export type Locale = 'en' | 'es' | 'hi' | 'ta' | 'te' | 'kn' | 'ml' | 'bn' | 'mr' | 'gu';
 
 export interface LocaleConfig {
   code: Locale;
@@ -18,6 +26,14 @@ export interface LocaleConfig {
 export const SUPPORTED_LOCALES: LocaleConfig[] = [
   { code: 'en', name: 'English', nativeName: 'English', dir: 'ltr' },
   { code: 'es', name: 'Spanish', nativeName: 'Espanol', dir: 'ltr' },
+  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', dir: 'ltr' },
+  { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', dir: 'ltr' },
+  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు', dir: 'ltr' },
+  { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ', dir: 'ltr' },
+  { code: 'ml', name: 'Malayalam', nativeName: 'മലയാളം', dir: 'ltr' },
+  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা', dir: 'ltr' },
+  { code: 'mr', name: 'Marathi', nativeName: 'मराठी', dir: 'ltr' },
+  { code: 'gu', name: 'Gujarati', nativeName: 'ગુજરાતી', dir: 'ltr' },
 ];
 
 export const DEFAULT_LOCALE: Locale = 'en';
@@ -27,6 +43,14 @@ type TranslationData = typeof en;
 const translations: Record<Locale, TranslationData> = {
   en,
   es: es as TranslationData,
+  hi: hi as TranslationData,
+  ta: ta as TranslationData,
+  te: te as TranslationData,
+  kn: kn as TranslationData,
+  ml: ml as TranslationData,
+  bn: bn as TranslationData,
+  mr: mr as TranslationData,
+  gu: gu as TranslationData,
 };
 
 /**

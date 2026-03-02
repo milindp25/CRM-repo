@@ -82,6 +82,7 @@ export class GeofenceService {
       ...(dto.longitude !== undefined && { longitude: new Prisma.Decimal(dto.longitude) }),
       ...(dto.radiusMeters !== undefined && { radiusMeters: dto.radiusMeters }),
       ...(dto.allowedIpRanges !== undefined && { allowedIpRanges: dto.allowedIpRanges as any }),
+      ...(dto.isActive !== undefined && { isActive: dto.isActive }),
     };
 
     const updated = await this.repository.updateZone(id, companyId, updateData);

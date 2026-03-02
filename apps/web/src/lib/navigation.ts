@@ -32,6 +32,8 @@ import {
   MapPin,
   PieChart,
   LayoutDashboard,
+  FolderOpen,
+  GitBranch,
 } from 'lucide-react';
 import { Permission } from '@hrplatform/shared';
 
@@ -200,6 +202,22 @@ export const navigation: NavItem[] = [
     icon: FileText,
     requiredPermissions: [Permission.VIEW_POLICIES, Permission.MANAGE_POLICIES, Permission.ACKNOWLEDGE_POLICY],
     requiredFeature: 'POLICIES',
+  },
+  {
+    name: 'Documents',
+    nameKey: 'nav.documents',
+    href: '/documents',
+    icon: FolderOpen,
+    requiredPermissions: [Permission.VIEW_EMPLOYEES, Permission.MANAGE_EMPLOYEES],
+    requiredFeature: 'DOCUMENTS',
+  },
+  {
+    name: 'Workflows',
+    nameKey: 'nav.workflows',
+    href: '/workflows',
+    icon: GitBranch,
+    requiredPermissions: [Permission.MANAGE_COMPANY],
+    requiredFeature: 'WORKFLOWS',
   },
   {
     name: 'Exit Process',

@@ -92,13 +92,37 @@ export default function DashboardLayout({
   }, []);
 
   // WebSocket connection for real-time updates
+  // Dispatch custom events so individual pages can listen and refresh their data
   const handleNotification = useCallback((data: any) => {
-    // Notifications are handled by the notification bell component
-    // This is a placeholder for future real-time update handling
+    window.dispatchEvent(new CustomEvent('ws:notification', { detail: data }));
+  }, []);
+
+  const handleLeaveUpdate = useCallback((data: any) => {
+    window.dispatchEvent(new CustomEvent('ws:leave-update', { detail: data }));
+    window.dispatchEvent(new CustomEvent('ws:data-refresh', { detail: { type: 'leave', ...data } }));
+  }, []);
+
+  const handleAttendanceUpdate = useCallback((data: any) => {
+    window.dispatchEvent(new CustomEvent('ws:attendance-update', { detail: data }));
+    window.dispatchEvent(new CustomEvent('ws:data-refresh', { detail: { type: 'attendance', ...data } }));
+  }, []);
+
+  const handleExpenseUpdate = useCallback((data: any) => {
+    window.dispatchEvent(new CustomEvent('ws:expense-update', { detail: data }));
+    window.dispatchEvent(new CustomEvent('ws:data-refresh', { detail: { type: 'expense', ...data } }));
+  }, []);
+
+  const handleWorkflowUpdate = useCallback((data: any) => {
+    window.dispatchEvent(new CustomEvent('ws:workflow-update', { detail: data }));
+    window.dispatchEvent(new CustomEvent('ws:data-refresh', { detail: { type: 'workflow', ...data } }));
   }, []);
 
   const { connected: wsConnected } = useWebSocket({
     onNotification: handleNotification,
+    onLeaveUpdate: handleLeaveUpdate,
+    onAttendanceUpdate: handleAttendanceUpdate,
+    onExpenseUpdate: handleExpenseUpdate,
+    onWorkflowUpdate: handleWorkflowUpdate,
   });
 
   const filteredNavigation = useMemo(() => {
