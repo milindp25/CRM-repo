@@ -10,13 +10,18 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { EmployeeService } from './employee.service';
 import {
@@ -142,5 +147,25 @@ export class EmployeeController {
     @Param('id') id: string,
   ): Promise<void> {
     await this.employeeService.delete(id, user.companyId, user.userId, user.email);
+  }
+
+  @Post(':id/photo')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
+  @UseInterceptors(FileInterceptor('photo'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload employee photo' })
+  @ApiParam({ name: 'id', description: 'Employee UUID' })
+  @ApiResponse({ status: 200, description: 'Photo uploaded successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid file' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
+  async uploadPhoto(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No photo file provided');
+    }
+    return this.employeeService.uploadPhoto(id, user.companyId, file);
   }
 }

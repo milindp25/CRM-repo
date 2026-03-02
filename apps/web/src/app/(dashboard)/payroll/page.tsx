@@ -6,15 +6,32 @@ import type { PayrollBatch } from '@/lib/api/types';
 import { useToast } from '@/components/ui/toast';
 import { TableLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
+import { RoleGate } from '@/components/common/role-gate';
+import { Permission } from '@hrplatform/shared';
+import { PageContainer } from '@/components/ui/page-container';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { StatCard } from '@/components/ui/stat-card';
+import { DollarSign, Users, AlertTriangle, CheckCircle, Download, Send, CreditCard, RefreshCw, FileText, Filter, ChevronRight, ClipboardCheck } from 'lucide-react';
+import { PayrollDetailPanel } from '@/components/payroll/payroll-detail-panel';
+import { PayrollReviewPanel } from '@/components/payroll/payroll-review-panel';
+import { useAuthContext } from '@/contexts/auth-context';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { formatDate } from '@/lib/format-date';
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const getMonthName = (m: number) => MONTH_NAMES[m - 1] || '';
 
+const inputClass = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
+const selectClass = inputClass;
+
 type Tab = 'run' | 'history' | 'batches';
 
 export default function PayrollPage() {
+  useEffect(() => { document.title = 'Payroll | HRPlatform'; }, []);
+
   const [tab, setTab] = useState<Tab>('run');
   const toast = useToast();
+  const { user } = useAuthContext();
 
   // Run tab state
   const [runMonth, setRunMonth] = useState(new Date().getMonth() + 1);
@@ -37,9 +54,19 @@ export default function PayrollPage() {
     status: '',
   });
 
+  // Detail panel state
+  const [selectedPayroll, setSelectedPayroll] = useState<Payroll | null>(null);
+
+  // Review panel state (for PENDING_APPROVAL batches)
+  const [reviewingBatch, setReviewingBatch] = useState<PayrollBatch | null>(null);
+
   // Batches tab state
   const [batches, setBatches] = useState<PayrollBatch[]>([]);
   const [batchesLoading, setBatchesLoading] = useState(false);
+
+  // Confirm dialog states
+  const [runPayrollConfirm, setRunPayrollConfirm] = useState(false);
+  const [markAllPaidConfirm, setMarkAllPaidConfirm] = useState(false);
 
   // Load employees once
   useEffect(() => {
@@ -112,13 +139,12 @@ export default function PayrollPage() {
 
   // Actions
   const handleRunPayroll = async () => {
-    if (!confirm(`Run payroll for ${getMonthName(runMonth)} ${runYear}? This will process all active employees.`)) return;
     setProcessing(true);
     try {
       const batch = await apiClient.batchProcessPayroll(runMonth, runYear);
       setCurrentBatch(batch);
-      toast.success('Payroll Started', `Batch processing initiated for ${getMonthName(runMonth)} ${runYear}`);
-      // Reload after a moment
+      setRunPayrollConfirm(false);
+      toast.success('Payroll Started', `Calculating salaries for ${getMonthName(runMonth)} ${runYear}...`);
       setTimeout(() => loadCurrentBatch(), 2000);
     } catch (err: any) {
       toast.error('Batch Failed', err.message);
@@ -129,12 +155,10 @@ export default function PayrollPage() {
 
   const handleMarkAllPaid = async () => {
     if (!currentBatch) return;
-    if (!confirm('Mark all processed payrolls as paid?')) return;
     try {
-      for (const p of batchPayrolls.filter(p => p.status === 'PROCESSED')) {
-        await apiClient.markPayrollAsPaid(p.id);
-      }
-      toast.success('All Paid', 'All processed payrolls marked as paid');
+      const result = await apiClient.markBatchAsPaid(currentBatch.id);
+      toast.success('All Paid', result.message || 'All processed payrolls marked as paid');
+      setMarkAllPaidConfirm(false);
       loadCurrentBatch();
     } catch (err: any) {
       toast.error('Error', err.message);
@@ -191,262 +215,385 @@ export default function PayrollPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
-      case 'PROCESSED': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'PAID': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'HOLD': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'PENDING': return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
-      case 'PROCESSING': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'COMPLETED': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'FAILED': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-      case 'PARTIAL': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
-      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
-    }
-  };
-
-  const tabClass = (t: Tab) => `px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+  const tabClass = (t: Tab) => `px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
     tab === t
-      ? 'border-blue-600 text-blue-600'
-      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+      ? 'border-primary text-primary'
+      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
   }`;
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Payroll</h1>
-          <p className="text-muted-foreground mt-1">Process payroll, view history, and manage batches</p>
-        </div>
-      </div>
-
+    <PageContainer
+      title="Payroll"
+      description="Run payroll, review past payments, and track progress"
+      breadcrumbs={[
+        { label: 'Dashboard', href: '/' },
+        { label: 'Payroll' },
+      ]}
+    >
       {/* Tabs */}
-      <div className="flex gap-0 border-b border-border mb-6">
-        <button onClick={() => setTab('run')} className={tabClass('run')}>Payroll Run</button>
-        <button onClick={() => setTab('history')} className={tabClass('history')}>History</button>
-        <button onClick={() => setTab('batches')} className={tabClass('batches')}>Batches</button>
+      <div role="tablist" aria-label="Payroll sections" className="flex gap-0 border-b border-border -mt-2">
+        <button role="tab" aria-selected={tab === 'run'} aria-controls="panel-run" onClick={() => setTab('run')} className={tabClass('run')}>Run Payroll</button>
+        <button role="tab" aria-selected={tab === 'history'} aria-controls="panel-history" onClick={() => setTab('history')} className={tabClass('history')}>Past Payments</button>
+        <button role="tab" aria-selected={tab === 'batches'} aria-controls="panel-batches" onClick={() => setTab('batches')} className={tabClass('batches')}>All Runs</button>
       </div>
 
-      {/* ═══ Tab 1: Payroll Run ═══ */}
+      {/* Tab 1: Payroll Run */}
       {tab === 'run' && (
-        <div>
+        <div id="panel-run" role="tabpanel" className="space-y-6">
           {/* Period selector + actions */}
-          <div className="bg-card rounded-lg shadow-md p-4 mb-6">
+          <div className="rounded-xl border bg-card p-4">
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Month</label>
-                <select value={runMonth} onChange={e => setRunMonth(Number(e.target.value))} className="px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm">
+                <label htmlFor="payroll-run-month" className="block text-sm font-medium text-foreground mb-1.5">Month</label>
+                <select id="payroll-run-month" value={runMonth} onChange={e => setRunMonth(Number(e.target.value))} className={selectClass} style={{ width: 'auto', minWidth: '140px' }}>
                   {MONTH_NAMES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Year</label>
-                <select value={runYear} onChange={e => setRunYear(Number(e.target.value))} className="px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm">
+                <label htmlFor="payroll-run-year" className="block text-sm font-medium text-foreground mb-1.5">Year</label>
+                <select id="payroll-run-year" value={runYear} onChange={e => setRunYear(Number(e.target.value))} className={selectClass} style={{ width: 'auto', minWidth: '100px' }}>
                   {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
               {!currentBatch && (
-                <button onClick={handleRunPayroll} disabled={processing} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium">
-                  {processing ? 'Processing...' : 'Run Payroll'}
-                </button>
+                <RoleGate requiredPermissions={[Permission.MANAGE_PAYROLL]} hideOnly>
+                  <button onClick={() => setRunPayrollConfirm(true)} disabled={processing} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <DollarSign className="h-4 w-4" />
+                    {processing ? 'Processing...' : 'Run Payroll'}
+                  </button>
+                </RoleGate>
               )}
               {currentBatch && currentBatch.status === 'COMPLETED' && (
                 <>
-                  <button onClick={handleMarkAllPaid} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium">
-                    Mark All Paid
+                  <RoleGate requiredPermissions={[Permission.MANAGE_PAYROLL]} hideOnly>
+                    <button onClick={() => setMarkAllPaidConfirm(true)} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                      <CreditCard className="h-4 w-4" />
+                      Confirm All Payments
+                    </button>
+                  </RoleGate>
+                  <button onClick={handleDownloadBankFile} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium border border-input bg-background text-foreground hover:bg-muted transition-colors">
+                    <Download className="h-4 w-4" />
+                    Download for Bank
                   </button>
-                  <button onClick={handleDownloadBankFile} className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm font-medium">
-                    Download Bank File
-                  </button>
-                  <button onClick={handleSubmitApproval} className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm font-medium">
+                  <button onClick={handleSubmitApproval} className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium border border-primary text-primary bg-background hover:bg-primary/5 transition-colors">
+                    <Send className="h-4 w-4" />
                     Submit for Approval
                   </button>
+                  {batchPayrolls.some((p: any) => p.approvalStatus === 'PENDING_APPROVAL') && user?.role === 'COMPANY_ADMIN' && (
+                    <button
+                      onClick={() => setReviewingBatch(currentBatch)}
+                      className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+                    >
+                      <ClipboardCheck className="h-4 w-4" />
+                      Review &amp; Approve
+                    </button>
+                  )}
                 </>
               )}
             </div>
           </div>
 
-          {runError && <ErrorBanner message={runError} onDismiss={() => setRunError('')} className="mb-4" />}
+          {runError && <ErrorBanner message={runError} onDismiss={() => setRunError('')} />}
 
           {/* Batch status card */}
           {currentBatch && (
-            <div className="bg-card rounded-lg shadow-md p-4 mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-foreground">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">
                   Batch: {getMonthName(currentBatch.month)} {currentBatch.year}
                 </h3>
-                <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(currentBatch.status)}`}>
-                  {currentBatch.status}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-4 mb-3">
-                <div className="text-center p-2 bg-muted/50 rounded">
-                  <p className="text-2xl font-bold text-foreground">{currentBatch.totalCount}</p>
-                  <p className="text-xs text-muted-foreground">Total</p>
-                </div>
-                <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded">
-                  <p className="text-2xl font-bold text-green-700 dark:text-green-400">{currentBatch.processedCount}</p>
-                  <p className="text-xs text-muted-foreground">Processed</p>
-                </div>
-                <div className="text-center p-2 bg-red-50 dark:bg-red-900/20 rounded">
-                  <p className="text-2xl font-bold text-red-700 dark:text-red-400">{currentBatch.failedCount}</p>
-                  <p className="text-xs text-muted-foreground">Failed</p>
+                <div className="flex items-center gap-2">
+                  {batchPayrolls.length > 0 && batchPayrolls[0].approvalStatus && (
+                    <StatusBadge variant={getStatusVariant(batchPayrolls[0].approvalStatus)} dot>
+                      {batchPayrolls[0].approvalStatus.replace(/_/g, ' ')}
+                    </StatusBadge>
+                  )}
+                  <StatusBadge variant={getStatusVariant(currentBatch.status)} dot>
+                    {currentBatch.status}
+                  </StatusBadge>
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard
+                  title="Total"
+                  value={currentBatch.totalCount}
+                  icon={Users}
+                  iconColor="blue"
+                  subtitle="Employees in batch"
+                />
+                <StatCard
+                  title="Processed"
+                  value={currentBatch.processedCount}
+                  icon={CheckCircle}
+                  iconColor="green"
+                  subtitle={currentBatch.totalCount > 0 ? `${Math.round((currentBatch.processedCount / currentBatch.totalCount) * 100)}% complete` : '0%'}
+                />
+                <StatCard
+                  title="Failed"
+                  value={currentBatch.failedCount}
+                  icon={AlertTriangle}
+                  iconColor="rose"
+                  subtitle="Require attention"
+                />
+              </div>
+
+              {/* Progress bar */}
               {currentBatch.totalCount > 0 && (
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="rounded-xl border bg-card p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-foreground">Processing Progress</span>
+                    <span className="text-sm text-muted-foreground">
+                      {Math.round((currentBatch.processedCount / currentBatch.totalCount) * 100)}%
+                    </span>
+                  </div>
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{ width: `${(currentBatch.processedCount / currentBatch.totalCount) * 100}%` }}
-                  />
+                    className="w-full bg-muted rounded-full h-2"
+                    role="progressbar"
+                    aria-valuenow={Math.round((currentBatch.processedCount / currentBatch.totalCount) * 100)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label="Payroll processing progress"
+                  >
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${(currentBatch.processedCount / currentBatch.totalCount) * 100}%` }}
+                    />
+                  </div>
                 </div>
               )}
+
+              {/* Errors */}
               {currentBatch.errors && currentBatch.errors.length > 0 && (
-                <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/10 rounded text-sm">
-                  <p className="font-medium text-red-800 dark:text-red-400 mb-1">Errors:</p>
-                  {currentBatch.errors.slice(0, 5).map((e, i) => (
-                    <p key={i} className="text-red-700 dark:text-red-300 text-xs">Employee {e.employeeId}: {e.error}</p>
-                  ))}
+                <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive" aria-hidden="true" />
+                    <p className="text-sm font-medium text-destructive">Processing Errors</p>
+                  </div>
+                  <div className="space-y-1">
+                    {currentBatch.errors.slice(0, 5).map((e, i) => (
+                      <p key={i} className="text-xs text-destructive/80">
+                        Employee {e.employeeId}: {e.error}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Payroll records table */}
-          <div className="bg-card rounded-lg shadow-md overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted/50 border-b border-border">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Employee</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Gross</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Deductions</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Net</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {runLoading ? (
-                  <tr><td colSpan={6}><TableLoader rows={5} cols={6} /></td></tr>
-                ) : batchPayrolls.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                    {currentBatch ? 'No payroll records in this batch.' : `No payroll batch for ${getMonthName(runMonth)} ${runYear}. Click "Run Payroll" to start.`}
-                  </td></tr>
-                ) : (
-                  batchPayrolls.map(r => (
-                    <tr key={r.id} className="hover:bg-muted/30">
-                      <td className="px-4 py-3">
-                        <p className="text-sm font-medium text-foreground">{r.employee?.firstName} {r.employee?.lastName}</p>
-                        <p className="text-xs text-muted-foreground">{r.employee?.employeeCode}</p>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-foreground text-right font-medium">
-                        {typeof r.grossSalary === 'number' ? `₹${r.grossSalary.toLocaleString()}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-red-600 dark:text-red-400 text-right">
-                        -{typeof r.pfEmployee === 'number' ? `₹${(r.pfEmployee + r.esiEmployee + r.tds + r.pt + r.otherDeductions).toLocaleString()}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-green-600 dark:text-green-400 text-right font-semibold">
-                        {typeof r.netSalary === 'number' ? `₹${r.netSalary.toLocaleString()}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusColor(r.status)}`}>{r.status}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex gap-1 justify-end">
-                          {r.status === 'PROCESSED' && (
-                            <button onClick={() => handleRecalculate(r.id)} className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded">Recalc</button>
-                          )}
-                          {r.status === 'PROCESSED' && (
-                            <button onClick={() => apiClient.markPayrollAsPaid(r.id).then(() => { toast.success('Paid', 'Marked as paid'); loadCurrentBatch(); }).catch((e: any) => toast.error('Error', e.message))} className="text-xs px-2 py-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded">Pay</button>
-                          )}
-                          <button onClick={() => handleDownloadPayslip(r.id)} className="text-xs px-2 py-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded">Payslip</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Review panel (replaces table when reviewing) */}
+          {reviewingBatch && (
+            <PayrollReviewPanel
+              batch={reviewingBatch}
+              onClose={() => setReviewingBatch(null)}
+              onActionComplete={() => {
+                setReviewingBatch(null);
+                loadCurrentBatch();
+              }}
+            />
+          )}
+
+          {/* Payroll records table (hidden when review panel is active) */}
+          {!reviewingBatch && (
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted/30 border-b border-border">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Employee</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Gross</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Deductions</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Net</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {runLoading ? (
+                    <tr><td colSpan={6}><TableLoader rows={5} cols={6} /></td></tr>
+                  ) : batchPayrolls.length === 0 ? (
+                    <tr><td colSpan={6}>
+                      <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                        <DollarSign className="h-12 w-12 text-muted-foreground/50 mb-3" aria-hidden="true" />
+                        <h3 className="text-lg font-semibold text-foreground">
+                          {currentBatch ? 'No payroll records' : 'No payroll batch'}
+                        </h3>
+                        <p className="mt-1 text-sm text-muted-foreground max-w-sm">
+                          {currentBatch ? 'No payroll records in this batch.' : `No payroll batch for ${getMonthName(runMonth)} ${runYear}. Click "Run Payroll" to start.`}
+                        </p>
+                      </div>
+                    </td></tr>
+                  ) : (
+                    batchPayrolls.map(r => (
+                      <tr
+                        key={r.id}
+                        className="hover:bg-muted/30 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                        onClick={() => setSelectedPayroll(r)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedPayroll(r); } }}
+                        tabIndex={0}
+                        aria-label={`View payroll details for ${r.employee?.firstName} ${r.employee?.lastName}`}
+                      >
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-medium text-foreground">{r.employee?.firstName} {r.employee?.lastName}</p>
+                          <p className="text-xs text-muted-foreground">{r.employee?.employeeCode}</p>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-foreground text-right font-medium">
+                          {typeof r.grossSalary === 'number' ? `$${r.grossSalary.toLocaleString()}` : '--'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          <span className="text-destructive dark:text-red-400">
+                            -{typeof r.pfEmployee === 'number' ? `$${(r.pfEmployee + r.esiEmployee + r.tds + r.pt + r.otherDeductions).toLocaleString()}` : '--'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold">
+                          <span className="text-green-600 dark:text-green-400">
+                            {typeof r.netSalary === 'number' ? `$${r.netSalary.toLocaleString()}` : '--'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <StatusBadge variant={getStatusVariant(r.status)}>{r.status}</StatusBadge>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex gap-1 justify-end">
+                            {r.status === 'PROCESSED' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleRecalculate(r.id); }}
+                                className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                              >
+                                <RefreshCw className="h-3 w-3" />
+                                Recalculate
+                              </button>
+                            )}
+                            {r.status === 'PROCESSED' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); apiClient.markPayrollAsPaid(r.id).then(() => { toast.success('Paid', 'Marked as paid'); loadCurrentBatch(); }).catch((err: any) => toast.error('Error', err.message)); }}
+                                className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-xs font-medium text-muted-foreground hover:text-green-600 hover:bg-green-500/10 transition-colors"
+                              >
+                                <CreditCard className="h-3 w-3" />
+                                Pay
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDownloadPayslip(r.id); }}
+                              className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-xs font-medium text-muted-foreground hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
+                            >
+                              <FileText className="h-3 w-3" />
+                              Payslip
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ═══ Tab 2: History ═══ */}
+      {/* Tab 2: History */}
       {tab === 'history' && (
-        <div>
-          <div className="bg-card rounded-lg shadow-md p-4 mb-6">
+        <div id="panel-history" role="tabpanel" className="space-y-6">
+          <div className="rounded-xl border bg-card p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <h3 className="text-sm font-medium text-foreground">Filters</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Month</label>
-                <select value={histFilters.month} onChange={e => setHistFilters(p => ({ ...p, month: Number(e.target.value) }))} className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm">
+                <label htmlFor="payroll-hist-month" className="block text-sm font-medium text-foreground mb-1.5">Month</label>
+                <select id="payroll-hist-month" value={histFilters.month} onChange={e => setHistFilters(p => ({ ...p, month: Number(e.target.value) }))} className={selectClass}>
                   {MONTH_NAMES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Year</label>
-                <select value={histFilters.year} onChange={e => setHistFilters(p => ({ ...p, year: Number(e.target.value) }))} className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm">
+                <label htmlFor="payroll-hist-year" className="block text-sm font-medium text-foreground mb-1.5">Year</label>
+                <select id="payroll-hist-year" value={histFilters.year} onChange={e => setHistFilters(p => ({ ...p, year: Number(e.target.value) }))} className={selectClass}>
                   {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Employee</label>
-                <select value={histFilters.employeeId} onChange={e => setHistFilters(p => ({ ...p, employeeId: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm">
+                <label htmlFor="payroll-hist-employee" className="block text-sm font-medium text-foreground mb-1.5">Employee</label>
+                <select id="payroll-hist-employee" value={histFilters.employeeId} onChange={e => setHistFilters(p => ({ ...p, employeeId: e.target.value }))} className={selectClass}>
                   <option value="">All</option>
                   {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.employeeCode} - {emp.firstName} {emp.lastName}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Status</label>
-                <select value={histFilters.status} onChange={e => setHistFilters(p => ({ ...p, status: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm">
+                <label htmlFor="payroll-hist-status" className="block text-sm font-medium text-foreground mb-1.5">Status</label>
+                <select id="payroll-hist-status" value={histFilters.status} onChange={e => setHistFilters(p => ({ ...p, status: e.target.value }))} className={selectClass}>
                   <option value="">All</option>
-                  <option value="DRAFT">Draft</option>
-                  <option value="PROCESSED">Processed</option>
+                  <option value="DRAFT">Pending</option>
+                  <option value="PROCESSED">Ready</option>
                   <option value="PAID">Paid</option>
-                  <option value="HOLD">Hold</option>
+                  <option value="HOLD">On Hold</option>
                 </select>
               </div>
             </div>
           </div>
 
-          {historyError && <ErrorBanner message={historyError} onDismiss={() => setHistoryError('')} className="mb-4" />}
+          {historyError && <ErrorBanner message={historyError} onDismiss={() => setHistoryError('')} />}
 
-          <div className="bg-card rounded-lg shadow-md overflow-hidden">
+          <div className="rounded-xl border bg-card overflow-hidden">
             <table className="w-full">
-              <thead className="bg-muted/50 border-b border-border">
+              <thead className="bg-muted/30 border-b border-border">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Employee</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Period</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Gross</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Deductions</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Net</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Actions</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Employee</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Period</th>
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Gross</th>
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Deductions</th>
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Net</th>
+                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {historyLoading ? (
                   <tr><td colSpan={7}><TableLoader rows={5} cols={7} /></td></tr>
                 ) : historyRecords.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No records found.</td></tr>
+                  <tr><td colSpan={7}>
+                    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                      <FileText className="h-12 w-12 text-muted-foreground/50 mb-3" aria-hidden="true" />
+                      <h3 className="text-lg font-semibold text-foreground">No records found</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">Try changing the month, employee, or status above to find records.</p>
+                    </div>
+                  </td></tr>
                 ) : (
                   historyRecords.map(r => {
                     const ded = r.pfEmployee + r.esiEmployee + r.tds + r.pt + r.otherDeductions;
                     return (
-                      <tr key={r.id} className="hover:bg-muted/30">
+                      <tr
+                        key={r.id}
+                        className="hover:bg-muted/30 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                        onClick={() => setSelectedPayroll(r)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedPayroll(r); } }}
+                        tabIndex={0}
+                        aria-label={`View payroll details for ${r.employee?.firstName} ${r.employee?.lastName}, ${getMonthName(r.payPeriodMonth)} ${r.payPeriodYear}`}
+                      >
                         <td className="px-4 py-3">
                           <p className="text-sm font-medium text-foreground">{r.employee?.firstName} {r.employee?.lastName}</p>
                           <p className="text-xs text-muted-foreground">{r.employee?.employeeCode}</p>
                         </td>
                         <td className="px-4 py-3 text-sm text-foreground">{getMonthName(r.payPeriodMonth)} {r.payPeriodYear}</td>
-                        <td className="px-4 py-3 text-sm text-right font-medium text-foreground">₹{r.grossSalary.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-sm text-right text-red-600 dark:text-red-400">-₹{ded.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-600 dark:text-green-400">₹{r.netSalary.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm text-right font-medium text-foreground">${r.grossSalary.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          <span className="text-destructive dark:text-red-400">-${ded.toLocaleString()}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold">
+                          <span className="text-green-600 dark:text-green-400">${r.netSalary.toLocaleString()}</span>
+                        </td>
                         <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusColor(r.status)}`}>{r.status}</span>
+                          <StatusBadge variant={getStatusVariant(r.status)}>{r.status}</StatusBadge>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button onClick={() => handleDownloadPayslip(r.id)} className="text-xs text-purple-600 hover:text-purple-800">Payslip</button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownloadPayslip(r.id); }}
+                            className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-xs font-medium text-muted-foreground hover:text-purple-600 hover:bg-purple-500/10 transition-colors"
+                          >
+                            <FileText className="h-3 w-3" />
+                            Payslip
+                          </button>
                         </td>
                       </tr>
                     );
@@ -458,36 +605,53 @@ export default function PayrollPage() {
         </div>
       )}
 
-      {/* ═══ Tab 3: Batches ═══ */}
+      {/* Tab 3: Batches */}
       {tab === 'batches' && (
-        <div className="bg-card rounded-lg shadow-md overflow-hidden">
+        <div id="panel-batches" role="tabpanel" className="rounded-xl border bg-card overflow-hidden">
           <table className="w-full">
-            <thead className="bg-muted/50 border-b border-border">
+            <thead className="bg-muted/30 border-b border-border">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Period</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Status</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Total</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Processed</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase">Failed</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Completed</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Period</th>
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</th>
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Processed</th>
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Failed</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Completed</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {batchesLoading ? (
                 <tr><td colSpan={6}><TableLoader rows={3} cols={6} /></td></tr>
               ) : batches.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No batches yet.</td></tr>
+                <tr><td colSpan={6}>
+                  <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                    <Users className="h-12 w-12 text-muted-foreground/50 mb-3" aria-hidden="true" />
+                    <h3 className="text-lg font-semibold text-foreground">No batches yet</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Go to the &quot;Run Payroll&quot; tab to process your first payroll.</p>
+                  </div>
+                </td></tr>
               ) : (
                 batches.map(b => (
-                  <tr key={b.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => { setRunMonth(b.month); setRunYear(b.year); setTab('run'); }}>
+                  <tr
+                    key={b.id}
+                    className="hover:bg-muted/30 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                    onClick={() => { setRunMonth(b.month); setRunYear(b.year); setTab('run'); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRunMonth(b.month); setRunYear(b.year); setTab('run'); } }}
+                    tabIndex={0}
+                    aria-label={`View payroll run for ${getMonthName(b.month)} ${b.year}`}
+                  >
                     <td className="px-4 py-3 text-sm font-medium text-foreground">{getMonthName(b.month)} {b.year}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(b.status)}`}>{b.status}</span>
+                      <StatusBadge variant={getStatusVariant(b.status)} dot>{b.status}</StatusBadge>
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-foreground">{b.totalCount}</td>
-                    <td className="px-4 py-3 text-center text-sm text-green-600 dark:text-green-400">{b.processedCount}</td>
-                    <td className="px-4 py-3 text-center text-sm text-red-600 dark:text-red-400">{b.failedCount}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{b.completedAt ? new Date(b.completedAt).toLocaleString() : '—'}</td>
+                    <td className="px-4 py-3 text-center text-sm">
+                      <span className="text-green-600 dark:text-green-400">{b.processedCount}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm">
+                      <span className="text-destructive dark:text-red-400">{b.failedCount}</span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{b.completedAt ? formatDate(b.completedAt, { time: true }) : '--'}</td>
                   </tr>
                 ))
               )}
@@ -495,6 +659,34 @@ export default function PayrollPage() {
           </table>
         </div>
       )}
-    </div>
+      {/* Detail Panel */}
+      {selectedPayroll && (
+        <PayrollDetailPanel
+          payroll={selectedPayroll}
+          onClose={() => setSelectedPayroll(null)}
+          onUpdated={() => {
+            if (tab === 'run') loadCurrentBatch();
+            if (tab === 'history') loadHistory();
+          }}
+        />
+      )}
+      {/* Confirm Dialogs */}
+      <ConfirmDialog
+        open={runPayrollConfirm}
+        onClose={() => setRunPayrollConfirm(false)}
+        onConfirm={handleRunPayroll}
+        title="Run Payroll"
+        description={`Run payroll for ${getMonthName(runMonth)} ${runYear}? This will calculate salaries for all active employees.`}
+        confirmLabel="Run Payroll"
+      />
+      <ConfirmDialog
+        open={markAllPaidConfirm}
+        onClose={() => setMarkAllPaidConfirm(false)}
+        onConfirm={handleMarkAllPaid}
+        title="Confirm All Payments"
+        description="Mark all processed payrolls as paid? This marks them as complete."
+        confirmLabel="Confirm All Paid"
+      />
+    </PageContainer>
   );
 }

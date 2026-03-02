@@ -13,6 +13,8 @@ const PUBLIC_PATHS = [
   '/register',
   '/auth/forgot-password',
   '/auth/reset-password',
+  '/privacy',
+  '/terms',
 ];
 
 const PUBLIC_PREFIXES = [

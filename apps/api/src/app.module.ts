@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ApiKeyThrottlerGuard } from './common/guards/api-key-throttler.guard';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
@@ -98,6 +99,9 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
 
     // Event System
     EventEmitterModule.forRoot(),
+
+    // Task Scheduling
+    ScheduleModule.forRoot(),
 
     // Core Modules
     DatabaseModule,

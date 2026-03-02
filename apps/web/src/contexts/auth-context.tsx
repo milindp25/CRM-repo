@@ -125,8 +125,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const response: AuthResponse = await apiClient.register(data, remember);
         setUser(response.user);
 
-        // Redirect to dashboard
-        router.push('/dashboard');
+        // Redirect to onboarding wizard for new registrations
+        router.push('/onboarding');
       } catch (err) {
         if (err instanceof ApiError) {
           setError(err.message);

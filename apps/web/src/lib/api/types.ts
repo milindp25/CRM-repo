@@ -24,7 +24,7 @@ export interface Department {
 
 export interface CreateDepartmentData {
   name: string;
-  code: string;
+  code?: string;
   description?: string;
   parentId?: string;
   headEmployeeId?: string;
@@ -74,7 +74,7 @@ export interface Designation {
 
 export interface CreateDesignationData {
   title: string;
-  code: string;
+  code?: string;
   description?: string;
   level?: number;
   minSalary?: number;
@@ -253,6 +253,9 @@ export interface Payroll {
   ifscCode?: string;
   bankName?: string;
   status: 'DRAFT' | 'PROCESSED' | 'PAID' | 'HOLD';
+  approvalStatus?: string;
+  adjustments?: Array<{ id: string; name: string; type: 'EARNING' | 'DEDUCTION'; amount: number; reason?: string }>;
+  batchId?: string;
   paidAt?: string;
   payslipPath?: string;
   notes?: string;

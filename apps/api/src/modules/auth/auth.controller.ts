@@ -7,6 +7,7 @@ import {
   HttpStatus,
   UseGuards,
   Get,
+  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -52,6 +53,19 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {}
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Get('check-company')
+  @ApiOperation({ summary: 'Check if a company name already exists' })
+  @ApiQuery({ name: 'name', required: true, description: 'Company name to check' })
+  @ApiResponse({ status: 200, description: 'Returns whether the company exists' })
+  async checkCompany(@Query('name') name: string) {
+    if (!name || name.trim().length < 2) {
+      return { exists: false };
+    }
+    return this.authService.checkCompanyExists(name.trim());
+  }
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } })

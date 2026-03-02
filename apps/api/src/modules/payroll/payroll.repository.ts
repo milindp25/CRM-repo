@@ -13,6 +13,8 @@ const EMPLOYEE_SELECT = {
   w4Allowances: true,
   salaryStructureId: true,
   annualCtc: true,
+  department: { select: { name: true } },
+  designation: { select: { title: true } },
 };
 
 @Injectable()
@@ -126,12 +128,17 @@ export class PayrollRepository {
       select: {
         id: true,
         companyName: true,
+        city: true,
+        state: true,
+        country: true,
+        postalCode: true,
         payrollCountry: true,
         payFrequency: true,
         pfEnabled: true,
         esiEnabled: true,
         emailPayslipEnabled: true,
         companyPanEncrypted: true,
+        tanEncrypted: true,
         einEncrypted: true,
       },
     });

@@ -148,14 +148,14 @@ export default function LeaveBalancePage() {
         </div>
         <Link
           href="/leave"
-          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+          className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
         >
           ← Leave Requests
         </Link>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+        <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-md text-sm dark:bg-destructive/5">
           {error}
         </div>
       )}
@@ -199,9 +199,9 @@ export default function LeaveBalancePage() {
       </div>
 
       {/* Entitlement Key */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
-        <p className="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">Annual Entitlements (Days)</p>
-        <div className="flex flex-wrap gap-4 text-sm text-blue-800">
+      <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-6 dark:bg-primary/10">
+        <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">Annual Entitlements (Days)</p>
+        <div className="flex flex-wrap gap-4 text-sm text-foreground">
           {Object.entries(LEAVE_ENTITLEMENTS)
             .filter(([, days]) => days > 0)
             .map(([type, days]) => (
@@ -214,7 +214,7 @@ export default function LeaveBalancePage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
         </div>
       ) : balances.length === 0 ? (
         <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">

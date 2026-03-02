@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
+import { PageContainer } from '@/components/ui/page-container';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { EmptyState } from '@/components/ui/error-banner';
+import { TableLoader } from '@/components/ui/page-loader';
+import { ArrowRightLeft, Plus } from 'lucide-react';
+
+const INPUT_CLASS = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
+const SELECT_CLASS = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
 
 interface Delegation {
   id: string;
@@ -116,114 +125,139 @@ export default function DelegationsPage() {
   };
 
   const scopeOptions = ['LEAVE', 'EXPENSE', 'DOCUMENT', 'PAYROLL'];
+  const scopeLabels: Record<string, string> = { LEAVE: 'Time Off', EXPENSE: 'Expenses', DOCUMENT: 'Documents', PAYROLL: 'Payroll' };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Approval Delegations</h1>
-          <p className="text-muted-foreground">Delegate your approvals when you&apos;re away</p>
-        </div>
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
-        >
-          {showCreate ? 'Cancel' : 'New Delegation'}
+    <PageContainer
+      title="Backup Approvers"
+      description="Assign someone to handle approvals when you're away"
+      breadcrumbs={[
+        { label: 'Dashboard', href: '/' },
+        { label: 'Settings', href: '/settings' },
+        { label: 'Backup Approvers' },
+      ]}
+      actions={
+        <button onClick={() => setShowCreate(true)}
+          className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+          <Plus className="h-4 w-4" />
+          Add Backup Approver
         </button>
-      </div>
-
-      {showCreate && (
-        <form onSubmit={handleCreate} className="bg-card border border-border rounded-lg p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      }
+    >
+      {/* Create Form Modal */}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} size="lg">
+        <ModalHeader onClose={() => setShowCreate(false)}>Add Backup Approver</ModalHeader>
+        <form onSubmit={handleCreate}>
+          <ModalBody className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Delegate To *</label>
+                <select
+                  value={form.delegateId}
+                  onChange={(e) => setForm({ ...form, delegateId: e.target.value })}
+                  className={SELECT_CLASS}
+                  required
+                >
+                  <option value="">Select user...</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.email})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Reason</label>
+                <input
+                  type="text"
+                  value={form.reason}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                  placeholder="e.g., On vacation"
+                  className={INPUT_CLASS}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Start Date *</label>
+                <input
+                  type="date"
+                  value={form.startDate}
+                  onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                  className={INPUT_CLASS}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">End Date *</label>
+                <input
+                  type="date"
+                  value={form.endDate}
+                  onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                  className={INPUT_CLASS}
+                  required
+                />
+              </div>
+            </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Delegate To</label>
-              <select
-                value={form.delegateId}
-                onChange={(e) => setForm({ ...form, delegateId: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                required
-              >
-                <option value="">Select user...</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.email})</option>
+              <label className="block text-sm font-medium text-foreground mb-1.5">What can they approve? (leave empty for everything)</label>
+              <div className="flex flex-wrap gap-3">
+                {scopeOptions.map((s) => (
+                  <label key={s} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.scope.includes(s)}
+                      onChange={(e) => {
+                        if (e.target.checked) setForm({ ...form, scope: [...form.scope, s] });
+                        else setForm({ ...form, scope: form.scope.filter((x) => x !== s) });
+                      }}
+                      className="rounded border-input"
+                    />
+                    {scopeLabels[s] || s}
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Reason</label>
-              <input
-                type="text"
-                value={form.reason}
-                onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                placeholder="e.g., On vacation"
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Start Date</label>
-              <input
-                type="date"
-                value={form.startDate}
-                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">End Date</label>
-              <input
-                type="date"
-                value={form.endDate}
-                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                required
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Scope (leave empty for all types)</label>
-            <div className="flex flex-wrap gap-2">
-              {scopeOptions.map((s) => (
-                <label key={s} className="flex items-center gap-1 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={form.scope.includes(s)}
-                    onChange={(e) => {
-                      if (e.target.checked) setForm({ ...form, scope: [...form.scope, s] });
-                      else setForm({ ...form, scope: form.scope.filter((x) => x !== s) });
-                    }}
-                  />
-                  {s}
-                </label>
-              ))}
-            </div>
-          </div>
-          <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">
-            Create Delegation
-          </button>
+          </ModalBody>
+          <ModalFooter>
+            <button type="button" onClick={() => setShowCreate(false)}
+              className="border border-input bg-background text-foreground hover:bg-muted h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+              Cancel
+            </button>
+            <button type="submit"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+              Save
+            </button>
+          </ModalFooter>
         </form>
-      )}
+      </Modal>
 
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
+      {/* Delegations Table */}
+      <div className="rounded-xl border bg-card overflow-hidden">
         <table className="w-full">
-          <thead className="bg-muted/50">
+          <thead className="border-b bg-muted/30">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Delegator</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Delegate</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Period</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Reason</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Original Approver</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Backup Person</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Period</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Reason</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y">
             {loading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
+              <tr><td colSpan={6}><TableLoader rows={4} cols={6} /></td></tr>
             ) : delegations.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No delegations found</td></tr>
+              <tr>
+                <td colSpan={6}>
+                  <EmptyState
+                    icon={<ArrowRightLeft className="h-10 w-10" />}
+                    title="No backup approvers set up"
+                    description="Assign someone to handle approvals on your behalf when you're away"
+                    action={{ label: 'Add Backup Approver', onClick: () => setShowCreate(true) }}
+                  />
+                </td>
+              </tr>
             ) : (
               delegations.map((d) => (
-                <tr key={d.id} className="hover:bg-muted/30">
+                <tr key={d.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 text-sm text-foreground">{d.delegator.firstName} {d.delegator.lastName}</td>
                   <td className="px-4 py-3 text-sm text-foreground">{d.delegate.firstName} {d.delegate.lastName}</td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
@@ -231,13 +265,14 @@ export default function DelegationsPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">{d.reason || '-'}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${d.isActive ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                    <StatusBadge variant={getStatusVariant(d.isActive ? 'ACTIVE' : 'INACTIVE')} dot>
                       {d.isActive ? 'Active' : 'Revoked'}
-                    </span>
+                    </StatusBadge>
                   </td>
                   <td className="px-4 py-3">
                     {d.isActive && (
-                      <button onClick={() => handleRevoke(d.id)} className="text-sm text-destructive hover:underline">
+                      <button onClick={() => handleRevoke(d.id)}
+                        className="text-sm text-destructive hover:bg-destructive/10 h-8 px-3 rounded-lg transition-colors font-medium">
                         Revoke
                       </button>
                     )}
@@ -248,6 +283,6 @@ export default function DelegationsPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageContainer>
   );
 }

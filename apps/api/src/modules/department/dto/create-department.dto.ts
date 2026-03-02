@@ -22,14 +22,15 @@ export class CreateDepartmentDto {
   @Length(1, 100)
   name: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'ENG',
-    description: 'Unique department code within the company',
+    description: 'Unique department code within the company. Auto-generated from name if not provided.',
     maxLength: 50,
   })
+  @IsOptional()
   @IsString()
-  @Length(1, 50)
-  code: string;
+  @MaxLength(50)
+  code?: string;
 
   @ApiPropertyOptional({
     example: 'Responsible for all software development and engineering operations',

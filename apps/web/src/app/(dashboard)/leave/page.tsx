@@ -2,12 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, Leave, CreateLeaveData, Employee } from '@/lib/api-client';
-import { Plus, Calendar, Clock, Trash2, Edit2, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { Plus, Calendar, Clock, Trash2, Edit2, CheckCircle, XCircle, Ban, Filter, X, CalendarDays, CalendarClock, Check } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { TableLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
+import { PageContainer } from '@/components/ui/page-container';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { StatCard } from '@/components/ui/stat-card';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { formatDate } from '@/lib/format-date';
+import { Loader2 } from 'lucide-react';
+
+const inputClass = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
+const selectClass = inputClass;
 
 export default function LeavePage() {
+  useEffect(() => { document.title = 'Time Off | HRPlatform'; }, []);
+
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +31,22 @@ export default function LeavePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const toast = useToast();
+
+  // Confirm dialog states
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [bulkApproveConfirm, setBulkApproveConfirm] = useState(false);
+  const [bulkRejectConfirm, setBulkRejectConfirm] = useState(false);
+  const [bulkRejectReason, setBulkRejectReason] = useState('');
+
+  // Per-row loading states
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  // Selection for bulk actions
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Filters
   const [employeeFilter, setEmployeeFilter] = useState('');
@@ -162,12 +190,11 @@ export default function LeavePage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this leave request?')) return;
-
     try {
       await apiClient.deleteLeave(id);
       toast.success('Leave request deleted successfully');
       setError(null);
+      setDeleteConfirmId(null);
       fetchLeaves();
     } catch (err: any) {
       toast.error('Failed to delete leave request', err.message || undefined);
@@ -176,21 +203,25 @@ export default function LeavePage() {
 
   const handleApprove = async (id: string) => {
     try {
+      setApprovingId(id);
       await apiClient.approveLeave(id);
       toast.success('Leave request approved');
       setError(null);
       fetchLeaves();
     } catch (err: any) {
       toast.error('Failed to approve leave request', err.message || undefined);
+    } finally {
+      setApprovingId(null);
     }
   };
 
   const handleReject = async (id: string) => {
-    const reason = prompt('Reason for rejection (optional):');
     try {
-      await apiClient.rejectLeave(id, reason || undefined);
+      await apiClient.rejectLeave(id, rejectReason || undefined);
       toast.success('Leave request rejected');
       setError(null);
+      setRejectConfirmId(null);
+      setRejectReason('');
       fetchLeaves();
     } catch (err: any) {
       toast.error('Failed to reject leave request', err.message || undefined);
@@ -198,15 +229,61 @@ export default function LeavePage() {
   };
 
   const handleCancel = async (id: string) => {
-    const reason = prompt('Reason for cancellation (optional):');
     try {
-      await apiClient.cancelLeave(id, reason || undefined);
+      await apiClient.cancelLeave(id, cancelReason || undefined);
       toast.success('Leave request cancelled');
       setError(null);
+      setCancelConfirmId(null);
+      setCancelReason('');
       fetchLeaves();
     } catch (err: any) {
       toast.error('Failed to cancel leave request', err.message || undefined);
     }
+  };
+
+  const handleBulkApprove = async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      const result = await apiClient.bulkApproveLeave(ids);
+      toast.success('Bulk Approved', `${result.processed} leave request(s) approved`);
+      setSelectedIds(new Set());
+      setBulkApproveConfirm(false);
+      fetchLeaves();
+    } catch (err: any) {
+      toast.error('Bulk Approve Failed', err.message || undefined);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      const result = await apiClient.bulkRejectLeave(ids, bulkRejectReason || undefined);
+      toast.success('Bulk Rejected', `${result.processed} leave request(s) rejected`);
+      setSelectedIds(new Set());
+      setBulkRejectConfirm(false);
+      setBulkRejectReason('');
+      fetchLeaves();
+    } catch (err: any) {
+      toast.error('Bulk Reject Failed', err.message || undefined);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    const pendingLeaves = leaves.filter(l => l.status === 'PENDING');
+    if (pendingLeaves.length === 0) return;
+    const allSelected = pendingLeaves.every(l => selectedIds.has(l.id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(pendingLeaves.map(l => l.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
   };
 
   const resetForm = () => {
@@ -222,16 +299,6 @@ export default function LeavePage() {
     setShowForm(false);
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      APPROVED: 'bg-green-100 text-green-800',
-      REJECTED: 'bg-red-100 text-red-800',
-      CANCELLED: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
-    };
-    return colors[status] || 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
-  };
-
   const getLeaveTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       CASUAL: 'Casual Leave',
@@ -240,40 +307,113 @@ export default function LeavePage() {
       PRIVILEGE: 'Privilege Leave',
       MATERNITY: 'Maternity Leave',
       PATERNITY: 'Paternity Leave',
-      COMPENSATORY: 'Compensatory Off',
-      LOSS_OF_PAY: 'Loss of Pay',
+      COMPENSATORY: 'Time Off in Lieu',
+      LOSS_OF_PAY: 'Unpaid Leave',
     };
     return labels[type] || type;
   };
 
-  return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Leave Management</h1>
-        <p className="mt-2 text-muted-foreground">Manage employee leave requests</p>
-      </div>
+  // Compute summary stats
+  const pendingCount = leaves.filter(l => l.status === 'PENDING').length;
+  const approvedCount = leaves.filter(l => l.status === 'APPROVED').length;
+  const rejectedCount = leaves.filter(l => l.status === 'REJECTED').length;
+  const totalDays = leaves.reduce((sum, l) => sum + (l.totalDays || 0), 0);
 
+  const hasFilters = employeeFilter || leaveTypeFilter || statusFilter || startDate || endDate;
+
+  return (
+    <PageContainer
+      title="Time Off"
+      description="Review and manage time off requests from your team"
+      breadcrumbs={[
+        { label: 'Dashboard', href: '/' },
+        { label: 'Time Off' },
+      ]}
+      actions={
+        <button
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Apply for Leave
+        </button>
+      }
+    >
+      {/* Error banner */}
       {error && (
         <ErrorBanner
           message={error}
           onDismiss={() => setError(null)}
           onRetry={() => fetchLeaves()}
-          className="mb-6"
         />
       )}
 
+      {/* Stat cards */}
+      {!loading && leaves.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Pending"
+            value={pendingCount}
+            icon={Clock}
+            iconColor="amber"
+            subtitle="Awaiting approval"
+          />
+          <StatCard
+            title="Approved"
+            value={approvedCount}
+            icon={CheckCircle}
+            iconColor="green"
+            subtitle="Current page"
+          />
+          <StatCard
+            title="Rejected"
+            value={rejectedCount}
+            icon={XCircle}
+            iconColor="rose"
+            subtitle="Current page"
+          />
+          <StatCard
+            title="Total Days"
+            value={totalDays}
+            icon={CalendarDays}
+            iconColor="blue"
+            subtitle="Current page"
+          />
+        </div>
+      )}
+
       {/* Filters */}
-      <div className="mb-6 p-4 bg-card rounded-lg shadow">
+      <div className="rounded-xl border bg-card p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Filter className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <h3 className="text-sm font-medium text-foreground">Filters</h3>
+          {hasFilters && (
+            <button
+              onClick={() => {
+                setEmployeeFilter('');
+                setLeaveTypeFilter('');
+                setStatusFilter('');
+                setStartDate('');
+                setEndDate('');
+                setCurrentPage(1);
+              }}
+              className="ml-auto inline-flex items-center gap-1 h-7 px-2 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <X className="h-3 w-3" />
+              Clear
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Employee</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Employee</label>
             <select
               value={employeeFilter}
               onChange={(e) => {
                 setEmployeeFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={selectClass}
             >
               <option value="">All Employees</option>
               {employees.map((emp) => (
@@ -285,14 +425,14 @@ export default function LeavePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Leave Type</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Leave Type</label>
             <select
               value={leaveTypeFilter}
               onChange={(e) => {
                 setLeaveTypeFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={selectClass}
             >
               <option value="">All Types</option>
               <option value="CASUAL">Casual Leave</option>
@@ -301,22 +441,22 @@ export default function LeavePage() {
               <option value="PRIVILEGE">Privilege Leave</option>
               <option value="MATERNITY">Maternity Leave</option>
               <option value="PATERNITY">Paternity Leave</option>
-              <option value="COMPENSATORY">Compensatory Off</option>
-              <option value="LOSS_OF_PAY">Loss of Pay</option>
+              <option value="COMPENSATORY">Time Off in Lieu</option>
+              <option value="LOSS_OF_PAY">Unpaid Leave</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Status</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Status</label>
             <select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={selectClass}
             >
-              <option value="">All Status</option>
+              <option value="">All Statuses</option>
               <option value="PENDING">Pending</option>
               <option value="APPROVED">Approved</option>
               <option value="REJECTED">Rejected</option>
@@ -325,7 +465,7 @@ export default function LeavePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Start Date</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Start Date</label>
             <input
               type="date"
               value={startDate}
@@ -333,12 +473,12 @@ export default function LeavePage() {
                 setStartDate(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">End Date</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">End Date</label>
             <input
               type="date"
               value={endDate}
@@ -346,310 +486,356 @@ export default function LeavePage() {
                 setEndDate(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={inputClass}
             />
           </div>
         </div>
-
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={() => {
-              setEmployeeFilter('');
-              setLeaveTypeFilter('');
-              setStatusFilter('');
-              setStartDate('');
-              setEndDate('');
-              setCurrentPage(1);
-            }}
-            className="px-4 py-2 text-sm text-foreground bg-muted rounded-lg hover:bg-muted"
-          >
-            Clear Filters
-          </button>
-        </div>
       </div>
 
-      {/* Apply leave button */}
-      <div className="mb-4">
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus size={20} />
-          {showForm ? 'Cancel' : 'Apply for Leave'}
-        </button>
-      </div>
-
-      {/* Leave form */}
-      {showForm && (
-        <div className="mb-6 p-6 bg-card rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? 'Edit Leave Request' : 'Apply for Leave'}
-          </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Employee <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
-                value={formData.employeeId}
-                onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Select employee</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.firstName} {emp.lastName} ({emp.employeeCode})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Leave Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
-                value={formData.leaveType}
-                onChange={(e) => setFormData({ ...formData, leaveType: e.target.value as any })}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="CASUAL">Casual Leave</option>
-                <option value="SICK">Sick Leave</option>
-                <option value="EARNED">Earned Leave</option>
-                <option value="PRIVILEGE">Privilege Leave</option>
-                <option value="MATERNITY">Maternity Leave</option>
-                <option value="PATERNITY">Paternity Leave</option>
-                <option value="COMPENSATORY">Compensatory Off</option>
-                <option value="LOSS_OF_PAY">Loss of Pay</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Start Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.startDate}
-                onChange={(e) => {
-                  const newStartDate = e.target.value;
-                  const days = calculateDays(newStartDate, formData.endDate);
-                  setFormData({ ...formData, startDate: newStartDate, totalDays: days });
-                }}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                End Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.endDate}
-                onChange={(e) => {
-                  const newEndDate = e.target.value;
-                  const days = calculateDays(formData.startDate, newEndDate);
-                  setFormData({ ...formData, endDate: newEndDate, totalDays: days });
-                }}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Total Days <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                required
-                min="0.5"
-                step="0.5"
-                value={formData.totalDays}
-                onChange={(e) => setFormData({ ...formData, totalDays: parseFloat(e.target.value) })}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-4 pt-6">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.isHalfDay || false}
-                  onChange={(e) => setFormData({ ...formData, isHalfDay: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 border-border rounded focus:ring-blue-500"
-                />
-                <span className="text-sm font-medium text-foreground">Half Day</span>
-              </label>
-
-              {formData.isHalfDay && (
+      {/* Leave form modal */}
+      <Modal open={showForm} onClose={resetForm} size="lg">
+        <ModalHeader onClose={resetForm}>
+          {editingId ? 'Edit Leave Request' : 'Apply for Leave'}
+        </ModalHeader>
+        <form onSubmit={handleSubmit}>
+          <ModalBody>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Employee <span className="text-destructive">*</span>
+                </label>
                 <select
-                  value={formData.halfDayType || ''}
-                  onChange={(e) => setFormData({ ...formData, halfDayType: e.target.value as any })}
-                  className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                  value={formData.employeeId}
+                  onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
+                  className={selectClass}
                 >
-                  <option value="">Select Half</option>
-                  <option value="FIRST_HALF">First Half</option>
-                  <option value="SECOND_HALF">Second Half</option>
+                  <option value="">Select employee</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName} ({emp.employeeCode})
+                    </option>
+                  ))}
                 </select>
-              )}
-            </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Contact During Leave</label>
-              <input
-                type="text"
-                value={formData.contactDuringLeave || ''}
-                onChange={(e) => setFormData({ ...formData, contactDuringLeave: e.target.value })}
-                placeholder="Phone number or email"
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Leave Type <span className="text-destructive">*</span>
+                </label>
+                <select
+                  required
+                  value={formData.leaveType}
+                  onChange={(e) => setFormData({ ...formData, leaveType: e.target.value as any })}
+                  className={selectClass}
+                >
+                  <option value="CASUAL">Casual Leave</option>
+                  <option value="SICK">Sick Leave</option>
+                  <option value="EARNED">Earned Leave</option>
+                  <option value="PRIVILEGE">Privilege Leave</option>
+                  <option value="MATERNITY">Maternity Leave</option>
+                  <option value="PATERNITY">Paternity Leave</option>
+                  <option value="COMPENSATORY">Time Off in Lieu</option>
+                  <option value="LOSS_OF_PAY">Unpaid Leave</option>
+                </select>
+              </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Reason <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                required
-                value={formData.reason}
-                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Reason for leave..."
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Start Date <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.startDate}
+                  onChange={(e) => {
+                    const newStartDate = e.target.value;
+                    const days = calculateDays(newStartDate, formData.endDate);
+                    setFormData({ ...formData, startDate: newStartDate, totalDays: days });
+                  }}
+                  className={inputClass}
+                />
+              </div>
 
-            <div className="md:col-span-2 flex gap-2">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Saving...' : editingId ? 'Update' : 'Submit'}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={submitting}
-                className="px-6 py-2 bg-muted text-foreground rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  End Date <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.endDate}
+                  onChange={(e) => {
+                    const newEndDate = e.target.value;
+                    const days = calculateDays(formData.startDate, newEndDate);
+                    setFormData({ ...formData, endDate: newEndDate, totalDays: days });
+                  }}
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Total Days <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0.5"
+                  step="0.5"
+                  value={formData.totalDays}
+                  onChange={(e) => setFormData({ ...formData, totalDays: parseFloat(e.target.value) })}
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="flex items-center gap-4 pt-7">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isHalfDay || false}
+                    onChange={(e) => setFormData({ ...formData, isHalfDay: e.target.checked })}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary/30"
+                  />
+                  <span className="text-sm font-medium text-foreground">Half Day</span>
+                </label>
+
+                {formData.isHalfDay && (
+                  <select
+                    value={formData.halfDayType || ''}
+                    onChange={(e) => setFormData({ ...formData, halfDayType: e.target.value as any })}
+                    className="h-10 px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                  >
+                    <option value="">Select Half</option>
+                    <option value="FIRST_HALF">First Half</option>
+                    <option value="SECOND_HALF">Second Half</option>
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Contact During Leave</label>
+                <input
+                  type="text"
+                  value={formData.contactDuringLeave || ''}
+                  onChange={(e) => setFormData({ ...formData, contactDuringLeave: e.target.value })}
+                  placeholder="Phone number or email"
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  Reason <span className="text-destructive">*</span>
+                </label>
+                <textarea
+                  required
+                  value={formData.reason}
+                  onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                  placeholder="Reason for leave..."
+                />
+              </div>
             </div>
-          </form>
+          </ModalBody>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={resetForm}
+              disabled={submitting}
+              className="h-9 px-4 rounded-lg text-sm font-medium border border-input bg-background text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Saving...' : editingId ? 'Update' : 'Submit'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      {/* Bulk actions bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border bg-primary/5 border-primary/20" aria-live="polite">
+          <span className="text-sm font-medium text-primary">{selectedIds.size} selected</span>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => setBulkApproveConfirm(true)}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+            >
+              <CheckCircle className="h-3.5 w-3.5" />
+              Approve ({selectedIds.size})
+            </button>
+            <button
+              onClick={() => setBulkRejectConfirm(true)}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+            >
+              <XCircle className="h-3.5 w-3.5" />
+              Reject ({selectedIds.size})
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              Clear
+            </button>
+          </div>
         </div>
       )}
 
       {/* Leave requests table */}
-      <div className="bg-card rounded-lg shadow overflow-hidden">
+      <div className="rounded-xl border bg-card overflow-hidden">
         {loading ? (
-          <TableLoader rows={5} cols={6} />
+          <TableLoader rows={5} cols={7} />
         ) : leaves.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
-            No leave requests found. Click &quot;Apply for Leave&quot; to create one.
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center" style={{ gridColumn: 'span 7' }}>
+            <CalendarClock className="h-12 w-12 text-muted-foreground/50 mb-3" aria-hidden="true" />
+            <h3 className="text-lg font-semibold text-foreground">No leave requests</h3>
+            <p className="mt-1 text-sm text-muted-foreground max-w-sm">
+              No leave requests found. Click &quot;Apply for Leave&quot; to create one.
+            </p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-muted border-b border-border">
+                <thead className="bg-muted/30 border-b border-border">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th scope="col" className="w-10 px-4 py-3">
+                      <button
+                        onClick={toggleSelectAll}
+                        role="checkbox"
+                        aria-checked={leaves.filter(l => l.status === 'PENDING').length > 0 && leaves.filter(l => l.status === 'PENDING').every(l => selectedIds.has(l.id))}
+                        className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
+                          leaves.filter(l => l.status === 'PENDING').length > 0 && leaves.filter(l => l.status === 'PENDING').every(l => selectedIds.has(l.id))
+                            ? 'bg-primary border-primary text-primary-foreground'
+                            : selectedIds.size > 0
+                              ? 'bg-primary/50 border-primary text-primary-foreground'
+                              : 'border-input hover:border-primary/50'
+                        }`}
+                        aria-label="Select all leave requests"
+                      >
+                        {(selectedIds.size > 0) && <Check className="h-3 w-3" />}
+                      </button>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Employee
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Leave Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Duration
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Reason
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-card divide-y divide-border">
+                <tbody className="divide-y divide-border">
                   {leaves.map((leave) => (
-                    <tr key={leave.id} className="hover:bg-muted">
+                    <tr key={leave.id} className={`hover:bg-muted/30 transition-colors ${selectedIds.has(leave.id) ? 'bg-primary/5' : ''}`}>
+                      <td className="w-10 px-4 py-4">
+                        {leave.status === 'PENDING' ? (
+                          <button
+                            onClick={() => toggleSelect(leave.id)}
+                            role="checkbox"
+                            aria-checked={selectedIds.has(leave.id)}
+                            className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
+                              selectedIds.has(leave.id)
+                                ? 'bg-primary border-primary text-primary-foreground'
+                                : 'border-input hover:border-primary/50'
+                            }`}
+                            aria-label={`Select leave request for ${leave.employee?.firstName ?? ''} ${leave.employee?.lastName ?? ''}`.trim()}
+                          >
+                            {selectedIds.has(leave.id) && <Check className="h-3 w-3" />}
+                          </button>
+                        ) : (
+                          <div className="h-4 w-4" />
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-foreground">
                           {leave.employee?.firstName} {leave.employee?.lastName}
                         </div>
-                        <div className="text-sm text-muted-foreground">{leave.employee?.employeeCode}</div>
+                        <div className="text-xs text-muted-foreground">{leave.employee?.employeeCode}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-foreground">{getLeaveTypeLabel(leave.leaveType)}</div>
+                        <StatusBadge variant={getStatusVariant(leave.leaveType)}>
+                          {getLeaveTypeLabel(leave.leaveType)}
+                        </StatusBadge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1 text-sm text-foreground">
-                          <Calendar size={14} className="text-muted-foreground" />
-                          {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
+                        <div className="flex items-center gap-1.5 text-sm text-foreground">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                          {formatDate(leave.startDate)} - {formatDate(leave.endDate)}
                         </div>
-                        <div className="text-sm text-muted-foreground">{leave.totalDays} days</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{leave.totalDays} day{leave.totalDays !== 1 ? 's' : ''}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-foreground max-w-xs truncate">{leave.reason}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(leave.status)}`}>
+                        <StatusBadge variant={getStatusVariant(leave.status)} dot>
                           {leave.status}
-                        </span>
+                        </StatusBadge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-1">
                           {leave.status === 'PENDING' && (
                             <>
                               <button
                                 onClick={() => handleApprove(leave.id)}
-                                className="text-green-600 hover:text-green-800"
-                                title="Approve"
+                                disabled={approvingId === leave.id}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-green-600 hover:bg-green-500/10 transition-colors disabled:opacity-50"
+                                aria-label="Approve"
                               >
-                                <CheckCircle size={18} />
+                                {approvingId === leave.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                               </button>
                               <button
-                                onClick={() => handleReject(leave.id)}
-                                className="text-red-600 hover:text-red-800"
-                                title="Reject"
+                                onClick={() => setRejectConfirmId(leave.id)}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                aria-label="Reject"
                               >
-                                <XCircle size={18} />
+                                <XCircle className="h-4 w-4" />
                               </button>
                             </>
                           )}
                           {(leave.status === 'PENDING' || leave.status === 'APPROVED') && (
                             <button
-                              onClick={() => handleCancel(leave.id)}
-                              className="text-orange-600 hover:text-orange-800"
-                              title="Cancel"
+                              onClick={() => setCancelConfirmId(leave.id)}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-orange-600 hover:bg-orange-500/10 transition-colors"
+                              aria-label="Cancel"
                             >
-                              <Ban size={18} />
+                              <Ban className="h-4 w-4" />
                             </button>
                           )}
                           {leave.status === 'PENDING' && (
                             <>
                               <button
                                 onClick={() => handleEdit(leave)}
-                                className="text-blue-600 hover:text-blue-800"
-                                title="Edit"
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                                aria-label="Edit"
                               >
-                                <Edit2 size={16} />
+                                <Edit2 className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleDelete(leave.id)}
-                                className="text-red-600 hover:text-red-800"
-                                title="Delete"
+                                onClick={() => setDeleteConfirmId(leave.id)}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                aria-label="Delete"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </>
                           )}
@@ -664,21 +850,21 @@ export default function LeavePage() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="px-6 py-4 border-t border-border flex items-center justify-between">
-                <div className="text-sm text-foreground">
+                <div className="text-sm text-muted-foreground">
                   Page {currentPage} of {totalPages}
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-4 py-2 text-sm border border-border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+                    className="h-9 px-4 text-sm font-medium border border-input rounded-lg bg-background text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-4 py-2 text-sm border border-border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted"
+                    className="h-9 px-4 text-sm font-medium border border-input rounded-lg bg-background text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
                   >
                     Next
                   </button>
@@ -688,6 +874,75 @@ export default function LeavePage() {
           </>
         )}
       </div>
-    </div>
+      {/* Confirm Dialogs */}
+      <ConfirmDialog
+        open={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => handleDelete(deleteConfirmId!)}
+        title="Delete Leave Request"
+        description="Are you sure you want to delete this leave request? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+      />
+      <ConfirmDialog
+        open={!!rejectConfirmId}
+        onClose={() => { setRejectConfirmId(null); setRejectReason(''); }}
+        onConfirm={() => handleReject(rejectConfirmId!)}
+        title="Reject Leave Request"
+        description="Please provide an optional reason for rejection."
+        confirmLabel="Reject"
+        variant="destructive"
+      >
+        <textarea
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+          placeholder="Reason for rejection (optional)"
+          rows={2}
+          className="mt-3 w-full px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+        />
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={!!cancelConfirmId}
+        onClose={() => { setCancelConfirmId(null); setCancelReason(''); }}
+        onConfirm={() => handleCancel(cancelConfirmId!)}
+        title="Cancel Leave Request"
+        description="Are you sure you want to cancel this leave request?"
+        confirmLabel="Cancel Request"
+        variant="destructive"
+      >
+        <textarea
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          placeholder="Reason for cancellation (optional)"
+          rows={2}
+          className="mt-3 w-full px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+        />
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={bulkApproveConfirm}
+        onClose={() => setBulkApproveConfirm(false)}
+        onConfirm={handleBulkApprove}
+        title="Approve Selected Requests"
+        description={`Are you sure you want to approve ${selectedIds.size} leave request(s)?`}
+        confirmLabel="Approve All"
+      />
+      <ConfirmDialog
+        open={bulkRejectConfirm}
+        onClose={() => { setBulkRejectConfirm(false); setBulkRejectReason(''); }}
+        onConfirm={handleBulkReject}
+        title="Reject Selected Requests"
+        description={`Reject ${selectedIds.size} leave request(s)?`}
+        confirmLabel="Reject All"
+        variant="destructive"
+      >
+        <textarea
+          value={bulkRejectReason}
+          onChange={(e) => setBulkRejectReason(e.target.value)}
+          placeholder="Reason for rejection (optional)"
+          rows={2}
+          className="mt-3 w-full px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+        />
+      </ConfirmDialog>
+    </PageContainer>
   );
 }

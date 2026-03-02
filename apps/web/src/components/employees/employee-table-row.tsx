@@ -1,14 +1,10 @@
 'use client';
 
-/**
- * Employee Table Row Component
- * Individual row in employee table with actions
- */
-
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Eye, Edit, Trash2 } from 'lucide-react';
 import type { Employee } from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
 
 interface EmployeeTableRowProps {
   employee: Employee;
@@ -19,46 +15,33 @@ export function EmployeeTableRow({ employee, onDelete }: EmployeeTableRowProps) 
   const router = useRouter();
   const [showActions, setShowActions] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const menuRef = useRef<HTMLTableCellElement>(null);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'bg-green-100 text-green-800';
-      case 'ON_NOTICE':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'RESIGNED':
-        return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
-      case 'TERMINATED':
-        return 'bg-red-100 text-red-800';
-      case 'ON_LEAVE':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
-    }
-  };
+  // Close menu on outside click
+  useEffect(() => {
+    if (!showActions) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowActions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showActions]);
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'Active';
-      case 'ON_NOTICE':
-        return 'On Notice';
-      case 'RESIGNED':
-        return 'Resigned';
-      case 'TERMINATED':
-        return 'Terminated';
-      case 'ON_LEAVE':
-        return 'On Leave';
-      default:
-        return status;
-    }
+    const labels: Record<string, string> = {
+      ACTIVE: 'Active',
+      ON_NOTICE: 'On Notice',
+      RESIGNED: 'Resigned',
+      TERMINATED: 'Terminated',
+      ON_LEAVE: 'On Leave',
+    };
+    return labels[status] || status;
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this employee?')) {
-      return;
-    }
-
+    if (!confirm('Are you sure you want to delete this employee?')) return;
     setIsDeleting(true);
     try {
       await onDelete(employee.id);
@@ -71,81 +54,89 @@ export function EmployeeTableRow({ employee, onDelete }: EmployeeTableRowProps) 
   };
 
   return (
-    <tr className="hover:bg-muted transition-colors">
+    <tr className="hover:bg-muted/30 transition-colors">
       {/* Employee Code */}
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td className="px-4 py-3 whitespace-nowrap">
         <button
           onClick={() => router.push(`/employees/${employee.id}`)}
-          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+          className="font-mono text-xs text-primary hover:text-primary/80 hover:underline bg-muted px-1.5 py-0.5 rounded"
         >
           {employee.employeeCode}
         </button>
       </td>
 
       {/* Name */}
-      <td className="px-6 py-4 whitespace-nowrap">
+      <td className="px-4 py-3 whitespace-nowrap">
         <div className="flex items-center">
-          <div className="h-10 w-10 flex-shrink-0">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
-              {employee.firstName[0]}{employee.lastName[0]}
-            </div>
+          <div className="h-9 w-9 flex-shrink-0">
+            {employee.photoUrl ? (
+              <img
+                src={employee.photoUrl}
+                alt={`${employee.firstName} ${employee.lastName}`}
+                className="h-9 w-9 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
+                {employee.firstName[0]}{employee.lastName[0]}
+              </div>
+            )}
           </div>
-          <div className="ml-4">
+          <div className="ml-3">
             <div className="text-sm font-medium text-foreground">
               {employee.firstName} {employee.middleName ? employee.middleName + ' ' : ''}{employee.lastName}
             </div>
-            <div className="text-sm text-muted-foreground">{employee.workEmail}</div>
+            <div className="text-xs text-muted-foreground">{employee.workEmail}</div>
           </div>
         </div>
       </td>
 
-      {/* Department - hidden on small screens */}
-      <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+      {/* Department */}
+      <td className="px-4 py-3 whitespace-nowrap hidden md:table-cell">
         <div className="text-sm text-foreground">
-          {employee.department?.name || '-'}
+          {employee.department?.name || '—'}
         </div>
         {employee.department?.code && (
-          <div className="text-sm text-muted-foreground">{employee.department.code}</div>
+          <div className="text-xs text-muted-foreground">{employee.department.code}</div>
         )}
       </td>
 
-      {/* Designation - hidden on small/medium screens */}
-      <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+      {/* Designation */}
+      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">
         <div className="text-sm text-foreground">
-          {employee.designation?.title || '-'}
+          {employee.designation?.title || '—'}
         </div>
         {employee.designation?.level && (
-          <div className="text-sm text-muted-foreground">Level {employee.designation.level}</div>
+          <div className="text-xs text-muted-foreground">Level {employee.designation.level}</div>
         )}
       </td>
 
       {/* Status */}
-      <td className="px-6 py-4 whitespace-nowrap">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(employee.status)}`}>
+      <td className="px-4 py-3 whitespace-nowrap">
+        <StatusBadge variant={getStatusVariant(employee.status)} size="sm">
           {getStatusLabel(employee.status)}
-        </span>
+        </StatusBadge>
       </td>
 
       {/* Actions */}
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
+      <td className="px-4 py-3 whitespace-nowrap text-right text-sm relative" ref={menuRef}>
         <button
           onClick={() => setShowActions(!showActions)}
-          className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted"
+          className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
         >
-          <MoreVertical className="h-5 w-5" />
+          <MoreVertical className="h-4 w-4" />
         </button>
 
         {showActions && (
-          <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-card ring-1 ring-black ring-opacity-5 z-10">
+          <div className="absolute right-4 mt-1 w-44 rounded-xl border bg-card shadow-lg z-20">
             <div className="py-1">
               <button
                 onClick={() => {
                   router.push(`/employees/${employee.id}`);
                   setShowActions(false);
                 }}
-                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-foreground hover:bg-muted"
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
               >
-                <Eye className="h-4 w-4" />
+                <Eye className="h-4 w-4 text-muted-foreground" />
                 View Details
               </button>
               <button
@@ -153,15 +144,16 @@ export function EmployeeTableRow({ employee, onDelete }: EmployeeTableRowProps) 
                   router.push(`/employees/${employee.id}/edit`);
                   setShowActions(false);
                 }}
-                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-foreground hover:bg-muted"
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
               >
-                <Edit className="h-4 w-4" />
+                <Edit className="h-4 w-4 text-muted-foreground" />
                 Edit
               </button>
+              <div className="my-1 border-t border-border" />
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 disabled:opacity-50 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
                 {isDeleting ? 'Deleting...' : 'Delete'}

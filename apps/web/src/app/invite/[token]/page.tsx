@@ -85,7 +85,7 @@ export default function AcceptInvitationPage() {
           </div>
           <h1 className="text-xl font-bold text-gray-900 mb-2">Invalid Invitation</h1>
           <p className="text-gray-500 mb-6">{error}</p>
-          <button onClick={() => router.push('/login')} className="text-blue-600 hover:text-blue-700 font-medium">
+          <button onClick={() => router.push('/login')} className="text-primary hover:text-primary/80 font-medium">
             Go to Login
           </button>
         </div>
@@ -133,48 +133,48 @@ export default function AcceptInvitationPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">First Name *</label>
               <input type="text" required value={form.firstName}
                 onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Last Name *</label>
               <input type="text" required value={form.lastName}
                 onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
             <input type="tel" value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="+91 98765 43210" />
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="+91 98765 43210" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Password *</label>
             <input type="password" required minLength={8} value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Min 8 characters" />
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary" placeholder="Min 8 characters" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password *</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Confirm Password *</label>
             <input type="password" required value={form.confirmPassword}
               onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary" />
           </div>
 
           <button type="submit" disabled={submitting}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
+            className="w-full py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 font-medium">
             {submitting ? 'Creating Account...' : 'Create Account & Join'}
           </button>
 
           <p className="text-center text-sm text-gray-500">
             Already have an account?{' '}
-            <button type="button" onClick={() => router.push('/login')} className="text-blue-600 hover:text-blue-700 font-medium">
+            <button type="button" onClick={() => router.push('/login')} className="text-primary hover:text-primary/80 font-medium">
               Sign in
             </button>
           </p>

@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/components/ui/toast';
+import { PageContainer } from '@/components/ui/page-container';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { EmptyState } from '@/components/ui/error-banner';
+import { TableLoader } from '@/components/ui/page-loader';
+import { CalendarDays, Plus } from 'lucide-react';
+
+const INPUT_CLASS = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
+const SELECT_CLASS = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
 
 interface LeavePolicy {
   id: string;
@@ -92,6 +101,7 @@ export default function LeavePoliciesPage() {
         }),
       });
       setShowCreate(false);
+      setForm({ leaveType: 'CASUAL', name: '', annualEntitlement: '12', accrualType: 'ANNUAL_GRANT', carryoverLimit: '0', maxConsecutiveDays: '', fiscalYearStart: '1' });
       toast.success('Policy Created', `Leave policy "${form.name}" has been created`);
       fetchPolicies();
     } catch (err: any) {
@@ -103,78 +113,114 @@ export default function LeavePoliciesPage() {
   const accrualTypes = ['ANNUAL_GRANT', 'MONTHLY_ACCRUAL', 'NO_ACCRUAL'];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Leave Policies</h1>
-          <p className="text-muted-foreground">Configure leave accrual and entitlement rules</p>
-        </div>
-        <button onClick={() => setShowCreate(!showCreate)} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">
-          {showCreate ? 'Cancel' : 'New Policy'}
+    <PageContainer
+      title="Time Off Rules"
+      description="Set up how time off is earned and how much each employee gets"
+      breadcrumbs={[
+        { label: 'Dashboard', href: '/' },
+        { label: 'Settings', href: '/settings' },
+        { label: 'Time Off Rules' },
+      ]}
+      actions={
+        <button onClick={() => setShowCreate(true)}
+          className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+          <Plus className="h-4 w-4" />
+          New Policy
         </button>
-      </div>
-
-      {showCreate && (
-        <form onSubmit={handleCreate} className="bg-card border border-border rounded-lg p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Leave Type</label>
-              <select value={form.leaveType} onChange={(e) => setForm({ ...form, leaveType: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground">
-                {leaveTypes.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Policy Name</label>
-              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" placeholder="e.g. Annual Casual Leave" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Annual Entitlement (days)</label>
-              <input type="number" value={form.annualEntitlement} onChange={(e) => setForm({ ...form, annualEntitlement: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Accrual Type</label>
-              <select value={form.accrualType} onChange={(e) => setForm({ ...form, accrualType: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground">
-                {accrualTypes.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Carryover Limit</label>
-              <input type="number" value={form.carryoverLimit} onChange={(e) => setForm({ ...form, carryoverLimit: e.target.value })} className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Max Consecutive Days</label>
-              <input type="number" value={form.maxConsecutiveDays} onChange={(e) => setForm({ ...form, maxConsecutiveDays: e.target.value })} placeholder="No limit" className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground" />
-            </div>
-          </div>
-          <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90">Create Policy</button>
-        </form>
-      )}
-
-      <div className="grid gap-4">
-        {loading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading...</div>
-        ) : policies.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No leave policies configured</div>
-        ) : (
-          policies.map((p) => (
-            <div key={p.id} className="bg-card border border-border rounded-lg p-4 flex items-center justify-between">
+      }
+    >
+      {/* Create Form Modal */}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} size="lg">
+        <ModalHeader onClose={() => setShowCreate(false)}>New Leave Policy</ModalHeader>
+        <form onSubmit={handleCreate}>
+          <ModalBody className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-foreground">{p.name}</h3>
-                  <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">{p.leaveType}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {p.annualEntitlement} days/year &middot; {p.accrualType.replace(/_/g, ' ')} &middot; Carryover: {p.carryoverLimit} days
-                  {p.maxConsecutiveDays && ` · Max ${p.maxConsecutiveDays} consecutive`}
-                </p>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Leave Type</label>
+                <select value={form.leaveType} onChange={(e) => setForm({ ...form, leaveType: e.target.value })} className={SELECT_CLASS}>
+                  {leaveTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.isActive ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                {p.isActive ? 'Active' : 'Inactive'}
-              </span>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Policy Name *</label>
+                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className={INPUT_CLASS} placeholder="e.g. Annual Casual Leave" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Annual Entitlement (days)</label>
+                <input type="number" value={form.annualEntitlement} onChange={(e) => setForm({ ...form, annualEntitlement: e.target.value })}
+                  className={INPUT_CLASS} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Accrual Type</label>
+                <select value={form.accrualType} onChange={(e) => setForm({ ...form, accrualType: e.target.value })} className={SELECT_CLASS}>
+                  {accrualTypes.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Carryover Limit</label>
+                <input type="number" value={form.carryoverLimit} onChange={(e) => setForm({ ...form, carryoverLimit: e.target.value })}
+                  className={INPUT_CLASS} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Max Consecutive Days</label>
+                <input type="number" value={form.maxConsecutiveDays} onChange={(e) => setForm({ ...form, maxConsecutiveDays: e.target.value })}
+                  placeholder="No limit" className={INPUT_CLASS} />
+              </div>
             </div>
-          ))
-        )}
-      </div>
-    </div>
+          </ModalBody>
+          <ModalFooter>
+            <button type="button" onClick={() => setShowCreate(false)}
+              className="border border-input bg-background text-foreground hover:bg-muted h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+              Cancel
+            </button>
+            <button type="submit"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+              Create Policy
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      {/* Policies List */}
+      {loading ? (
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <TableLoader rows={4} cols={3} />
+        </div>
+      ) : policies.length === 0 ? (
+        <div className="rounded-xl border bg-card">
+          <EmptyState
+            icon={<CalendarDays className="h-10 w-10" />}
+            title="No time off rules set up yet"
+            description="Create rules to define how much time off your employees earn and can take"
+            action={{ label: 'New Policy', onClick: () => setShowCreate(true) }}
+          />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {policies.map((p) => (
+            <div key={p.id} className="rounded-xl border bg-card p-4 hover:shadow-sm transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-foreground">{p.name}</h3>
+                    <StatusBadge variant={getStatusVariant(p.leaveType)}>
+                      {p.leaveType}
+                    </StatusBadge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {p.annualEntitlement} days/year &middot; {p.accrualType.replace(/_/g, ' ')} &middot; Carryover: {p.carryoverLimit} days
+                    {p.maxConsecutiveDays && ` · Max ${p.maxConsecutiveDays} consecutive`}
+                  </p>
+                </div>
+                <StatusBadge variant={getStatusVariant(p.isActive ? 'ACTIVE' : 'INACTIVE')} dot>
+                  {p.isActive ? 'Active' : 'Inactive'}
+                </StatusBadge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </PageContainer>
   );
 }

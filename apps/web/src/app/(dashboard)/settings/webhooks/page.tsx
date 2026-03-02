@@ -5,7 +5,14 @@ import { apiClient, type WebhookEndpoint, type WebhookDelivery } from '@/lib/api
 import { RoleGate } from '@/components/common/role-gate';
 import { FeatureGate } from '@/components/common/feature-gate';
 import { Permission } from '@hrplatform/shared';
-import Link from 'next/link';
+import { PageContainer } from '@/components/ui/page-container';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { ErrorBanner, EmptyState } from '@/components/ui/error-banner';
+import { TableLoader } from '@/components/ui/page-loader';
+import { Webhook, Plus, Send, History, Power, Trash2 } from 'lucide-react';
+
+const INPUT_CLASS = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
 
 const WEBHOOK_EVENTS = [
   { value: 'employee.created', label: 'Employee Created' },
@@ -99,103 +106,130 @@ export default function WebhooksPage() {
     setEvents(prev => prev.includes(event) ? prev.filter(e => e !== event) : [...prev, event]);
   };
 
-  const statusColor = (status: string) => {
-    switch (status) {
-      case 'SUCCESS': return 'bg-green-100 text-green-700';
-      case 'FAILED': return 'bg-red-100 text-red-700';
-      case 'RETRYING': return 'bg-yellow-100 text-yellow-700';
-      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
-    }
-  };
-
   return (
     <RoleGate requiredPermissions={[Permission.MANAGE_COMPANY]}>
       <FeatureGate feature="WEBHOOKS">
-        <div className="p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <Link href="/settings" className="hover:text-blue-600">Settings</Link>
-                <span>/</span><span>Webhooks</span>
-              </div>
-              <h1 className="text-2xl font-bold text-foreground">Webhooks</h1>
-              <p className="text-muted-foreground mt-1">Send real-time notifications to external services</p>
-            </div>
-            <button onClick={() => setShowCreate(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+        <PageContainer
+          title="Event Notifications"
+          description="Automatically notify other apps when things happen in HRPlatform"
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/' },
+            { label: 'Settings', href: '/settings' },
+            { label: 'Webhooks' },
+          ]}
+          actions={
+            <button onClick={() => setShowCreate(true)}
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+              <Plus className="h-4 w-4" />
               Add Endpoint
             </button>
-          </div>
+          }
+        >
+          {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
-          {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
-          {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
+          {success && (
+            <div className="p-4 rounded-xl border border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/30 text-sm text-green-700 dark:text-green-300">
+              {success}
+            </div>
+          )}
 
-          {showCreate && (
-            <div className="mb-6 bg-card rounded-lg shadow-md p-6 border">
-              <h2 className="text-lg font-semibold mb-4">Add Webhook Endpoint</h2>
-              <form onSubmit={handleCreate} className="space-y-4">
+          {/* Create Form Modal */}
+          <Modal open={showCreate} onClose={() => setShowCreate(false)} size="lg">
+            <ModalHeader onClose={() => setShowCreate(false)}>Add Webhook Endpoint</ModalHeader>
+            <form onSubmit={handleCreate}>
+              <ModalBody className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Name *</label>
-                  <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border rounded-lg" placeholder="e.g. Slack Notifications" />
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Name *</label>
+                  <input type="text" required value={name} onChange={e => setName(e.target.value)}
+                    className={INPUT_CLASS} placeholder="e.g. Slack Notifications" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Endpoint URL *</label>
-                  <input type="url" required value={url} onChange={e => setUrl(e.target.value)} className="w-full px-3 py-2 border rounded-lg" placeholder="https://example.com/webhooks" />
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Notification URL *</label>
+                  <input type="url" required value={url} onChange={e => setUrl(e.target.value)}
+                    className={INPUT_CLASS} placeholder="https://example.com/webhooks" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Events *</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Events *</label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1">
                     {WEBHOOK_EVENTS.map(evt => (
-                      <label key={evt.value} className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={events.includes(evt.value)} onChange={() => toggleEvent(evt.value)} className="rounded" />
+                      <label key={evt.value} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                        <input type="checkbox" checked={events.includes(evt.value)} onChange={() => toggleEvent(evt.value)} className="rounded border-input" />
                         {evt.label}
                       </label>
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button type="submit" disabled={creating || events.length === 0} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                    {creating ? 'Creating...' : 'Create Endpoint'}
-                  </button>
-                  <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 border rounded-lg hover:bg-muted">Cancel</button>
-                </div>
-              </form>
-            </div>
-          )}
+              </ModalBody>
+              <ModalFooter>
+                <button type="button" onClick={() => setShowCreate(false)}
+                  className="border border-input bg-background text-foreground hover:bg-muted h-9 px-4 rounded-lg text-sm font-medium transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={creating || events.length === 0}
+                  className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors">
+                  {creating ? 'Creating...' : 'Create Endpoint'}
+                </button>
+              </ModalFooter>
+            </form>
+          </Modal>
 
+          {/* Webhooks List */}
           {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading webhooks...</div>
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <TableLoader rows={4} cols={3} />
+            </div>
           ) : webhooks.length === 0 ? (
-            <div className="text-center py-12 bg-card rounded-lg shadow-md">
-              <div className="text-4xl mb-2">🔗</div>
-              <h3 className="text-lg font-medium text-foreground">No webhook endpoints</h3>
-              <p className="text-muted-foreground mt-1">Add an endpoint to receive real-time event notifications</p>
+            <div className="rounded-xl border bg-card">
+              <EmptyState
+                icon={<Webhook className="h-10 w-10" />}
+                title="No notifications set up yet"
+                description="Add a destination to send automatic updates when events happen"
+                action={{ label: 'Add Endpoint', onClick: () => setShowCreate(true) }}
+              />
             </div>
           ) : (
             <div className="space-y-3">
               {webhooks.map(wh => (
-                <div key={wh.id} className="bg-card rounded-lg shadow-sm border p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
+                <div key={wh.id} className="rounded-xl border bg-card p-4 hover:shadow-sm transition-shadow">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium text-foreground">{wh.name}</h3>
-                        <span className={`px-2 py-0.5 text-xs rounded-full ${wh.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-muted-foreground'}`}>
+                        <StatusBadge variant={getStatusVariant(wh.isActive ? 'ACTIVE' : 'DISABLED')} dot>
                           {wh.isActive ? 'Active' : 'Disabled'}
-                        </span>
+                        </StatusBadge>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-0.5 font-mono">{wh.url}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5 font-mono truncate">{wh.url}</p>
                       <div className="flex flex-wrap gap-1 mt-2">
                         {wh.events.map(evt => (
-                          <span key={evt} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded">{evt}</span>
+                          <StatusBadge key={evt} variant="info">{evt}</StatusBadge>
                         ))}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => handleTest(wh.id)} className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded">Test</button>
-                      <button onClick={() => viewDeliveries(wh.id)} className="px-3 py-1 text-sm text-muted-foreground hover:bg-muted rounded">Deliveries</button>
-                      <button onClick={() => handleToggle(wh.id, wh.isActive)} className="px-3 py-1 text-sm text-yellow-600 hover:bg-yellow-50 rounded">
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => handleTest(wh.id)}
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:bg-primary/10 h-8 px-2.5 rounded-lg transition-colors"
+                        title="Send test webhook">
+                        <Send className="h-3.5 w-3.5" />
+                        Test
+                      </button>
+                      <button onClick={() => viewDeliveries(wh.id)}
+                        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:bg-muted h-8 px-2.5 rounded-lg transition-colors"
+                        title="View delivery history">
+                        <History className="h-3.5 w-3.5" />
+                        Deliveries
+                      </button>
+                      <button onClick={() => handleToggle(wh.id, wh.isActive)}
+                        className="inline-flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 h-8 px-2.5 rounded-lg transition-colors"
+                        title={wh.isActive ? 'Disable endpoint' : 'Enable endpoint'}>
+                        <Power className="h-3.5 w-3.5" />
                         {wh.isActive ? 'Disable' : 'Enable'}
                       </button>
-                      <button onClick={() => handleDelete(wh.id)} className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded">Delete</button>
+                      <button onClick={() => handleDelete(wh.id)}
+                        className="inline-flex items-center gap-1 text-sm text-destructive hover:bg-destructive/10 h-8 px-2.5 rounded-lg transition-colors"
+                        title="Delete endpoint">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -204,39 +238,32 @@ export default function WebhooksPage() {
           )}
 
           {/* Delivery History Modal */}
-          {selectedWebhook && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50" onClick={() => setSelectedWebhook(null)}>
-              <div className="bg-card rounded-xl shadow-2xl max-w-3xl w-full mx-4 max-h-[80vh] overflow-y-auto border border-border" onClick={(e) => e.stopPropagation()}>
-                <div className="p-6 border-b flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Delivery History</h2>
-                  <button onClick={() => setSelectedWebhook(null)} className="text-muted-foreground hover:text-muted-foreground">✕</button>
-                </div>
-                <div className="p-6">
-                  {deliveries.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No deliveries yet</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {deliveries.map(d => (
-                        <div key={d.id} className="border rounded-lg p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-0.5 text-xs rounded-full ${statusColor(d.status)}`}>{d.status}</span>
-                              <span className="text-sm font-medium">{d.eventType}</span>
-                              {d.statusCode && <span className="text-xs text-muted-foreground">HTTP {d.statusCode}</span>}
-                              {d.duration && <span className="text-xs text-muted-foreground">{d.duration}ms</span>}
-                            </div>
-                            <span className="text-xs text-muted-foreground">{new Date(d.createdAt).toLocaleString()}</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">Attempt {d.attempt}/{d.maxRetries}</div>
+          <Modal open={!!selectedWebhook} onClose={() => setSelectedWebhook(null)} size="xl">
+            <ModalHeader onClose={() => setSelectedWebhook(null)}>Delivery History</ModalHeader>
+            <ModalBody>
+              {deliveries.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No deliveries yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {deliveries.map(d => (
+                    <div key={d.id} className="rounded-lg border border-border p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <StatusBadge variant={getStatusVariant(d.status)}>{d.status}</StatusBadge>
+                          <span className="text-sm font-medium text-foreground">{d.eventType}</span>
+                          {d.statusCode && <span className="text-xs text-muted-foreground">HTTP {d.statusCode}</span>}
+                          {d.duration && <span className="text-xs text-muted-foreground">{d.duration}ms</span>}
                         </div>
-                      ))}
+                        <span className="text-xs text-muted-foreground">{new Date(d.createdAt).toLocaleString()}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">Attempt {d.attempt}/{d.maxRetries}</div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
+              )}
+            </ModalBody>
+          </Modal>
+        </PageContainer>
       </FeatureGate>
     </RoleGate>
   );

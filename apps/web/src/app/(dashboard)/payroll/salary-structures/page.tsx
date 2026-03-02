@@ -173,7 +173,7 @@ export default function SalaryStructuresPage() {
   if (loading) return <PageLoader />;
 
   const basicWarning = getBasicWarning();
-  const inputClass = 'w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm';
+  const inputClass = 'w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm';
 
   return (
     <RoleGate requiredPermissions={[Permission.MANAGE_PAYROLL]}>
@@ -185,7 +185,7 @@ export default function SalaryStructuresPage() {
           </div>
           <button
             onClick={openCreate}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium text-sm"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 font-medium text-sm"
           >
             + Create Structure
           </button>
@@ -395,7 +395,7 @@ export default function SalaryStructuresPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium text-sm"
+                    className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 font-medium text-sm"
                   >
                     {submitting ? 'Saving...' : editingId ? 'Update Structure' : 'Create Structure'}
                   </button>

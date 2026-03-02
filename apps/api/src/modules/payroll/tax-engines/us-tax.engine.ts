@@ -214,6 +214,7 @@ export class USTaxEngine implements TaxEngine {
       isBonus = false,
       ytdSsWages = 0,
       ytdGrossEarnings = 0,
+      w4Allowances = 0,
     } = input;
 
     // Annualize for bracket calculations
@@ -241,9 +242,11 @@ export class USTaxEngine implements TaxEngine {
     }
 
     // Federal withholding — always applies (including bonus)
+    // W-4 allowances reduce taxable income for withholding purposes
     const federalWithholding = this.calculateFederalWithholding(
       annualGross,
       filingStatus,
+      w4Allowances,
     );
 
     // State withholding — always applies
@@ -403,14 +406,17 @@ export class USTaxEngine implements TaxEngine {
   }
 
   /**
-   * Federal withholding: Standard deduction → bracket tax → monthly amount.
+   * Federal withholding: Standard deduction → W-4 allowance reduction → bracket tax → monthly amount.
+   * W-4 allowances: Each allowance reduces annual taxable income by $4,300 (2025 equivalent).
    */
   private calculateFederalWithholding(
     annualGross: number,
     filingStatus: string,
+    w4Allowances: number = 0,
   ): number {
     const stdDeduction = this.standardDeductions[filingStatus] || 15750;
-    const taxableIncome = Math.max(0, annualGross - stdDeduction);
+    const allowanceDeduction = w4Allowances * 4300; // $4,300 per allowance (2025 personal exemption equivalent)
+    const taxableIncome = Math.max(0, annualGross - stdDeduction - allowanceDeduction);
     const brackets =
       this.federalBrackets[filingStatus] || this.federalBrackets['SINGLE'];
     const annualTax = this.computeBracketTax(taxableIncome, brackets);

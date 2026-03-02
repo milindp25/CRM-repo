@@ -14,8 +14,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RequireFeature } from '../../common/decorators/feature.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { UserRole } from '@hrplatform/shared';
+import { UserRole, Permission } from '@hrplatform/shared';
 import { LeaveService } from './leave.service';
 import {
   CreateLeaveDto,
@@ -26,6 +27,8 @@ import {
   ApproveLeaveDto,
   RejectLeaveDto,
   CancelLeaveDto,
+  BulkLeaveActionDto,
+  BulkLeaveActionResponseDto,
 } from './dto';
 
 interface JwtPayload {
@@ -44,7 +47,8 @@ export class LeaveController {
   constructor(private readonly leaveService: LeaveService) {}
 
   @Post()
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE)
+  @RequirePermissions(Permission.APPLY_LEAVE)
   @ApiOperation({ summary: 'Create leave request' })
   @ApiResponse({
     status: 201,
@@ -122,7 +126,8 @@ export class LeaveController {
   }
 
   @Post(':id/approve')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @RequirePermissions(Permission.APPROVE_LEAVE)
   @ApiOperation({ summary: 'Approve leave request' })
   @ApiResponse({
     status: 200,
@@ -141,7 +146,8 @@ export class LeaveController {
   }
 
   @Post(':id/reject')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @RequirePermissions(Permission.APPROVE_LEAVE)
   @ApiOperation({ summary: 'Reject leave request' })
   @ApiResponse({
     status: 200,
@@ -160,7 +166,7 @@ export class LeaveController {
   }
 
   @Post(':id/cancel')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE)
   @ApiOperation({ summary: 'Cancel leave request' })
   @ApiResponse({
     status: 200,
@@ -176,5 +182,41 @@ export class LeaveController {
     @Body() dto: CancelLeaveDto,
   ): Promise<LeaveResponseDto> {
     return this.leaveService.cancel(id, user.companyId, user.userId, dto);
+  }
+
+  // ── Bulk Operations ──────────────────────────────────────────────
+
+  @Post('bulk-approve')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Bulk approve multiple leave requests' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk approve result',
+    type: BulkLeaveActionResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async bulkApprove(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: BulkLeaveActionDto,
+  ): Promise<BulkLeaveActionResponseDto> {
+    return this.leaveService.bulkApprove(user.companyId, user.userId, dto);
+  }
+
+  @Post('bulk-reject')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Bulk reject multiple leave requests' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk reject result',
+    type: BulkLeaveActionResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async bulkReject(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: BulkLeaveActionDto,
+  ): Promise<BulkLeaveActionResponseDto> {
+    return this.leaveService.bulkReject(user.companyId, user.userId, dto);
   }
 }

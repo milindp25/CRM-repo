@@ -5,17 +5,33 @@ import { apiClient, type ExpenseClaim } from '@/lib/api-client';
 import { RoleGate } from '@/components/common/role-gate';
 import { FeatureGate } from '@/components/common/feature-gate';
 import { Permission } from '@hrplatform/shared';
+import { PageContainer } from '@/components/ui/page-container';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import { StatCard } from '@/components/ui/stat-card';
+import { ErrorBanner } from '@/components/ui/error-banner';
+import { TableLoader } from '@/components/ui/page-loader';
+import { useToast } from '@/components/ui/toast';
+import {
+  Plus, Loader2, AlertCircle, Receipt, DollarSign, Clock,
+  CheckCircle2, XCircle, CreditCard
+} from 'lucide-react';
+
+const categories = ['TRAVEL', 'FOOD', 'ACCOMMODATION', 'EQUIPMENT', 'COMMUNICATION', 'TRAINING', 'OTHER'];
+
+const INITIAL_FORM = { title: '', description: '', category: 'TRAVEL', amount: '', expenseDate: '' };
 
 export default function ExpensesPage() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'my' | 'all'>('my');
   const [expenses, setExpenses] = useState<ExpenseClaim[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', category: 'TRAVEL', amount: '', expenseDate: '' });
-  const [creating, setCreating] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'my') fetchMyExpenses();
@@ -46,32 +62,32 @@ export default function ExpensesPage() {
     }
   };
 
+  const fetchCurrent = () => activeTab === 'my' ? fetchMyExpenses() : fetchAllExpenses();
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCreating(true);
+    setSubmitting(true);
+    setFormError(null);
     try {
       await apiClient.createExpense({
         ...form,
         amount: Number(form.amount),
       });
-      setShowCreate(false);
-      setForm({ title: '', description: '', category: 'TRAVEL', amount: '', expenseDate: '' });
-      setSuccess('Expense claim submitted');
-      setTimeout(() => setSuccess(''), 3000);
-      if (activeTab === 'my') fetchMyExpenses();
-      else fetchAllExpenses();
+      setShowForm(false);
+      setForm(INITIAL_FORM);
+      toast.success('Expense submitted', 'Your expense claim has been submitted successfully.');
+      fetchCurrent();
     } catch (err: any) {
-      setError(err.message);
+      setFormError(err.message || 'Failed to submit expense');
     } finally {
-      setCreating(false);
+      setSubmitting(false);
     }
   };
 
   const handleApprove = async (id: string) => {
     try {
       await apiClient.approveExpense(id);
-      setSuccess('Expense approved');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Expense approved', 'The expense claim has been approved.');
       fetchAllExpenses();
     } catch (err: any) {
       setError(err.message);
@@ -81,118 +97,149 @@ export default function ExpensesPage() {
   const handleReject = async (id: string) => {
     try {
       await apiClient.rejectExpense(id);
-      setSuccess('Expense rejected');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Expense rejected', 'The expense claim has been rejected.');
       fetchAllExpenses();
     } catch (err: any) {
       setError(err.message);
     }
   };
 
-  const statusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      APPROVED: 'bg-green-100 text-green-800',
-      REJECTED: 'bg-red-100 text-red-800',
-      REIMBURSED: 'bg-blue-100 text-blue-800',
-      CANCELLED: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
-    };
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'}`}>{status}</span>;
+  const openNewForm = () => {
+    setShowForm(true);
+    setForm(INITIAL_FORM);
+    setFormError(null);
   };
 
-  const categories = ['TRAVEL', 'FOOD', 'ACCOMMODATION', 'EQUIPMENT', 'COMMUNICATION', 'TRAINING', 'OTHER'];
+  // Stats
+  const pending = expenses.filter(e => e.status === 'PENDING').length;
+  const approved = expenses.filter(e => e.status === 'APPROVED').length;
+  const totalAmount = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const inputClass = 'w-full h-10 px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
 
   return (
     <FeatureGate feature="EXPENSES">
       <RoleGate requiredPermissions={[Permission.VIEW_EXPENSES, Permission.MANAGE_EXPENSES, Permission.SUBMIT_EXPENSE]}>
-        <div className="p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Expense Management</h1>
-              <p className="text-muted-foreground mt-1">Submit and manage expense claims</p>
-            </div>
-            <button onClick={() => setShowCreate(!showCreate)} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
-              {showCreate ? 'Cancel' : '+ Submit Expense'}
+        <PageContainer
+          title="Expense Management"
+          description="Submit and manage expense claims"
+          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Expenses' }]}
+          actions={
+            <button
+              onClick={openNewForm}
+              className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Submit Expense
             </button>
-          </div>
+          }
+        >
+          {error && <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={fetchCurrent} />}
 
-          {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
-          {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">{success}</div>}
-
-          {showCreate && (
-            <form onSubmit={handleCreate} className="bg-card rounded-lg shadow-md p-6 mb-6">
-              <h3 className="font-semibold text-foreground mb-4">Submit Expense Claim</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-foreground mb-1">Title *</label>
-                  <input type="text" required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" placeholder="Business trip to Mumbai" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Category *</label>
-                  <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md">
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Amount (INR) *</label>
-                  <input type="number" required min="1" step="0.01" value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Expense Date *</label>
-                  <input type="date" required value={form.expenseDate} onChange={e => setForm(p => ({ ...p, expenseDate: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Description</label>
-                  <input type="text" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md" />
-                </div>
-              </div>
-              <button type="submit" disabled={creating} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm">{creating ? 'Submitting...' : 'Submit Claim'}</button>
-            </form>
+          {/* Stats */}
+          {!loading && expenses.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard title="Total Claims" value={expenses.length} icon={Receipt} iconColor="blue" subtitle="All claims" />
+              <StatCard title="Pending" value={pending} icon={Clock} iconColor="amber" subtitle="Awaiting review" />
+              <StatCard title="Approved" value={approved} icon={CheckCircle2} iconColor="green" subtitle="Ready for reimbursement" />
+              <StatCard title="Total Amount" value={`${totalAmount.toLocaleString()}`} icon={DollarSign} iconColor="purple" subtitle="Across all claims" />
+            </div>
           )}
 
-          <div className="flex space-x-4 mb-6 border-b border-border">
-            <button onClick={() => setActiveTab('my')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'my' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}>
+          {/* Tabs */}
+          <div className="flex space-x-1 border-b border-border">
+            <button
+              onClick={() => setActiveTab('my')}
+              className={`pb-3 px-4 font-medium text-sm transition-colors ${
+                activeTab === 'my'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
               My Expenses
             </button>
-            <button onClick={() => setActiveTab('all')} className={`pb-3 px-1 font-medium text-sm ${activeTab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`pb-3 px-4 font-medium text-sm transition-colors ${
+                activeTab === 'all'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
               All Expenses
             </button>
           </div>
 
+          {/* Table */}
           {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading expenses...</div>
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <TableLoader rows={6} cols={5} />
+            </div>
           ) : expenses.length === 0 ? (
-            <div className="text-center py-12 bg-card rounded-lg shadow-md"><p className="text-muted-foreground">No expense claims found</p></div>
+            <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border bg-card">
+              <Receipt className="w-12 h-12 text-muted-foreground/40 mb-4" />
+              <h3 className="text-lg font-semibold text-foreground">No expense claims found</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                {activeTab === 'my' ? 'Submit your first expense claim to get started.' : 'No expense claims have been submitted yet.'}
+              </p>
+              {activeTab === 'my' && (
+                <button onClick={openNewForm} className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
+                  <Plus className="w-4 h-4" /> Submit Expense
+                </button>
+              )}
+            </div>
           ) : (
-            <div className="bg-card rounded-lg shadow-md overflow-hidden">
-              <table className="min-w-full divide-y divide-border">
-                <thead className="bg-muted">
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <table className="min-w-full divide-y">
+                <thead className="border-b bg-muted/30">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Title</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                    {activeTab === 'all' && <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Actions</th>}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                    {activeTab === 'all' && <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y">
                   {expenses.map(expense => (
-                    <tr key={expense.id} className="hover:bg-muted">
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-foreground">{expense.title}</div>
-                        {expense.description && <div className="text-xs text-muted-foreground">{expense.description}</div>}
+                    <tr key={expense.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center flex-shrink-0">
+                            <CreditCard className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-foreground truncate">{expense.title}</div>
+                            {expense.description && <div className="text-xs text-muted-foreground truncate max-w-[200px]">{expense.description}</div>}
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{expense.category}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-foreground">{expense.currency} {Number(expense.amount).toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(expense.expenseDate).toLocaleDateString()}</td>
-                      <td className="px-6 py-4">{statusBadge(expense.status)}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">{expense.category}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium text-foreground">{expense.currency} {Number(expense.amount).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{new Date(expense.expenseDate).toLocaleDateString()}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge variant={getStatusVariant(expense.status)} dot>
+                          {expense.status}
+                        </StatusBadge>
+                      </td>
                       {activeTab === 'all' && (
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           {expense.status === 'PENDING' && (
-                            <div className="flex gap-2">
-                              <button onClick={() => handleApprove(expense.id)} className="text-xs text-green-600 hover:text-green-800 font-medium">Approve</button>
-                              <button onClick={() => handleReject(expense.id)} className="text-xs text-red-600 hover:text-red-800 font-medium">Reject</button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleApprove(expense.id)}
+                                className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-medium rounded-lg bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950/30 dark:text-green-400 dark:hover:bg-green-950/50 transition-colors"
+                              >
+                                <CheckCircle2 className="w-3 h-3" /> Approve
+                              </button>
+                              <button
+                                onClick={() => handleReject(expense.id)}
+                                className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50 transition-colors"
+                              >
+                                <XCircle className="w-3 h-3" /> Reject
+                              </button>
                             </div>
                           )}
                         </td>
@@ -203,7 +250,59 @@ export default function ExpensesPage() {
               </table>
             </div>
           )}
-        </div>
+
+          {/* Create Modal */}
+          <Modal open={showForm} onClose={() => setShowForm(false)} size="lg">
+            <ModalHeader onClose={() => setShowForm(false)}>Submit Expense Claim</ModalHeader>
+            <form onSubmit={handleCreate}>
+              <ModalBody>
+                <div className="space-y-4">
+                  {formError && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-sm text-red-700 dark:text-red-400">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {formError}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-foreground">Title <span className="text-destructive">*</span></label>
+                    <input type="text" required value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} className={inputClass} placeholder="Business trip to Mumbai" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Category <span className="text-destructive">*</span></label>
+                      <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className={inputClass}>
+                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Amount <span className="text-destructive">*</span></label>
+                      <input type="number" required min="1" step="0.01" value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} className={inputClass} placeholder="0.00" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Expense Date <span className="text-destructive">*</span></label>
+                      <input type="date" required value={form.expenseDate} onChange={e => setForm(p => ({ ...p, expenseDate: e.target.value }))} className={inputClass} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Description</label>
+                      <input type="text" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className={inputClass} placeholder="Optional details" />
+                    </div>
+                  </div>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <button type="button" onClick={() => setShowForm(false)} disabled={submitting}
+                  className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={submitting}
+                  className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
+                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Submit Claim
+                </button>
+              </ModalFooter>
+            </form>
+          </Modal>
+        </PageContainer>
       </RoleGate>
     </FeatureGate>
   );

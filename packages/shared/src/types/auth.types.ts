@@ -23,6 +23,7 @@ export interface UserProfile {
   permissions: string[];
   companyId: string;
   companyName?: string;
+  onboardingCompleted?: boolean;
 }
 
 /**

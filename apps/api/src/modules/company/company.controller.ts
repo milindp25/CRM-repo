@@ -1,5 +1,16 @@
-import { Controller, Get, Patch, Post, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Body,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { CompanyService } from './company.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -63,5 +74,34 @@ export class CompanyController {
   @ApiOperation({ summary: 'Mark onboarding as complete' })
   async completeOnboarding(@CurrentUser() user: JwtPayload) {
     return this.companyService.completeOnboarding(user.companyId);
+  }
+
+  @Get('onboarding/user')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE)
+  @ApiOperation({ summary: 'Get current user onboarding status' })
+  async getUserOnboardingStatus(@CurrentUser() user: JwtPayload) {
+    return this.companyService.getUserOnboardingStatus(user.userId);
+  }
+
+  @Post('onboarding/user/complete')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE)
+  @ApiOperation({ summary: 'Mark current user onboarding as complete' })
+  async completeUserOnboarding(@CurrentUser() user: JwtPayload) {
+    return this.companyService.completeUserOnboarding(user.userId);
+  }
+
+  @Post('logo')
+  @Roles(UserRole.COMPANY_ADMIN)
+  @UseInterceptors(FileInterceptor('logo'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload company logo' })
+  async uploadLogo(
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No logo file provided');
+    }
+    return this.companyService.uploadLogo(user.companyId, file);
   }
 }

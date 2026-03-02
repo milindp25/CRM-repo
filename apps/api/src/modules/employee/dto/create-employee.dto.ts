@@ -34,14 +34,15 @@ export enum Gender {
 
 export class CreateEmployeeDto {
   // Employee identification
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'EMP001',
-    description: 'Unique employee code within the company',
+    description: 'Unique employee code within the company. Auto-generated (EMP-001 format) if not provided.',
     maxLength: 50,
   })
+  @IsOptional()
   @IsString()
-  @Length(1, 50)
-  employeeCode: string;
+  @MaxLength(50)
+  employeeCode?: string;
 
   // Personal information (Required)
   @ApiProperty({ example: 'John', maxLength: 100 })

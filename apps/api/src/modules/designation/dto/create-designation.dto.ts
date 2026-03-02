@@ -23,14 +23,15 @@ export class CreateDesignationDto {
   @Length(1, 100)
   title: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'SSE',
-    description: 'Unique designation code',
+    description: 'Unique designation code. Auto-generated from title if not provided.',
     maxLength: 50,
   })
+  @IsOptional()
   @IsString()
-  @Length(1, 50)
-  code: string;
+  @MaxLength(50)
+  code?: string;
 
   @ApiPropertyOptional({
     example: 'Responsible for designing and developing software solutions',

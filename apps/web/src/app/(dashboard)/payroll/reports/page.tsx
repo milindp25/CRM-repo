@@ -121,7 +121,7 @@ export default function PayrollReportsPage() {
                     return fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob());
                   }), `form24q_Q${quarter}_FY${year}.csv`)}
                   disabled={downloading === 'Form 24Q'}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
                 >
                   {downloading === 'Form 24Q' ? 'Downloading...' : 'Download CSV'}
                 </button>
@@ -138,7 +138,7 @@ export default function PayrollReportsPage() {
                     downloadFile('PF ECR', () => fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob()), `pf_ecr_${month}_${year}.csv`);
                   }}
                   disabled={downloading === 'PF ECR'}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
                 >
                   {downloading === 'PF ECR' ? 'Downloading...' : 'Download CSV'}
                 </button>
@@ -155,7 +155,7 @@ export default function PayrollReportsPage() {
                     downloadFile('ESI', () => fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob()), `esi_${month}_${year}.csv`);
                   }}
                   disabled={downloading === 'ESI'}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
                 >
                   {downloading === 'ESI' ? 'Downloading...' : 'Download CSV'}
                 </button>
@@ -183,7 +183,7 @@ export default function PayrollReportsPage() {
                     downloadFile('Form 941', () => fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob()), `form941_Q${quarter}_${year}.pdf`);
                   }}
                   disabled={downloading === 'Form 941'}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
                 >
                   {downloading === 'Form 941' ? 'Downloading...' : 'Download PDF'}
                 </button>
@@ -201,7 +201,7 @@ export default function PayrollReportsPage() {
                     downloadFile('State Tax', () => fetch(url, { credentials: 'include', headers: { Authorization: `Bearer ${apiClient.getAccessToken()}` } }).then(r => r.blob()), `state_tax_${state}_Q${quarter}_${year}.csv`);
                   }}
                   disabled={downloading === 'State Tax'}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
                 >
                   {downloading === 'State Tax' ? 'Downloading...' : 'Download CSV'}
                 </button>

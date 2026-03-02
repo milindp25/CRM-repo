@@ -12,6 +12,8 @@ import {
   ApproveLeaveDto,
   RejectLeaveDto,
   CancelLeaveDto,
+  BulkLeaveActionDto,
+  BulkLeaveActionResponseDto,
 } from './dto';
 
 @Injectable()
@@ -293,6 +295,108 @@ export class LeaveService {
     });
 
     return this.formatLeave(updated);
+  }
+
+  /**
+   * Bulk approve multiple leave requests.
+   * Skips non-PENDING leaves.
+   */
+  async bulkApprove(
+    companyId: string,
+    userId: string,
+    dto: BulkLeaveActionDto,
+  ): Promise<BulkLeaveActionResponseDto> {
+    this.logger.log(`Bulk approving ${dto.leaveIds.length} leave requests`);
+
+    const result: BulkLeaveActionResponseDto = { processed: 0, skipped: 0, errors: [] };
+
+    for (const leaveId of dto.leaveIds) {
+      try {
+        const leave = await this.repository.findById(leaveId, companyId);
+        if (!leave) {
+          result.errors.push({ leaveId, reason: 'Not found' });
+          continue;
+        }
+        if (leave.status !== 'PENDING') {
+          result.skipped++;
+          continue;
+        }
+
+        await this.repository.update(leaveId, companyId, {
+          status: 'APPROVED',
+          approvedBy: userId,
+          approvedAt: new Date(),
+          ...(dto.reason && { approvalNotes: dto.reason }),
+        });
+        result.processed++;
+      } catch (error) {
+        result.errors.push({ leaveId, reason: (error as Error).message });
+      }
+    }
+
+    this.cache.invalidateByPrefix('leave:');
+
+    await this.repository.createAuditLog({
+      userId,
+      companyId,
+      action: 'BULK_APPROVE',
+      resourceType: 'LEAVE',
+      resourceId: companyId,
+      newValues: { approved: result.processed, skipped: result.skipped },
+    });
+
+    this.logger.log(`Bulk approve complete: ${result.processed} processed, ${result.skipped} skipped`);
+    return result;
+  }
+
+  /**
+   * Bulk reject multiple leave requests.
+   * Skips non-PENDING leaves.
+   */
+  async bulkReject(
+    companyId: string,
+    userId: string,
+    dto: BulkLeaveActionDto,
+  ): Promise<BulkLeaveActionResponseDto> {
+    this.logger.log(`Bulk rejecting ${dto.leaveIds.length} leave requests`);
+
+    const result: BulkLeaveActionResponseDto = { processed: 0, skipped: 0, errors: [] };
+
+    for (const leaveId of dto.leaveIds) {
+      try {
+        const leave = await this.repository.findById(leaveId, companyId);
+        if (!leave) {
+          result.errors.push({ leaveId, reason: 'Not found' });
+          continue;
+        }
+        if (leave.status !== 'PENDING') {
+          result.skipped++;
+          continue;
+        }
+
+        await this.repository.update(leaveId, companyId, {
+          status: 'REJECTED',
+          ...(dto.reason && { approvalNotes: dto.reason }),
+        });
+        result.processed++;
+      } catch (error) {
+        result.errors.push({ leaveId, reason: (error as Error).message });
+      }
+    }
+
+    this.cache.invalidateByPrefix('leave:');
+
+    await this.repository.createAuditLog({
+      userId,
+      companyId,
+      action: 'BULK_REJECT',
+      resourceType: 'LEAVE',
+      resourceId: companyId,
+      newValues: { rejected: result.processed, skipped: result.skipped },
+    });
+
+    this.logger.log(`Bulk reject complete: ${result.processed} processed, ${result.skipped} skipped`);
+    return result;
   }
 
   private formatLeave(leave: any): LeaveResponseDto {

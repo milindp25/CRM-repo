@@ -16,6 +16,8 @@ import { SalaryStructureRepository } from './salary-structure/salary-structure.r
 import { PdfService } from './pdf/pdf.service';
 import { BankExportService } from './bank-export/bank-export.service';
 import { StatutoryReportService } from './reports/statutory-report.service';
+import { StorageService } from '../../common/services/storage.service';
+import { PayrollScheduler } from './payroll.scheduler';
 
 @Module({
   imports: [DatabaseModule, ConfigModule, EventEmitterModule],
@@ -32,12 +34,15 @@ import { StatutoryReportService } from './reports/statutory-report.service';
     // Salary structure
     SalaryStructureService,
     SalaryStructureRepository,
-    // PDF generation
+    // PDF generation + storage
     PdfService,
+    StorageService,
     // Bank export
     BankExportService,
     // Statutory reports
     StatutoryReportService,
+    // Scheduler
+    PayrollScheduler,
   ],
   exports: [PayrollService, TaxEngineFactory, PdfService],
 })

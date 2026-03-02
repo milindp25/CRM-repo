@@ -66,7 +66,7 @@ export function EmployeeFiltersComponent({
             placeholder="Search by name, email, or employee code..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg focus:ring-2 focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
           />
           {searchInput && (
             <button
@@ -82,14 +82,14 @@ export function EmployeeFiltersComponent({
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg transition-all ${
             showFilters || hasActiveFilters
-              ? 'border-blue-500 bg-blue-50 text-blue-700'
+              ? 'border-primary bg-primary/10 text-primary'
               : 'border-border hover:bg-muted'
           }`}
         >
           <Filter className="h-5 w-5" />
           Filters
           {hasActiveFilters && (
-            <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+            <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
               Active
             </span>
           )}
@@ -116,7 +116,7 @@ export function EmployeeFiltersComponent({
             <select
               value={filters.status || ''}
               onChange={(e) => onFiltersChange({ status: (e.target.value || undefined) as any })}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-2 focus:ring-primary/30 focus:border-primary"
             >
               <option value="">All Statuses</option>
               <option value="ACTIVE">Active</option>
@@ -135,7 +135,7 @@ export function EmployeeFiltersComponent({
             <select
               value={filters.employmentType || ''}
               onChange={(e) => onFiltersChange({ employmentType: (e.target.value || undefined) as any })}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-2 focus:ring-primary/30 focus:border-primary"
             >
               <option value="">All Types</option>
               <option value="FULL_TIME">Full Time</option>
@@ -153,7 +153,7 @@ export function EmployeeFiltersComponent({
             <select
               value={filters.departmentId || ''}
               onChange={(e) => onFiltersChange({ departmentId: e.target.value || undefined })}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-2 focus:ring-primary/30 focus:border-primary"
             >
               <option value="">All Departments</option>
               {departments.map((dept) => (
@@ -172,7 +172,7 @@ export function EmployeeFiltersComponent({
             <select
               value={filters.designationId || ''}
               onChange={(e) => onFiltersChange({ designationId: e.target.value || undefined })}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-2 focus:ring-primary/30 focus:border-primary"
             >
               <option value="">All Designations</option>
               {designations.map((desig) => (

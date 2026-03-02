@@ -15,7 +15,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RequireFeature } from '../../common/decorators/feature.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { UserRole } from '@hrplatform/shared';
+import { UserRole, Permission } from '@hrplatform/shared';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { AttendanceService } from './attendance.service';
 import {
   CreateAttendanceDto,
@@ -23,6 +24,8 @@ import {
   AttendanceFilterDto,
   AttendanceResponseDto,
   AttendancePaginationResponseDto,
+  BulkMarkAttendanceDto,
+  BulkAttendanceResponseDto,
 } from './dto';
 
 interface JwtPayload {
@@ -41,7 +44,8 @@ export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
   @Post()
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @RequirePermissions(Permission.MARK_ATTENDANCE)
   @ApiOperation({ summary: 'Create attendance record' })
   @ApiResponse({
     status: 201,
@@ -56,6 +60,23 @@ export class AttendanceController {
     @Body() dto: CreateAttendanceDto,
   ): Promise<AttendanceResponseDto> {
     return this.attendanceService.create(user.companyId, user.userId, dto);
+  }
+
+  @Post('bulk')
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Bulk mark attendance for multiple employees' })
+  @ApiResponse({
+    status: 201,
+    description: 'Bulk attendance marked',
+    type: BulkAttendanceResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async bulkMark(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: BulkMarkAttendanceDto,
+  ): Promise<BulkAttendanceResponseDto> {
+    return this.attendanceService.bulkMark(user.companyId, user.userId, dto);
   }
 
   @Get()
@@ -90,7 +111,8 @@ export class AttendanceController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN)
+  @Roles(UserRole.COMPANY_ADMIN, UserRole.HR_ADMIN, UserRole.MANAGER)
+  @RequirePermissions(Permission.MARK_ATTENDANCE)
   @ApiOperation({ summary: 'Update attendance record' })
   @ApiResponse({
     status: 200,

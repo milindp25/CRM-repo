@@ -184,13 +184,13 @@ export function generatePayslipPdf(data: PayslipData): InstanceType<typeof PDFDo
 
   // ─── Employer Contributions ──────────────────────────────────────────────
   if (data.employerContributions.length > 0) {
-    doc.fontSize(10).font('Helvetica-Bold').text('Employer Contributions');
+    doc.fontSize(10).font('Helvetica-Bold').text('Employer Contributions', col1X, doc.y, { width: pageWidth });
     doc.moveDown(0.3);
     doc.fontSize(9).font('Helvetica');
     for (const contrib of data.employerContributions) {
-      doc.text(`${contrib.name}: ${currencyFmt(contrib.amount)}`);
+      doc.text(`${contrib.name}: ${currencyFmt(contrib.amount)}`, col1X, doc.y, { width: pageWidth });
     }
-    doc.font('Helvetica-Bold').text(`Total Employer Contributions: ${currencyFmt(data.totalEmployerContributions)}`);
+    doc.font('Helvetica-Bold').text(`Total Employer Contributions: ${currencyFmt(data.totalEmployerContributions)}`, col1X, doc.y, { width: pageWidth });
     doc.moveDown(0.5);
     drawLine(doc, 50, doc.y, 545, doc.y);
     doc.moveDown(0.5);
@@ -198,12 +198,12 @@ export function generatePayslipPdf(data: PayslipData): InstanceType<typeof PDFDo
 
   // ─── Net Pay ─────────────────────────────────────────────────────────────
   doc.fontSize(14).font('Helvetica-Bold');
-  doc.text(`Net Pay: ${currencyFmt(data.netSalary)}`, { align: 'center' });
+  doc.text(`Net Pay: ${currencyFmt(data.netSalary)}`, col1X, doc.y, { width: pageWidth, align: 'center' });
   doc.moveDown(1);
 
   // ─── Footer ──────────────────────────────────────────────────────────────
   doc.fontSize(7).font('Helvetica')
-    .text('This is a computer-generated payslip and does not require a signature.', { align: 'center' });
+    .text('This is a computer-generated payslip and does not require a signature.', col1X, doc.y, { width: pageWidth, align: 'center' });
 
   return doc;
 }

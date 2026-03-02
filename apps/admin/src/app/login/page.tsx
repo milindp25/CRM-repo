@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Shield, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 
 export default function LoginPage() {
@@ -46,8 +46,9 @@ export default function LoginPage() {
         <div className="bg-white rounded-xl shadow-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
+              <div className="flex items-center gap-3 bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
+                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
 

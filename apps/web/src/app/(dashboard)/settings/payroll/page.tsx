@@ -1,16 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { apiClient, type Company } from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 import { RoleGate } from '@/components/common/role-gate';
 import { Permission } from '@hrplatform/shared';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
+import { PageContainer } from '@/components/ui/page-container';
+import { Loader2, Globe, ShieldCheck, Bell, Calendar, Info } from 'lucide-react';
 
 interface PayrollSettingsForm {
   payrollCountry: string;
   payFrequency: string;
+  payrollAutoGenerate: boolean;
+  payrollAutoDay: number;
   pfEnabled: boolean;
   esiEnabled: boolean;
   emailPayslipEnabled: boolean;
@@ -31,6 +35,8 @@ export default function PayrollSettingsPage() {
   const [form, setForm] = useState<PayrollSettingsForm>({
     payrollCountry: 'IN',
     payFrequency: 'MONTHLY',
+    payrollAutoGenerate: false,
+    payrollAutoDay: 25,
     pfEnabled: false,
     esiEnabled: false,
     emailPayslipEnabled: false,
@@ -52,6 +58,8 @@ export default function PayrollSettingsPage() {
           setForm({
             payrollCountry: (company as any).payrollCountry || 'IN',
             payFrequency: (company as any).payFrequency || 'MONTHLY',
+            payrollAutoGenerate: (company as any).payrollAutoGenerate || false,
+            payrollAutoDay: (company as any).payrollAutoDay || 25,
             pfEnabled: (company as any).pfEnabled || false,
             esiEnabled: (company as any).esiEnabled || false,
             emailPayslipEnabled: (company as any).emailPayslipEnabled || false,
@@ -78,9 +86,14 @@ export default function PayrollSettingsPage() {
     setSaving(true);
     setError('');
     try {
+      const isNonMonthly = ['BI_WEEKLY', 'WEEKLY'].includes(
+        form.payrollCountry === 'IN' ? 'MONTHLY' : form.payFrequency
+      );
       await apiClient.updateCompany({
         payrollCountry: form.payrollCountry,
         payFrequency: form.payrollCountry === 'IN' ? 'MONTHLY' : form.payFrequency,
+        payrollAutoGenerate: isNonMonthly ? false : form.payrollAutoGenerate,
+        payrollAutoDay: form.payrollAutoDay,
         pfEnabled: form.pfEnabled,
         esiEnabled: form.esiEnabled,
         emailPayslipEnabled: form.emailPayslipEnabled,
@@ -104,27 +117,32 @@ export default function PayrollSettingsPage() {
   const isIndia = form.payrollCountry === 'IN';
   const isUS = form.payrollCountry === 'US';
 
-  const inputClass = 'w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent';
-  const labelClass = 'block text-sm font-medium text-foreground mb-1';
-  const sectionClass = 'bg-card rounded-lg shadow-md p-6 mb-6';
+  const inputClass = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
+  const labelClass = 'block text-sm font-medium text-foreground mb-1.5';
+  const sectionClass = 'rounded-xl border bg-card p-6';
+  const checkboxClass = 'mt-1 h-4 w-4 rounded border-input text-primary focus:ring-primary/30';
 
   return (
     <RoleGate requiredPermissions={[Permission.MANAGE_COMPANY]}>
-      <div className="p-8 max-w-4xl">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-1">
-            <a href="/settings" className="text-muted-foreground hover:text-foreground text-sm">&larr; Settings</a>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Payroll Settings</h1>
-          <p className="text-muted-foreground mt-1">Configure payroll region, tax compliance, and pay frequency</p>
-        </div>
+      <PageContainer
+        title="Payroll Settings"
+        description="Configure payroll region, tax compliance, and pay frequency"
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/' },
+          { label: 'Settings', href: '/settings' },
+          { label: 'Payroll' },
+        ]}
+        className="max-w-4xl"
+      >
+        {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
-        {error && <ErrorBanner message={error} onDismiss={() => setError('')} className="mb-6" />}
-
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Payroll Region */}
           <div className={sectionClass}>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Payroll Region</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold text-foreground">Payroll Region</h2>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Country *</label>
@@ -164,10 +182,89 @@ export default function PayrollSettingsPage() {
             </div>
           </div>
 
+          {/* Automation */}
+          {(() => {
+            const effectiveFreq = isIndia ? 'MONTHLY' : form.payFrequency;
+            const isNonMonthly = ['BI_WEEKLY', 'WEEKLY'].includes(effectiveFreq);
+
+            return (
+              <div className={sectionClass}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold text-foreground">Automation</h2>
+                </div>
+
+                {isNonMonthly && (
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 mb-4">
+                    <Info className="h-4 w-4 mt-0.5 text-blue-500 dark:text-blue-400 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                        Not available for {effectiveFreq === 'BI_WEEKLY' ? 'bi-weekly' : 'weekly'} payroll
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                        Automatic payroll generation currently supports monthly and semi-monthly schedules. For {effectiveFreq === 'BI_WEEKLY' ? 'bi-weekly' : 'weekly'} payroll, please run it manually from the Payroll page.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-start gap-3 p-4 border border-border rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="payrollAutoGenerate"
+                    checked={form.payrollAutoGenerate}
+                    onChange={(e) => setForm(prev => ({ ...prev, payrollAutoGenerate: e.target.checked }))}
+                    className={checkboxClass}
+                    disabled={isNonMonthly}
+                  />
+                  <div className="flex-1">
+                    <label
+                      htmlFor="payrollAutoGenerate"
+                      className={`text-sm font-medium cursor-pointer ${isNonMonthly ? 'text-muted-foreground' : 'text-foreground'}`}
+                    >
+                      Automatically Generate Payroll
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      When enabled, payroll will be generated automatically on the scheduled day each month. You can still review and approve before marking as paid.
+                    </p>
+
+                    {form.payrollAutoGenerate && !isNonMonthly && (
+                      <div className="mt-3">
+                        <label className={labelClass}>Day of Month</label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            min={1}
+                            max={28}
+                            value={form.payrollAutoDay}
+                            onChange={(e) => {
+                              const val = Math.min(28, Math.max(1, parseInt(e.target.value) || 1));
+                              setForm(prev => ({ ...prev, payrollAutoDay: val }));
+                            }}
+                            className={`${inputClass} !w-24`}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            Payroll will be generated on the {form.payrollAutoDay}{form.payrollAutoDay === 1 ? 'st' : form.payrollAutoDay === 2 ? 'nd' : form.payrollAutoDay === 3 ? 'rd' : 'th'} of each month
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          Choose a day between 1 and 28 to avoid month-end date issues.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* India-specific */}
           {isIndia && (
             <div className={sectionClass}>
-              <h2 className="text-lg font-semibold text-foreground mb-4">India Compliance</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold text-foreground">India Compliance</h2>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Company PAN *</label>
@@ -211,7 +308,7 @@ export default function PayrollSettingsPage() {
                     id="pfEnabled"
                     checked={form.pfEnabled}
                     onChange={(e) => setForm(prev => ({ ...prev, pfEnabled: e.target.checked }))}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className={checkboxClass}
                   />
                   <div className="flex-1">
                     <label htmlFor="pfEnabled" className="text-sm font-medium text-foreground cursor-pointer">
@@ -241,7 +338,7 @@ export default function PayrollSettingsPage() {
                     id="esiEnabled"
                     checked={form.esiEnabled}
                     onChange={(e) => setForm(prev => ({ ...prev, esiEnabled: e.target.checked }))}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className={checkboxClass}
                   />
                   <div className="flex-1">
                     <label htmlFor="esiEnabled" className="text-sm font-medium text-foreground cursor-pointer">
@@ -271,7 +368,10 @@ export default function PayrollSettingsPage() {
           {/* US-specific */}
           {isUS && (
             <div className={sectionClass}>
-              <h2 className="text-lg font-semibold text-foreground mb-4">US Compliance</h2>
+              <div className="flex items-center gap-2 mb-4">
+                <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold text-foreground">US Compliance</h2>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Employer Identification Number (EIN) *</label>
@@ -290,14 +390,17 @@ export default function PayrollSettingsPage() {
 
           {/* Email Payslip */}
           <div className={sectionClass}>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Notifications</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <Bell className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
+            </div>
             <div className="flex items-start gap-3 p-4 border border-border rounded-lg">
               <input
                 type="checkbox"
                 id="emailPayslip"
                 checked={form.emailPayslipEnabled}
                 onChange={(e) => setForm(prev => ({ ...prev, emailPayslipEnabled: e.target.checked }))}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className={checkboxClass}
               />
               <div>
                 <label htmlFor="emailPayslip" className="text-sm font-medium text-foreground cursor-pointer">
@@ -315,13 +418,14 @@ export default function PayrollSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving ? 'Saving...' : 'Save Payroll Settings'}
             </button>
           </div>
         </form>
-      </div>
+      </PageContainer>
     </RoleGate>
   );
 }

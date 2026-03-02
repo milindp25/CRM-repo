@@ -309,14 +309,14 @@ export default function ReportsPage() {
           <button
             onClick={generateReport}
             disabled={loading}
-            className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 transition"
+            className="px-5 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition"
           >
             {loading ? 'Generating...' : 'Generate Report'}
           </button>
           {generated && reportData.length > 0 && (
             <button
               onClick={exportToCSV}
-              className="px-5 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition"
+              className="px-5 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition"
             >
               Export to Excel (CSV)
             </button>

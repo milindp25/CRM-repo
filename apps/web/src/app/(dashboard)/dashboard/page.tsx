@@ -3,14 +3,19 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { apiClient, type Employee, type Leave, type Attendance, type Payroll } from '@/lib/api-client';
+import { apiClient, type Leave, type Payroll } from '@/lib/api-client';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useToast } from '@/components/ui/toast';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
-import { Building2, Activity, Loader2 } from 'lucide-react';
+import { StatCard } from '@/components/ui/stat-card';
+import { StatusBadge, getStatusVariant } from '@/components/ui/status-badge';
+import {
+  Users, UserCheck, CalendarCheck, ClipboardList,
+  DollarSign, TrendingUp, Loader2, Activity, Building2,
+  Plus, Clock, ChevronRight, ArrowRight, FileCheck,
+} from 'lucide-react';
 
-// Lazy load heavy dashboard widgets to reduce initial bundle
 const ActivityFeed = dynamic(
   () => import('@/components/dashboard/activity-feed').then(mod => ({ default: mod.ActivityFeed })),
   { loading: () => <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div> }
@@ -37,14 +42,9 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
-    totalEmployees: 0,
-    activeEmployees: 0,
-    presentToday: 0,
-    absentToday: 0,
-    wfhToday: 0,
-    pendingLeaves: 0,
-    draftPayrolls: 0,
-    processedPayrolls: 0,
+    totalEmployees: 0, activeEmployees: 0,
+    presentToday: 0, absentToday: 0, wfhToday: 0,
+    pendingLeaves: 0, draftPayrolls: 0, processedPayrolls: 0,
   });
   const [pendingLeaves, setPendingLeaves] = useState<Leave[]>([]);
   const [recentPayrolls, setRecentPayrolls] = useState<Payroll[]>([]);
@@ -54,75 +54,6 @@ export default function DashboardPage() {
   const toast = useToast();
 
   const today = new Date().toISOString().split('T')[0];
-
-  useEffect(() => {
-    let cancelled = false;
-    const fetchData = async () => {
-      try {
-        if (!cancelled) {
-          setLoading(true);
-          setError('');
-        }
-
-        const [employeesRes, attendanceRes, leavesRes, payrollRes] = await Promise.allSettled([
-          apiClient.getEmployees({ limit: 100 }),
-          apiClient.getAttendance({ startDate: today, endDate: today }),
-          apiClient.getLeave({ status: 'PENDING' }),
-          apiClient.getPayroll({ take: 5 }),
-        ]);
-
-        if (!cancelled) {
-          // Process employees
-          if (employeesRes.status === 'fulfilled') {
-            const employees = employeesRes.value.data;
-            setStats(prev => ({
-              ...prev,
-              totalEmployees: employees.length,
-              activeEmployees: employees.filter(e => e.status === 'ACTIVE').length,
-            }));
-          }
-
-          // Process attendance
-          if (attendanceRes.status === 'fulfilled') {
-            const attendance = attendanceRes.value.data;
-            setStats(prev => ({
-              ...prev,
-              presentToday: attendance.filter(a => a.status === 'PRESENT').length,
-              absentToday: attendance.filter(a => a.status === 'ABSENT').length,
-              wfhToday: attendance.filter(a => a.isWorkFromHome).length,
-            }));
-          }
-
-          // Process leaves
-          if (leavesRes.status === 'fulfilled') {
-            const leaves = leavesRes.value.data;
-            setPendingLeaves(leaves.slice(0, 5));
-            setStats(prev => ({
-              ...prev,
-              pendingLeaves: leavesRes.value.meta.totalItems || leaves.length,
-            }));
-          }
-
-          // Process payroll
-          if (payrollRes.status === 'fulfilled') {
-            const payrolls = payrollRes.value.data;
-            setRecentPayrolls(payrolls);
-            setStats(prev => ({
-              ...prev,
-              draftPayrolls: payrolls.filter(p => p.status === 'DRAFT').length,
-              processedPayrolls: payrolls.filter(p => p.status === 'PROCESSED').length,
-            }));
-          }
-        }
-      } catch (err: any) {
-        if (!cancelled) setError(err.message || 'Failed to load dashboard data');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchData();
-    return () => { cancelled = true; };
-  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -180,6 +111,10 @@ export default function DashboardPage() {
     }
   };
 
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
   const handleApproveLeave = async (id: string) => {
     try {
       await apiClient.approveLeave(id);
@@ -201,129 +136,165 @@ export default function DashboardPage() {
   };
 
   const getMonthName = (month: number) => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[month - 1];
   };
 
-  const getPayrollStatusColor = (status: string) => {
-    switch (status) {
-      case 'DRAFT': return 'bg-muted text-muted-foreground';
-      case 'PROCESSED': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'PAID': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case 'HOLD': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
+  if (loading) return <PageLoader />;
 
-  const getLeaveTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      CASUAL: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      SICK: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-      EARNED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      PRIVILEGE: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-      MATERNITY: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
-      PATERNITY: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-      COMPENSATORY: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-      LOSS_OF_PAY: 'bg-muted text-muted-foreground',
-    };
-    return colors[type] || 'bg-muted text-muted-foreground';
-  };
-
-  if (loading) {
-    return <PageLoader />;
-  }
+  const attendanceRate = stats.activeEmployees > 0
+    ? Math.round((stats.presentToday / stats.activeEmployees) * 100)
+    : 0;
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6" data-tour="dashboard">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/employees/new"
+            className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add Employee
+          </Link>
+        </div>
       </div>
 
       {error && (
-        <ErrorBanner message={error} onDismiss={() => setError('')} onRetry={() => fetchDashboardData()} className="mb-6" />
+        <ErrorBanner message={error} onDismiss={() => setError('')} onRetry={fetchDashboardData} />
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children" data-tour="dashboard-stats">
         <StatCard
           title="Total Employees"
           value={stats.totalEmployees}
-          sub={`${stats.activeEmployees} active`}
-          icon="👥"
-          color="blue"
-          href="/employees"
+          subtitle={`${stats.activeEmployees} active`}
+          icon={Users}
+          iconColor="blue"
+          onClick={() => window.location.href = '/employees'}
         />
         <StatCard
           title="Present Today"
           value={stats.presentToday}
-          sub={stats.wfhToday > 0 ? `${stats.wfhToday} WFH` : stats.absentToday > 0 ? `${stats.absentToday} absent` : 'All present'}
-          icon="✅"
-          color="green"
-          href="/attendance"
+          subtitle={stats.wfhToday > 0 ? `${stats.wfhToday} remote today` : `${stats.absentToday} absent`}
+          icon={UserCheck}
+          iconColor="green"
+          trend={stats.activeEmployees > 0 ? { value: attendanceRate, label: 'attendance rate' } : undefined}
+          onClick={() => window.location.href = '/attendance'}
         />
         <StatCard
-          title="Pending Leaves"
+          title="Time Off Requests"
           value={stats.pendingLeaves}
-          sub="Awaiting approval"
-          icon="📋"
-          color={stats.pendingLeaves > 0 ? 'orange' : 'green'}
-          href="/leave"
+          subtitle="Awaiting approval"
+          icon={ClipboardList}
+          iconColor={stats.pendingLeaves > 0 ? 'amber' : 'green'}
+          onClick={() => window.location.href = '/leave'}
         />
         <StatCard
-          title="Payroll Actions"
+          title="Payroll"
           value={stats.draftPayrolls + stats.processedPayrolls}
-          sub={`${stats.draftPayrolls} draft · ${stats.processedPayrolls} to pay`}
-          icon="💰"
-          color={stats.draftPayrolls + stats.processedPayrolls > 0 ? 'purple' : 'green'}
-          href="/payroll"
+          subtitle={`${stats.draftPayrolls} pending, ${stats.processedPayrolls} ready`}
+          icon={DollarSign}
+          iconColor="purple"
+          onClick={() => window.location.href = '/payroll'}
         />
       </div>
 
-      {/* Two column layout: Leaves & Payroll */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {/* Attendance bar */}
+      <div className="rounded-xl border bg-card p-5" data-tour="attendance-overview">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-foreground flex items-center gap-2">
+            <CalendarCheck className="w-4 h-4 text-primary" />
+            Today&apos;s Attendance
+          </h2>
+          <Link href="/attendance" className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1">
+            Mark Attendance <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+        {stats.activeEmployees === 0 ? (
+          <p className="text-sm text-muted-foreground">No employees to track yet</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                <span className="text-muted-foreground">Present: <strong className="text-foreground">{stats.presentToday}</strong></span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                <span className="text-muted-foreground">Absent: <strong className="text-foreground">{stats.absentToday}</strong></span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+                <span className="text-muted-foreground">Working from Home: <strong className="text-foreground">{stats.wfhToday}</strong></span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                <span className="text-muted-foreground">No Status Yet: <strong className="text-foreground">{Math.max(0, stats.activeEmployees - stats.presentToday - stats.absentToday)}</strong></span>
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2 flex overflow-hidden">
+              <div className="bg-green-500 h-2 transition-all duration-500" style={{ width: `${(stats.presentToday / stats.activeEmployees) * 100}%` }} />
+              <div className="bg-red-400 h-2 transition-all duration-500" style={{ width: `${(stats.absentToday / stats.activeEmployees) * 100}%` }} />
+              <div className="bg-blue-400 h-2 transition-all duration-500" style={{ width: `${(stats.wfhToday / stats.activeEmployees) * 100}%` }} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Two column: Leaves & Payroll */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending Leave Approvals */}
-        <div className="bg-card rounded-xl border border-border shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <h2 className="font-semibold text-foreground">Pending Leave Approvals</h2>
-            <Link href="/leave" className="text-sm text-primary hover:opacity-80">
-              View all
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b">
+            <h2 className="font-semibold text-foreground flex items-center gap-2">
+              <FileCheck className="w-4 h-4 text-amber-500" />
+              Time Off Requests
+            </h2>
+            <Link href="/leave" className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1">
+              View all <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y">
             {pendingLeaves.length === 0 ? (
-              <div className="px-5 py-8 text-center text-muted-foreground text-sm">
-                No pending leave requests
+              <div className="px-5 py-10 text-center">
+                <ClipboardList className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No pending requests</p>
               </div>
             ) : (
               pendingLeaves.map(leave => (
-                <div key={leave.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                <div key={leave.id} className="px-5 py-3 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground truncate">
                       {leave.employee?.firstName} {leave.employee?.lastName}
                     </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${getLeaveTypeColor(leave.leaveType)}`}>
+                    <div className="flex items-center gap-2 mt-1">
+                      <StatusBadge variant={getStatusVariant(leave.leaveType)} size="sm">
                         {leave.leaveType.replace('_', ' ')}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {leave.totalDays}d · {new Date(leave.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </StatusBadge>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {leave.totalDays}d &middot; {new Date(leave.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex gap-1.5 flex-shrink-0">
                     <button
                       onClick={() => handleApproveLeave(leave.id)}
-                      className="text-xs px-2.5 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                      className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium transition-colors"
                     >
                       Approve
                     </button>
                     <button
                       onClick={() => handleRejectLeave(leave.id)}
-                      className="text-xs px-2.5 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                      className="text-xs px-3 py-1.5 border border-border text-foreground rounded-lg hover:bg-muted font-medium transition-colors"
                     >
                       Reject
                     </button>
@@ -335,21 +306,25 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Payroll */}
-        <div className="bg-card rounded-xl border border-border shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <h2 className="font-semibold text-foreground">Recent Payroll</h2>
-            <Link href="/payroll" className="text-sm text-primary hover:opacity-80">
-              View all
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b">
+            <h2 className="font-semibold text-foreground flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-purple-500" />
+              Recent Payroll
+            </h2>
+            <Link href="/payroll" className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1">
+              View all <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y">
             {recentPayrolls.length === 0 ? (
-              <div className="px-5 py-8 text-center text-muted-foreground text-sm">
-                No payroll records yet
+              <div className="px-5 py-10 text-center">
+                <DollarSign className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No payroll records yet</p>
               </div>
             ) : (
               recentPayrolls.map(payroll => (
-                <div key={payroll.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                <div key={payroll.id} className="px-5 py-3 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground truncate">
                       {payroll.employee?.firstName} {payroll.employee?.lastName}
@@ -358,13 +333,13 @@ export default function DashboardPage() {
                       {getMonthName(payroll.payPeriodMonth)} {payroll.payPeriodYear}
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-foreground">
+                  <div className="text-right flex-shrink-0 space-y-1">
+                    <p className="text-sm font-semibold text-foreground tabular-nums">
                       ₹{payroll.netSalary.toFixed(0)}
                     </p>
-                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${getPayrollStatusColor(payroll.status)}`}>
+                    <StatusBadge variant={getStatusVariant(payroll.status)} size="sm">
                       {payroll.status}
-                    </span>
+                    </StatusBadge>
                   </div>
                 </div>
               ))
@@ -373,63 +348,20 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Attendance Summary Bar */}
-      <div className="bg-card rounded-xl border border-border shadow-sm mb-6 p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-foreground">Today&apos;s Attendance</h2>
-          <Link href="/attendance" className="text-sm text-primary hover:opacity-80">
-            Mark Attendance
-          </Link>
-        </div>
-        {stats.totalEmployees === 0 ? (
-          <p className="text-sm text-muted-foreground">No employees to track yet</p>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex gap-6 text-sm">
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
-                <span className="text-muted-foreground">Present: <strong className="text-foreground">{stats.presentToday}</strong></span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-red-400 inline-block"></span>
-                <span className="text-muted-foreground">Absent: <strong className="text-foreground">{stats.absentToday}</strong></span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-blue-400 inline-block"></span>
-                <span className="text-muted-foreground">WFH: <strong className="text-foreground">{stats.wfhToday}</strong></span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600 inline-block"></span>
-                <span className="text-muted-foreground">Not Marked: <strong className="text-foreground">{Math.max(0, stats.activeEmployees - stats.presentToday - stats.absentToday)}</strong></span>
-              </span>
-            </div>
-            {stats.activeEmployees > 0 && (
-              <div className="w-full bg-muted rounded-full h-2.5 flex overflow-hidden">
-                <div className="bg-green-500 h-2.5 transition-all" style={{ width: `${(stats.presentToday / stats.activeEmployees) * 100}%` }} />
-                <div className="bg-red-400 h-2.5 transition-all" style={{ width: `${(stats.absentToday / stats.activeEmployees) * 100}%` }} />
-                <div className="bg-blue-400 h-2.5 transition-all" style={{ width: `${(stats.wfhToday / stats.activeEmployees) * 100}%` }} />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Three column layout: Calendar, Activity Feed, Org Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Calendar */}
-        <div className="bg-card rounded-xl border border-border shadow-sm p-5">
+      {/* Three column: Calendar, Activity, Org Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="rounded-xl border bg-card p-5">
           <CalendarWidget />
         </div>
 
-        {/* Activity Feed */}
-        <div className="bg-card rounded-xl border border-border shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b">
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-primary" />
               <h2 className="font-semibold text-foreground">Recent Activity</h2>
             </div>
-            <Link href="/audit-logs" className="text-sm text-primary hover:opacity-80">
-              View all
+            <Link href="/audit-logs" className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1">
+              View history <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
           <div className="px-5 py-3">
@@ -437,15 +369,14 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Org Chart */}
-        <div className="bg-card rounded-xl border border-border shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b">
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-primary" />
               <h2 className="font-semibold text-foreground">Organization</h2>
             </div>
-            <Link href="/departments" className="text-sm text-primary hover:opacity-80">
-              View all
+            <Link href="/departments" className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1">
+              View all <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
           <div className="px-5 py-3">
@@ -458,75 +389,53 @@ export default function DashboardPage() {
       <div>
         <h2 className="font-semibold text-foreground mb-3">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <QuickAction href="/employees/new" icon="➕" label="Add Employee" color="blue" />
-          <QuickAction href="/attendance" icon="📅" label="Mark Attendance" color="green" />
-          <QuickAction href="/leave" icon="✅" label="Review Leaves" color="orange" badge={stats.pendingLeaves} />
-          <QuickAction href="/payroll" icon="💰" label="Process Payroll" color="purple" badge={stats.draftPayrolls} />
+          <QuickAction href="/employees/new" icon={Plus} label="Add Employee" color="blue" />
+          <QuickAction href="/attendance" icon={CalendarCheck} label="Mark Attendance" color="green" />
+          <QuickAction href="/leave" icon={FileCheck} label="Review Time Off" color="amber" badge={stats.pendingLeaves} />
+          <QuickAction href="/payroll" icon={DollarSign} label="Run Payroll" color="purple" badge={stats.draftPayrolls} />
         </div>
       </div>
     </div>
   );
 }
 
-// ── Sub-components ──────────────────────────────────────────
-
-function StatCard({
-  title, value, sub, icon, color, href,
-}: {
-  title: string;
-  value: number;
-  sub: string;
-  icon: string;
-  color: 'blue' | 'green' | 'orange' | 'purple';
-  href: string;
-}) {
-  const colorMap = {
-    blue:   { text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-100 dark:border-blue-900/40' },
-    green:  { text: 'text-green-600 dark:text-green-400', border: 'border-green-100 dark:border-green-900/40' },
-    orange: { text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-100 dark:border-orange-900/40' },
-    purple: { text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-100 dark:border-purple-900/40' },
-  };
-  const c = colorMap[color];
-
-  return (
-    <Link href={href} className={`bg-card rounded-xl border ${c.border} shadow-sm p-5 hover:shadow-md transition-shadow block`}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-2xl">{icon}</span>
-        <span className={`text-3xl font-bold ${c.text}`}>{value}</span>
-      </div>
-      <p className="font-medium text-foreground text-sm">{title}</p>
-      <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
-    </Link>
-  );
-}
+/* ── Quick Action Card ─────────────────────────────────── */
 
 function QuickAction({
-  href, icon, label, color, badge,
+  href, icon: Icon, label, color, badge,
 }: {
   href: string;
-  icon: string;
+  icon: React.ElementType;
   label: string;
-  color: 'blue' | 'green' | 'orange' | 'purple';
+  color: 'blue' | 'green' | 'amber' | 'purple';
   badge?: number;
 }) {
-  const colorMap = {
-    blue:   'hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-900/20 dark:hover:border-blue-800',
-    green:  'hover:bg-green-50 hover:border-green-200 dark:hover:bg-green-900/20 dark:hover:border-green-800',
-    orange: 'hover:bg-orange-50 hover:border-orange-200 dark:hover:bg-orange-900/20 dark:hover:border-orange-800',
-    purple: 'hover:bg-purple-50 hover:border-purple-200 dark:hover:bg-purple-900/20 dark:hover:border-purple-800',
+  const hoverColors = {
+    blue: 'hover:border-blue-300 dark:hover:border-blue-800',
+    green: 'hover:border-green-300 dark:hover:border-green-800',
+    amber: 'hover:border-amber-300 dark:hover:border-amber-800',
+    purple: 'hover:border-purple-300 dark:hover:border-purple-800',
+  };
+  const iconBg = {
+    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400',
+    green: 'bg-green-50 text-green-600 dark:bg-green-950/50 dark:text-green-400',
+    amber: 'bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400',
+    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400',
   };
 
   return (
     <Link
       href={href}
-      className={`relative bg-card border border-border rounded-xl p-4 flex flex-col items-center gap-2 text-center transition-all ${colorMap[color]} shadow-sm hover:shadow-md`}
+      className={`relative rounded-xl border bg-card p-4 flex flex-col items-center gap-3 text-center transition-all hover:shadow-md hover:-translate-y-0.5 ${hoverColors[color]}`}
     >
       {badge !== undefined && badge > 0 && (
-        <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+        <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
           {badge > 9 ? '9+' : badge}
         </span>
       )}
-      <span className="text-2xl">{icon}</span>
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg[color]}`}>
+        <Icon className="w-5 h-5" />
+      </div>
       <span className="text-sm font-medium text-foreground">{label}</span>
     </Link>
   );
