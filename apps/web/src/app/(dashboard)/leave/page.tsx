@@ -65,31 +65,17 @@ export default function LeavePage() {
     reason: '',
   });
 
-  // Fetch employees once on mount
-  useEffect(() => {
-    let cancelled = false;
-    const loadEmployees = async () => {
-      try {
-        const response = await apiClient.getEmployees({ limit: 100, status: 'ACTIVE' });
-        if (!cancelled) setEmployees(response.data);
-      } catch (err: any) {
-        if (!cancelled) console.error('Failed to fetch employees:', err);
-      }
-    };
-    loadEmployees();
-    return () => { cancelled = true; };
-  }, []);
+  // Track whether employees have been loaded (avoids re-fetching on filter changes)
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
 
-  // Fetch leaves when filters or page changes
+  // Fetch leaves (and employees on first load) — parallel via Promise.all
   useEffect(() => {
     let cancelled = false;
-    const loadLeaves = async () => {
+    const loadData = async () => {
       try {
-        if (!cancelled) {
-          setLoading(true);
-          setError(null);
-        }
-        const response = await apiClient.getLeave({
+        if (!cancelled) { setLoading(true); setError(null); }
+
+        const leavePromise = apiClient.getLeave({
           page: currentPage,
           limit: 20,
           ...(employeeFilter && { employeeId: employeeFilter }),
@@ -98,9 +84,24 @@ export default function LeavePage() {
           ...(startDate && { startDate }),
           ...(endDate && { endDate }),
         });
-        if (!cancelled) {
-          setLeaves(response.data);
-          setTotalPages(response.meta.totalPages);
+
+        if (!employeesLoaded) {
+          const [empResponse, leaveResponse] = await Promise.all([
+            apiClient.getEmployees({ limit: 100, status: 'ACTIVE' }),
+            leavePromise,
+          ]);
+          if (!cancelled) {
+            setEmployees(empResponse.data);
+            setEmployeesLoaded(true);
+            setLeaves(leaveResponse.data);
+            setTotalPages(leaveResponse.meta.totalPages);
+          }
+        } else {
+          const leaveResponse = await leavePromise;
+          if (!cancelled) {
+            setLeaves(leaveResponse.data);
+            setTotalPages(leaveResponse.meta.totalPages);
+          }
         }
       } catch (err: any) {
         if (!cancelled) setError(err.message || 'Failed to fetch leave requests');
@@ -108,9 +109,9 @@ export default function LeavePage() {
         if (!cancelled) setLoading(false);
       }
     };
-    loadLeaves();
+    loadData();
     return () => { cancelled = true; };
-  }, [currentPage, employeeFilter, leaveTypeFilter, statusFilter, startDate, endDate]);
+  }, [currentPage, employeeFilter, leaveTypeFilter, statusFilter, startDate, endDate, employeesLoaded]);
 
   const fetchEmployees = async () => {
     try {

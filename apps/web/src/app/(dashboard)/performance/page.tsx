@@ -14,8 +14,11 @@ import { TableLoader, PageLoader } from '@/components/ui/page-loader';
 import { useToast } from '@/components/ui/toast';
 import {
   Plus, Loader2, AlertCircle, Target, BarChart3, CheckCircle2,
-  Clock, CalendarRange, Trophy, Crosshair,
+  Clock, CalendarRange, Trophy, Crosshair, Edit2, Trash2,
+  Play, Check, Minus,
 } from 'lucide-react';
+
+const inputClass = 'h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
 
 export default function PerformancePage() {
   const toast = useToast();
@@ -25,15 +28,23 @@ export default function PerformancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Create cycle form
+  // Create/Edit cycle form
   const [showCycleModal, setShowCycleModal] = useState(false);
   const [cycleForm, setCycleForm] = useState({ name: '', cycleType: 'QUARTERLY', startDate: '', endDate: '', description: '' });
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Create goal form
+  // Create/Edit goal form
   const [showGoalModal, setShowGoalModal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [goalForm, setGoalForm] = useState({ title: '', description: '', priority: 'MEDIUM', dueDate: '' });
+
+  // Delete confirmation
+  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
+
+  // Progress update
+  const [updatingProgressId, setUpdatingProgressId] = useState<string | null>(null);
+  const [progressValue, setProgressValue] = useState(0);
 
   useEffect(() => {
     if (activeTab === 'cycles') fetchCycles();
@@ -83,32 +94,97 @@ export default function PerformancePage() {
     }
   };
 
-  const handleCreateGoal = async (e: React.FormEvent) => {
+  const handleActivateCycle = async (id: string) => {
+    try {
+      await apiClient.activateReviewCycle(id);
+      toast.success('Cycle Activated', 'Review cycle is now active.');
+      fetchCycles();
+    } catch (err: any) {
+      toast.error('Failed to activate', err.message);
+    }
+  };
+
+  const handleCompleteCycle = async (id: string) => {
+    try {
+      await apiClient.completeReviewCycle(id);
+      toast.success('Cycle Completed', 'Review cycle has been marked as completed.');
+      fetchCycles();
+    } catch (err: any) {
+      toast.error('Failed to complete', err.message);
+    }
+  };
+
+  // Goal handlers
+  const openGoalModal = (goal?: Goal) => {
+    if (goal) {
+      setEditingGoal(goal);
+      setGoalForm({
+        title: goal.title,
+        description: goal.description || '',
+        priority: goal.priority,
+        dueDate: goal.dueDate ? goal.dueDate.split('T')[0] : '',
+      });
+    } else {
+      setEditingGoal(null);
+      setGoalForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '' });
+    }
+    setFormError(null);
+    setShowGoalModal(true);
+  };
+
+  const handleSubmitGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     setFormError(null);
     try {
-      await apiClient.createGoal(goalForm);
+      if (editingGoal) {
+        await apiClient.updateGoal(editingGoal.id, goalForm);
+        toast.success('Goal Updated', `"${goalForm.title}" has been updated.`);
+      } else {
+        await apiClient.createGoal(goalForm);
+        toast.success('Goal Created', 'New goal has been created successfully.');
+      }
       setShowGoalModal(false);
+      setEditingGoal(null);
       setGoalForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '' });
-      toast.success('Goal created', 'New goal has been created successfully.');
       fetchGoals();
     } catch (err: any) {
-      setFormError(err.message || 'Failed to create goal');
+      setFormError(err.message || 'Failed to save goal');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDeleteGoal = async (id: string) => {
+    try {
+      await apiClient.deleteGoal(id);
+      setDeletingGoalId(null);
+      toast.success('Goal Deleted', 'Goal has been removed.');
+      fetchGoals();
+    } catch (err: any) {
+      toast.error('Failed to delete goal', err.message);
+    }
+  };
+
+  const startProgressUpdate = (goal: Goal) => {
+    setUpdatingProgressId(goal.id);
+    setProgressValue(goal.progress || 0);
+  };
+
+  const handleUpdateProgress = async (goalId: string) => {
+    try {
+      await apiClient.updateGoalProgress(goalId, progressValue);
+      setUpdatingProgressId(null);
+      toast.success('Progress Updated', `Progress set to ${progressValue}%.`);
+      fetchGoals();
+    } catch (err: any) {
+      toast.error('Failed to update progress', err.message);
     }
   };
 
   const openCycleModal = () => {
     setShowCycleModal(true);
     setCycleForm({ name: '', cycleType: 'QUARTERLY', startDate: '', endDate: '', description: '' });
-    setFormError(null);
-  };
-
-  const openGoalModal = () => {
-    setShowGoalModal(true);
-    setGoalForm({ title: '', description: '', priority: 'MEDIUM', dueDate: '' });
     setFormError(null);
   };
 
@@ -121,11 +197,9 @@ export default function PerformancePage() {
     }
   };
 
-  // Stats for cycles
+  // Stats
   const activeCycles = cycles.filter(c => c.status === 'ACTIVE').length;
   const completedCycles = cycles.filter(c => c.status === 'COMPLETED').length;
-
-  // Stats for goals
   const completedGoals = goals.filter(g => g.status === 'COMPLETED').length;
   const inProgressGoals = goals.filter(g => g.status === 'IN_PROGRESS').length;
   const avgProgress = goals.length > 0 ? Math.round(goals.reduce((sum, g) => sum + (g.progress || 0), 0) / goals.length) : 0;
@@ -138,14 +212,11 @@ export default function PerformancePage() {
         <PageContainer
           title="Reviews"
           description="Set up review cycles, track goals, and manage team performance"
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Reviews' },
-          ]}
+          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Reviews' }]}
           actions={
             <RoleGate requiredPermissions={[Permission.MANAGE_PERFORMANCE]} hideOnly>
               <button
-                onClick={activeTab === 'cycles' ? openCycleModal : openGoalModal}
+                onClick={activeTab === 'cycles' ? openCycleModal : () => openGoalModal()}
                 className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -189,7 +260,6 @@ export default function PerformancePage() {
           {/* Review Cycles Tab */}
           {activeTab === 'cycles' && (
             <div className="space-y-6">
-              {/* Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <StatCard title="Total Cycles" value={cycles.length} icon={CalendarRange} iconColor="blue" />
                 <StatCard title="Active" value={activeCycles} icon={BarChart3} iconColor="green" />
@@ -198,7 +268,7 @@ export default function PerformancePage() {
 
               {loading ? (
                 <div className="rounded-xl border bg-card overflow-hidden">
-                  <TableLoader rows={5} cols={4} />
+                  <TableLoader rows={5} cols={5} />
                 </div>
               ) : cycles.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border bg-card">
@@ -206,10 +276,7 @@ export default function PerformancePage() {
                   <h3 className="text-lg font-semibold text-foreground">No review cycles yet</h3>
                   <p className="text-sm text-muted-foreground mt-1 max-w-sm">Create your first review cycle to start tracking performance.</p>
                   <RoleGate requiredPermissions={[Permission.MANAGE_PERFORMANCE]} hideOnly>
-                    <button
-                      onClick={openCycleModal}
-                      className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-                    >
+                    <button onClick={openCycleModal} className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
                       <Plus className="w-4 h-4" /> Create Review Cycle
                     </button>
                   </RoleGate>
@@ -223,12 +290,20 @@ export default function PerformancePage() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Period</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {cycles.map(cycle => (
                         <tr key={cycle.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3.5 text-sm font-medium text-foreground">{cycle.name}</td>
+                          <td className="px-4 py-3.5">
+                            <div>
+                              <span className="text-sm font-medium text-foreground">{cycle.name}</span>
+                              {cycle.description && (
+                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{cycle.description}</p>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-3.5 text-sm text-muted-foreground">{cycle.cycleType.replace(/_/g, ' ')}</td>
                           <td className="px-4 py-3.5 text-sm text-muted-foreground">
                             {new Date(cycle.startDate).toLocaleDateString()} - {new Date(cycle.endDate).toLocaleDateString()}
@@ -237,6 +312,30 @@ export default function PerformancePage() {
                             <StatusBadge variant={getStatusVariant(cycle.status)} dot>
                               {cycle.status.replace(/_/g, ' ')}
                             </StatusBadge>
+                          </td>
+                          <td className="px-4 py-3.5 text-right">
+                            <RoleGate requiredPermissions={[Permission.MANAGE_PERFORMANCE]} hideOnly>
+                              <div className="flex items-center gap-1 justify-end">
+                                {cycle.status === 'DRAFT' && (
+                                  <button
+                                    onClick={() => handleActivateCycle(cycle.id)}
+                                    className="h-7 px-2.5 rounded-md text-xs font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 transition-colors inline-flex items-center gap-1"
+                                    title="Activate cycle"
+                                  >
+                                    <Play className="w-3 h-3" /> Activate
+                                  </button>
+                                )}
+                                {cycle.status === 'ACTIVE' && (
+                                  <button
+                                    onClick={() => handleCompleteCycle(cycle.id)}
+                                    className="h-7 px-2.5 rounded-md text-xs font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors inline-flex items-center gap-1"
+                                    title="Complete cycle"
+                                  >
+                                    <Check className="w-3 h-3" /> Complete
+                                  </button>
+                                )}
+                              </div>
+                            </RoleGate>
                           </td>
                         </tr>
                       ))}
@@ -250,7 +349,6 @@ export default function PerformancePage() {
           {/* Goals Tab */}
           {activeTab === 'goals' && (
             <div className="space-y-6">
-              {/* Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <StatCard title="Total Goals" value={goals.length} icon={Target} iconColor="blue" />
                 <StatCard title="In Progress" value={inProgressGoals} icon={Clock} iconColor="amber" />
@@ -273,19 +371,16 @@ export default function PerformancePage() {
                   <Crosshair className="w-12 h-12 text-muted-foreground/40 mb-4" />
                   <h3 className="text-lg font-semibold text-foreground">No goals yet</h3>
                   <p className="text-sm text-muted-foreground mt-1 max-w-sm">Create your first goal to start tracking your objectives.</p>
-                  <button
-                    onClick={openGoalModal}
-                    className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-                  >
+                  <button onClick={() => openGoalModal()} className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
                     <Plus className="w-4 h-4" /> Create Goal
                   </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {goals.map(goal => (
-                    <div key={goal.id} className="rounded-xl border bg-card p-5 hover:shadow-md transition-all">
+                    <div key={goal.id} className="rounded-xl border bg-card p-5 hover:shadow-md transition-all group">
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-foreground">{goal.title}</h3>
+                        <h3 className="font-semibold text-foreground flex-1 mr-2">{goal.title}</h3>
                         <StatusBadge variant={getStatusVariant(goal.status)} dot>
                           {goal.status.replace(/_/g, ' ')}
                         </StatusBadge>
@@ -304,13 +399,85 @@ export default function PerformancePage() {
                           </span>
                         )}
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
+
+                      {/* Progress bar */}
+                      {updatingProgressId === goal.id ? (
+                        <div className="flex items-center gap-3 mb-2">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={progressValue}
+                            onChange={e => setProgressValue(Number(e.target.value))}
+                            className="flex-1 h-2 accent-primary"
+                          />
+                          <span className="text-xs font-medium text-foreground w-10 text-right">{progressValue}%</span>
+                          <button
+                            onClick={() => handleUpdateProgress(goal.id)}
+                            className="h-6 px-2 bg-primary text-primary-foreground rounded text-xs font-medium hover:bg-primary/90 transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setUpdatingProgressId(null)}
+                            className="h-6 px-2 border border-input rounded text-xs font-medium hover:bg-muted transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
                         <div
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${goal.progress}%` }}
-                        />
-                      </div>
+                          className="w-full bg-muted rounded-full h-2 cursor-pointer"
+                          onClick={() => startProgressUpdate(goal)}
+                          title="Click to update progress"
+                        >
+                          <div
+                            className="bg-primary h-2 rounded-full transition-all"
+                            style={{ width: `${goal.progress}%` }}
+                          />
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1.5">{goal.progress}% complete</p>
+
+                      {/* Action buttons */}
+                      {deletingGoalId === goal.id ? (
+                        <div className="mt-3 flex items-center gap-2 pt-3 border-t border-border">
+                          <span className="text-xs text-destructive font-medium flex-1">Delete this goal?</span>
+                          <button
+                            onClick={() => handleDeleteGoal(goal.id)}
+                            className="h-6 px-2.5 bg-destructive text-destructive-foreground rounded text-xs font-medium hover:bg-destructive/90 transition-colors"
+                          >
+                            Yes
+                          </button>
+                          <button
+                            onClick={() => setDeletingGoalId(null)}
+                            className="h-6 px-2.5 border border-input rounded text-xs font-medium hover:bg-muted transition-colors"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="mt-3 flex items-center gap-1 pt-3 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => openGoalModal(goal)}
+                            className="h-6 px-2 rounded text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors inline-flex items-center gap-1"
+                          >
+                            <Edit2 className="w-3 h-3" /> Edit
+                          </button>
+                          <button
+                            onClick={() => startProgressUpdate(goal)}
+                            className="h-6 px-2 rounded text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors inline-flex items-center gap-1"
+                          >
+                            <BarChart3 className="w-3 h-3" /> Progress
+                          </button>
+                          <button
+                            onClick={() => setDeletingGoalId(goal.id)}
+                            className="h-6 px-2 rounded text-xs font-medium text-destructive hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors inline-flex items-center gap-1 ml-auto"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -320,9 +487,7 @@ export default function PerformancePage() {
 
           {/* Create Review Cycle Modal */}
           <Modal open={showCycleModal} onClose={() => setShowCycleModal(false)} size="lg">
-            <ModalHeader onClose={() => setShowCycleModal(false)}>
-              Create Review Cycle
-            </ModalHeader>
+            <ModalHeader onClose={() => setShowCycleModal(false)}>Create Review Cycle</ModalHeader>
             <form onSubmit={handleCreateCycle}>
               <ModalBody>
                 <div className="space-y-4">
@@ -335,22 +500,11 @@ export default function PerformancePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-foreground">Name <span className="text-destructive">*</span></label>
-                      <input
-                        type="text"
-                        required
-                        value={cycleForm.name}
-                        onChange={e => setCycleForm(p => ({ ...p, name: e.target.value }))}
-                        className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                        placeholder="Q1 2025 Review"
-                      />
+                      <input type="text" required value={cycleForm.name} onChange={e => setCycleForm(p => ({ ...p, name: e.target.value }))} className={inputClass} placeholder="Q1 2026 Review" />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-foreground">Type <span className="text-destructive">*</span></label>
-                      <select
-                        value={cycleForm.cycleType}
-                        onChange={e => setCycleForm(p => ({ ...p, cycleType: e.target.value }))}
-                        className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                      >
+                      <select value={cycleForm.cycleType} onChange={e => setCycleForm(p => ({ ...p, cycleType: e.target.value }))} className={inputClass}>
                         <option value="QUARTERLY">Quarterly</option>
                         <option value="HALF_YEARLY">Half Yearly</option>
                         <option value="ANNUAL">Annual</option>
@@ -359,51 +513,22 @@ export default function PerformancePage() {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-foreground">Start Date <span className="text-destructive">*</span></label>
-                      <input
-                        type="date"
-                        required
-                        value={cycleForm.startDate}
-                        onChange={e => setCycleForm(p => ({ ...p, startDate: e.target.value }))}
-                        className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                      />
+                      <input type="date" required value={cycleForm.startDate} onChange={e => setCycleForm(p => ({ ...p, startDate: e.target.value }))} className={inputClass} />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-foreground">End Date <span className="text-destructive">*</span></label>
-                      <input
-                        type="date"
-                        required
-                        value={cycleForm.endDate}
-                        onChange={e => setCycleForm(p => ({ ...p, endDate: e.target.value }))}
-                        className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                      />
+                      <input type="date" required value={cycleForm.endDate} onChange={e => setCycleForm(p => ({ ...p, endDate: e.target.value }))} className={inputClass} />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-foreground">Description</label>
-                    <textarea
-                      value={cycleForm.description}
-                      onChange={e => setCycleForm(p => ({ ...p, description: e.target.value }))}
-                      className="w-full min-h-[80px] px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-y"
-                      rows={2}
-                      placeholder="Brief description of this review cycle"
-                    />
+                    <textarea value={cycleForm.description} onChange={e => setCycleForm(p => ({ ...p, description: e.target.value }))} className="w-full min-h-[80px] px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-y" rows={2} placeholder="Brief description of this review cycle" />
                   </div>
                 </div>
               </ModalBody>
               <ModalFooter>
-                <button
-                  type="button"
-                  onClick={() => setShowCycleModal(false)}
-                  disabled={creating}
-                  className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-                >
+                <button type="button" onClick={() => setShowCycleModal(false)} disabled={creating} className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={creating} className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
                   {creating && <Loader2 className="w-4 h-4 animate-spin" />}
                   Create Cycle
                 </button>
@@ -411,12 +536,12 @@ export default function PerformancePage() {
             </form>
           </Modal>
 
-          {/* Create Goal Modal */}
-          <Modal open={showGoalModal} onClose={() => setShowGoalModal(false)} size="md">
-            <ModalHeader onClose={() => setShowGoalModal(false)}>
-              Create Goal
+          {/* Create / Edit Goal Modal */}
+          <Modal open={showGoalModal} onClose={() => { setShowGoalModal(false); setEditingGoal(null); }} size="md">
+            <ModalHeader onClose={() => { setShowGoalModal(false); setEditingGoal(null); }}>
+              {editingGoal ? 'Edit Goal' : 'Create Goal'}
             </ModalHeader>
-            <form onSubmit={handleCreateGoal}>
+            <form onSubmit={handleSubmitGoal}>
               <ModalBody>
                 <div className="space-y-4">
                   {formError && (
@@ -427,23 +552,12 @@ export default function PerformancePage() {
                   )}
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-foreground">Title <span className="text-destructive">*</span></label>
-                    <input
-                      type="text"
-                      required
-                      value={goalForm.title}
-                      onChange={e => setGoalForm(p => ({ ...p, title: e.target.value }))}
-                      className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                      placeholder="Increase sales by 20%"
-                    />
+                    <input type="text" required value={goalForm.title} onChange={e => setGoalForm(p => ({ ...p, title: e.target.value }))} className={inputClass} placeholder="Increase sales by 20%" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-foreground">Priority</label>
-                      <select
-                        value={goalForm.priority}
-                        onChange={e => setGoalForm(p => ({ ...p, priority: e.target.value }))}
-                        className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                      >
+                      <select value={goalForm.priority} onChange={e => setGoalForm(p => ({ ...p, priority: e.target.value }))} className={inputClass}>
                         <option value="LOW">Low</option>
                         <option value="MEDIUM">Medium</option>
                         <option value="HIGH">High</option>
@@ -452,42 +566,20 @@ export default function PerformancePage() {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-sm font-medium text-foreground">Due Date</label>
-                      <input
-                        type="date"
-                        value={goalForm.dueDate}
-                        onChange={e => setGoalForm(p => ({ ...p, dueDate: e.target.value }))}
-                        className="h-10 w-full px-3 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                      />
+                      <input type="date" value={goalForm.dueDate} onChange={e => setGoalForm(p => ({ ...p, dueDate: e.target.value }))} className={inputClass} />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-foreground">Description</label>
-                    <textarea
-                      value={goalForm.description}
-                      onChange={e => setGoalForm(p => ({ ...p, description: e.target.value }))}
-                      className="w-full min-h-[80px] px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-y"
-                      rows={2}
-                      placeholder="Describe the goal and key results"
-                    />
+                    <textarea value={goalForm.description} onChange={e => setGoalForm(p => ({ ...p, description: e.target.value }))} className="w-full min-h-[80px] px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors resize-y" rows={2} placeholder="Describe the goal and key results" />
                   </div>
                 </div>
               </ModalBody>
               <ModalFooter>
-                <button
-                  type="button"
-                  onClick={() => setShowGoalModal(false)}
-                  disabled={creating}
-                  className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-                >
+                <button type="button" onClick={() => { setShowGoalModal(false); setEditingGoal(null); }} disabled={creating} className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={creating} className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
                   {creating && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Create Goal
+                  {editingGoal ? 'Update Goal' : 'Create Goal'}
                 </button>
               </ModalFooter>
             </form>

@@ -6,7 +6,10 @@ import {
   IsArray,
   IsEnum,
   MaxLength,
+  Allow,
+  ValidateNested,
 } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 export enum SurveyType {
   PULSE = 'PULSE',
@@ -66,6 +69,7 @@ export class CreateSurveyDto {
     ],
   })
   @IsArray()
+  @Type(() => Object)
   questions: any[];
 
   @ApiPropertyOptional({
@@ -73,5 +77,6 @@ export class CreateSurveyDto {
     example: { departments: ['engineering', 'product'], all: false },
   })
   @IsOptional()
+  @Allow()
   targetAudience?: any;
 }

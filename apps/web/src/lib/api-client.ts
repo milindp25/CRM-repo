@@ -28,6 +28,7 @@ import type {
   ExpenseClaim, CreateExpenseClaimData,
   ShiftDefinition, CreateShiftDefinitionData, ShiftAssignment,
   Policy, CreatePolicyData, PolicyAcknowledgment,
+  DashboardWidgetDefinition, DashboardWidgetLayout,
   SalaryStructure, CreateSalaryStructureData, UpdateSalaryStructureData, SalaryStructurePaginationResponse,
   PayrollBatch, PayrollYTD, ReconciliationReport, PayrollCompanySettings,
 } from './api/types';
@@ -338,7 +339,8 @@ class ApiClient {
           await this.attemptRefresh();
           return this.request<T>(endpoint, options, true);
         } catch {
-          // Refresh failed - throw original 401
+          // Refresh failed — fall through to the error handler below (line 347+)
+          // which throws ApiError(401). The auth context catches this and clears tokens.
         }
       }
 
@@ -573,7 +575,8 @@ class ApiClient {
   }
 
   async getDepartmentHierarchy(): Promise<Department[]> {
-    return this.request<Department[]>('/departments/hierarchy');
+    const response = await this.request<any>('/departments/hierarchy');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   // ==================== Designation Endpoints ====================
@@ -837,7 +840,8 @@ class ApiClient {
   }
 
   async getPayrollBatches(): Promise<PayrollBatch[]> {
-    return this.request<PayrollBatch[]>('/payroll/batch/list');
+    const response = await this.request<any>('/payroll/batch/list');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getPayrollBatch(id: string): Promise<PayrollBatch> {
@@ -996,7 +1000,8 @@ class ApiClient {
   // ==================== User Management Endpoints ====================
 
   async getUsers(): Promise<CompanyUser[]> {
-    return this.request<CompanyUser[]>('/users');
+    const response = await this.request<any>('/users');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getUserById(id: string): Promise<CompanyUser> {
@@ -1167,7 +1172,8 @@ class ApiClient {
   }
 
   async getEmployeeDocuments(employeeId: string): Promise<Document[]> {
-    return this.request<Document[]>(`/documents/employee/${employeeId}`);
+    const response = await this.request<any>(`/documents/employee/${employeeId}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async uploadDocument(file: File, metadata: CreateDocumentData): Promise<Document> {
@@ -1346,7 +1352,8 @@ class ApiClient {
   // ==================== Webhook Endpoints ====================
 
   async getWebhooks(): Promise<WebhookEndpoint[]> {
-    return this.request<WebhookEndpoint[]>('/webhooks');
+    const response = await this.request<any>('/webhooks');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getWebhook(id: string): Promise<WebhookEndpoint> {
@@ -1399,7 +1406,8 @@ class ApiClient {
 
   async getCustomFieldDefinitions(entityType?: string): Promise<CustomFieldDefinition[]> {
     const params = entityType ? `?entityType=${entityType}` : '';
-    return this.request<CustomFieldDefinition[]>(`/custom-fields/definitions${params}`);
+    const response = await this.request<any>(`/custom-fields/definitions${params}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getCustomFieldDefinition(id: string): Promise<CustomFieldDefinition> {
@@ -1427,7 +1435,8 @@ class ApiClient {
   }
 
   async getCustomFieldValues(entityType: string, entityId: string): Promise<CustomFieldValue[]> {
-    return this.request<CustomFieldValue[]>(`/custom-fields/values/${entityType}/${entityId}`);
+    const response = await this.request<any>(`/custom-fields/values/${entityType}/${entityId}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async setCustomFieldValues(entityType: string, entityId: string, values: { fieldKey: string; value: any }[]): Promise<void> {
@@ -1523,7 +1532,8 @@ class ApiClient {
     if (filters?.page) params.append('page', String(filters.page));
     if (filters?.limit) params.append('limit', String(filters.limit));
     const query = params.toString();
-    return this.request<ReviewCycle[]>(`/performance/review-cycles${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/performance/review-cycles${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getReviewCycle(id: string): Promise<ReviewCycle> {
@@ -1557,11 +1567,13 @@ class ApiClient {
     if (filters?.cycleId) params.append('cycleId', filters.cycleId);
     if (filters?.employeeId) params.append('employeeId', filters.employeeId);
     const query = params.toString();
-    return this.request<PerformanceReview[]>(`/performance/reviews${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/performance/reviews${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getMyReviews(): Promise<PerformanceReview[]> {
-    return this.request<PerformanceReview[]>('/performance/reviews/my');
+    const response = await this.request<any>('/performance/reviews/my');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getPerformanceReview(id: string): Promise<PerformanceReview> {
@@ -1588,11 +1600,13 @@ class ApiClient {
     if (filters?.status) params.append('status', filters.status);
     if (filters?.reviewId) params.append('reviewId', filters.reviewId);
     const query = params.toString();
-    return this.request<Goal[]>(`/performance/goals${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/performance/goals${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getMyGoals(): Promise<Goal[]> {
-    return this.request<Goal[]>('/performance/goals/my');
+    const response = await this.request<any>('/performance/goals/my');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getGoal(id: string): Promise<Goal> {
@@ -1631,7 +1645,8 @@ class ApiClient {
     if (filters?.status) params.append('status', filters.status);
     if (filters?.departmentId) params.append('departmentId', filters.departmentId);
     const query = params.toString();
-    return this.request<JobPosting[]>(`/recruitment/jobs${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/recruitment/jobs${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getJobPosting(id: string): Promise<JobPosting> {
@@ -1664,7 +1679,8 @@ class ApiClient {
     const params = new URLSearchParams();
     if (filters?.stage) params.append('stage', filters.stage);
     const query = params.toString();
-    return this.request<Applicant[]>(`/recruitment/jobs/${jobId}/applicants${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/recruitment/jobs/${jobId}/applicants${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getApplicant(id: string): Promise<Applicant> {
@@ -1690,7 +1706,8 @@ class ApiClient {
   }
 
   async getInterviews(applicantId: string): Promise<Interview[]> {
-    return this.request<Interview[]>(`/recruitment/applicants/${applicantId}/interviews`);
+    const response = await this.request<any>(`/recruitment/applicants/${applicantId}/interviews`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async scheduleInterview(applicantId: string, data: { scheduledAt: string; duration?: number; location?: string; interviewType?: string; round?: number; interviewerId?: string }): Promise<Interview> {
@@ -1714,7 +1731,8 @@ class ApiClient {
     if (filters?.status) params.append('status', filters.status);
     if (filters?.category) params.append('category', filters.category);
     const query = params.toString();
-    return this.request<TrainingCourse[]>(`/training/courses${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/training/courses${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getTrainingCourse(id: string): Promise<TrainingCourse> {
@@ -1740,11 +1758,13 @@ class ApiClient {
   }
 
   async getTrainingEnrollments(courseId: string): Promise<TrainingEnrollment[]> {
-    return this.request<TrainingEnrollment[]>(`/training/courses/${courseId}/enrollments`);
+    const response = await this.request<any>(`/training/courses/${courseId}/enrollments`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getMyEnrollments(): Promise<TrainingEnrollment[]> {
-    return this.request<TrainingEnrollment[]>('/training/enrollments/my');
+    const response = await this.request<any>('/training/enrollments/my');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async enrollInCourse(courseId: string, employeeId?: string): Promise<TrainingEnrollment> {
@@ -1776,7 +1796,8 @@ class ApiClient {
     if (filters?.category) params.append('category', filters.category);
     if (filters?.assignedTo) params.append('assignedTo', filters.assignedTo);
     const query = params.toString();
-    return this.request<Asset[]>(`/assets${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/assets${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getAsset(id: string): Promise<Asset> {
@@ -1816,7 +1837,8 @@ class ApiClient {
   }
 
   async getAssetHistory(id: string): Promise<AssetAssignment[]> {
-    return this.request<AssetAssignment[]>(`/assets/${id}/history`);
+    const response = await this.request<any>(`/assets/${id}/history`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   // ==================== Expense Management Endpoints ====================
@@ -1827,11 +1849,13 @@ class ApiClient {
     if (filters?.category) params.append('category', filters.category);
     if (filters?.employeeId) params.append('employeeId', filters.employeeId);
     const query = params.toString();
-    return this.request<ExpenseClaim[]>(`/expenses${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/expenses${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getMyExpenses(): Promise<ExpenseClaim[]> {
-    return this.request<ExpenseClaim[]>('/expenses/my');
+    const response = await this.request<any>('/expenses/my');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getExpense(id: string): Promise<ExpenseClaim> {
@@ -1880,7 +1904,8 @@ class ApiClient {
   // ==================== Shift Management Endpoints ====================
 
   async getShifts(): Promise<ShiftDefinition[]> {
-    return this.request<ShiftDefinition[]>('/shifts');
+    const response = await this.request<any>('/shifts');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getShift(id: string): Promise<ShiftDefinition> {
@@ -1911,11 +1936,13 @@ class ApiClient {
     if (filters?.startDate) params.append('startDate', filters.startDate);
     if (filters?.endDate) params.append('endDate', filters.endDate);
     const query = params.toString();
-    return this.request<ShiftAssignment[]>(`/shifts/assignments${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/shifts/assignments${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getMyShiftAssignments(): Promise<ShiftAssignment[]> {
-    return this.request<ShiftAssignment[]>('/shifts/assignments/my');
+    const response = await this.request<any>('/shifts/assignments/my');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async assignShift(shiftId: string, data: { employeeId: string; assignmentDate: string; endDate?: string; notes?: string }): Promise<ShiftAssignment> {
@@ -1936,7 +1963,8 @@ class ApiClient {
     if (filters?.status) params.append('status', filters.status);
     if (filters?.category) params.append('category', filters.category);
     const query = params.toString();
-    return this.request<Policy[]>(`/policies${query ? `?${query}` : ''}`);
+    const response = await this.request<any>(`/policies${query ? `?${query}` : ''}`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getPolicy(id: string): Promise<Policy> {
@@ -1970,11 +1998,13 @@ class ApiClient {
   }
 
   async getPolicyAcknowledgments(id: string): Promise<PolicyAcknowledgment[]> {
-    return this.request<PolicyAcknowledgment[]>(`/policies/${id}/acknowledgments`);
+    const response = await this.request<any>(`/policies/${id}/acknowledgments`);
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   async getMyAcknowledgments(): Promise<PolicyAcknowledgment[]> {
-    return this.request<PolicyAcknowledgment[]>('/policies/acknowledgments/my');
+    const response = await this.request<any>('/policies/acknowledgments/my');
+    return Array.isArray(response) ? response : (response?.data ?? []);
   }
 
   // ==================== File Upload Endpoints ====================
@@ -2041,6 +2071,29 @@ class ApiClient {
     }
 
     return (data as ApiSuccessResponse<{ logoUrl: string }>).data;
+  }
+
+  // ==================== Dashboard Widget Endpoints ====================
+
+  async getDashboardWidgets(): Promise<DashboardWidgetDefinition[]> {
+    return this.request<DashboardWidgetDefinition[]>('/dashboard/widgets');
+  }
+
+  async getDashboardConfig(): Promise<{ layout: DashboardWidgetLayout[] }> {
+    return this.request<{ layout: DashboardWidgetLayout[] }>('/dashboard/config');
+  }
+
+  async updateDashboardConfig(layout: DashboardWidgetLayout[]): Promise<{ layout: DashboardWidgetLayout[] }> {
+    return this.request<{ layout: DashboardWidgetLayout[] }>('/dashboard/config', {
+      method: 'PATCH',
+      body: JSON.stringify({ layout }),
+    });
+  }
+
+  async resetDashboardConfig(): Promise<{ layout: DashboardWidgetLayout[] }> {
+    return this.request<{ layout: DashboardWidgetLayout[] }>('/dashboard/config/reset', {
+      method: 'POST',
+    });
   }
 
   // ==================== Generic Request Methods ====================

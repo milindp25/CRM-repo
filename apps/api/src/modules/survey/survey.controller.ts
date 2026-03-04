@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Req,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -57,7 +58,12 @@ export class SurveyController {
   async create(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateSurveyDto,
+    @Req() req: any,
   ) {
+    // Preserve raw questions array (ValidationPipe whitelist strips nested object properties)
+    if (req.body?.questions) {
+      dto.questions = req.body.questions;
+    }
     return this.surveyService.createSurvey(user.companyId, user.userId, dto);
   }
 
@@ -110,7 +116,12 @@ export class SurveyController {
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() dto: Partial<CreateSurveyDto>,
+    @Req() req: any,
   ) {
+    // Preserve raw questions array (ValidationPipe whitelist strips nested object properties)
+    if (req.body?.questions) {
+      dto.questions = req.body.questions;
+    }
     return this.surveyService.updateSurvey(id, user.companyId, user.userId, dto);
   }
 
@@ -183,11 +194,14 @@ export class SurveyController {
     @CurrentUser() user: JwtPayload,
     @Param('id') surveyId: string,
     @Body() dto: SubmitResponseDto,
+    @Req() req: any,
   ) {
+    // Preserve raw answers array (ValidationPipe whitelist strips nested object properties)
+    const answers = req.body?.answers || dto.answers;
     return this.surveyService.submitResponse(
       surveyId,
       user.userId,
-      dto.answers,
+      answers,
       user.companyId,
     );
   }

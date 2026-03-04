@@ -1269,3 +1269,20 @@ export interface PolicyAcknowledgment {
   acknowledgedAt: string;
   createdAt: string;
 }
+
+// ==================== Dashboard Types ====================
+
+export interface DashboardWidgetDefinition {
+  id: string;
+  label: string;
+  roles: string[];
+  defaultSize: 'full' | 'half';
+  category: string;
+}
+
+export interface DashboardWidgetLayout {
+  widgetId: string;
+  order: number;
+  visible: boolean;
+  size: 'full' | 'half';
+}

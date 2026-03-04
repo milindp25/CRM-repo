@@ -12,8 +12,9 @@ import { useWebSocket } from '@/hooks/use-websocket';
 import { useLocale } from '@/contexts/locale-context';
 import { useAuthContext } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api-client';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Lock } from 'lucide-react';
 import type { Permission } from '@hrplatform/shared';
+import { FeatureUpgradePrompt } from '@/components/common/feature-upgrade-prompt';
 import { TourProvider } from '@/components/tour/tour-provider';
 import { TourButton } from '@/components/tour/tour-button';
 import { CommandPalette } from '@/components/command-palette/command-palette';
@@ -125,23 +126,38 @@ export default function DashboardLayout({
     onWorkflowUpdate: handleWorkflowUpdate,
   });
 
-  const filteredNavigation = useMemo(() => {
-    return navigation.filter((item) => {
-      if (item.alwaysVisible) return true;
+  // Build navigation: show all items user has role-permission for,
+  // but mark feature-locked items separately so they appear greyed out
+  const { accessibleNav, lockedFeatureForCurrentPage } = useMemo(() => {
+    const items: Array<typeof navigation[0] & { isLocked?: boolean }> = [];
+    let lockedFeature: string | undefined;
 
-      // Check role-based permissions
+    for (const item of navigation) {
+      if (item.alwaysVisible) {
+        items.push(item);
+        continue;
+      }
+
+      // Must have role-based permission to even see the item
       if (item.requiredPermissions && item.requiredPermissions.length > 0) {
-        if (!hasAnyPermission(item.requiredPermissions as Permission[])) return false;
+        if (!hasAnyPermission(item.requiredPermissions as Permission[])) continue;
       }
 
-      // Check feature flag
-      if (item.requiredFeature) {
-        if (!hasFeature(item.requiredFeature)) return false;
+      // Feature check: if feature missing, show as locked (not hidden)
+      if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
+        items.push({ ...item, isLocked: true });
+        // Check if current page is this locked feature
+        if (pathname.startsWith(item.href)) {
+          lockedFeature = item.requiredFeature;
+        }
+        continue;
       }
 
-      return true;
-    });
-  }, [hasAnyPermission, hasFeature]);
+      items.push(item);
+    }
+
+    return { accessibleNav: items, lockedFeatureForCurrentPage: lockedFeature };
+  }, [hasAnyPermission, hasFeature, pathname]);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -152,9 +168,28 @@ export default function DashboardLayout({
 
   const sidebarContent = (
     <nav className="p-3 space-y-0.5" aria-label="Sidebar navigation" data-tour="sidebar-nav">
-      {filteredNavigation.map((item) => {
+      {accessibleNav.map((item) => {
         const Icon = item.icon;
         const active = isActive(item.href);
+        const isLocked = (item as any).isLocked;
+
+        if (isLocked) {
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              data-tour={`nav-${item.href.replace(/\//g, '')}`}
+              className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground/60 hover:bg-muted/50 transition-all duration-150 group"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <span className="flex items-center space-x-3">
+                <Icon className="w-4.5 h-4.5 flex-shrink-0 opacity-50" />
+                <span>{item.nameKey ? t(item.nameKey) : item.name}</span>
+              </span>
+              <Lock className="w-3.5 h-3.5 opacity-40 group-hover:opacity-70 transition-opacity" />
+            </Link>
+          );
+        }
 
         return (
           <Link
@@ -243,7 +278,14 @@ export default function DashboardLayout({
 
           {/* Main Content */}
           <main id="main-content" className="flex-1 min-w-0">
-            {children}
+            {lockedFeatureForCurrentPage ? (
+              <FeatureUpgradePrompt
+                featureName={accessibleNav.find(n => n.requiredFeature === lockedFeatureForCurrentPage)?.name}
+                description="Your company's current plan doesn't include this feature. Contact your administrator to upgrade and unlock it."
+              />
+            ) : (
+              children
+            )}
           </main>
         </div>
       </TourProvider>

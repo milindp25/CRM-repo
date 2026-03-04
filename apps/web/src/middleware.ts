@@ -20,6 +20,7 @@ const PUBLIC_PATHS = [
 const PUBLIC_PREFIXES = [
   '/_next',
   '/api', // Will be removed once we migrate fully to standalone API
+  '/v1',  // Proxied to NestJS API via next.config.js rewrites
   '/favicon.ico',
   '/images',
   '/fonts',

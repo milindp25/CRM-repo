@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsArray } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class SubmitResponseDto {
   @ApiProperty({
@@ -12,5 +13,6 @@ export class SubmitResponseDto {
     ],
   })
   @IsArray()
+  @Type(() => Object)
   answers: any[];
 }

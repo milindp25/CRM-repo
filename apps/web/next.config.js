@@ -9,12 +9,21 @@ const nextConfig = {
 
   // Optimize bundle splitting
   experimental: {
-    optimizePackageImports: ['lucide-react', '@hrplatform/shared'],
+    optimizePackageImports: ['lucide-react', '@hrplatform/shared', 'recharts', 'date-fns'],
   },
   // Enable compression
   compress: true,
   // Optimize production builds
   poweredByHeader: false,
+  // Proxy API requests to backend (enables preview/testing when browser can't reach API port directly)
+  async rewrites() {
+    return [
+      {
+        source: '/v1/:path*',
+        destination: 'http://localhost:4000/v1/:path*',
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

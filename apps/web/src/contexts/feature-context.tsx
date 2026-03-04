@@ -18,7 +18,7 @@ export function FeatureProvider({ children }: { children: React.ReactNode }) {
   const [features, setFeatures] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchFeatures = useCallback(async () => {
+  const fetchFeatures = useCallback(async (bypassCache = false) => {
     if (!isAuthenticated) {
       setFeatures([]);
       setLoading(false);
@@ -26,8 +26,30 @@ export function FeatureProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // Check sessionStorage cache (5-minute TTL) to avoid redundant API calls
+      if (!bypassCache && typeof window !== 'undefined') {
+        const cached = sessionStorage.getItem('cached_features');
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            setFeatures(data);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       const response = await apiClient.get<{ features: string[] }>('/company/features');
-      setFeatures(response.features || []);
+      const featureList = response.features || [];
+      setFeatures(featureList);
+
+      // Cache in sessionStorage (clears on tab close)
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('cached_features', JSON.stringify({
+          data: featureList,
+          timestamp: Date.now(),
+        }));
+      }
     } catch {
       setFeatures([]);
     } finally {
@@ -51,7 +73,7 @@ export function FeatureProvider({ children }: { children: React.ReactNode }) {
       features,
       loading,
       hasFeature,
-      refreshFeatures: fetchFeatures,
+      refreshFeatures: () => fetchFeatures(true),
     }),
     [features, loading, hasFeature, fetchFeatures],
   );

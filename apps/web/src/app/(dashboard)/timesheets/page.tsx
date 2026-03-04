@@ -11,7 +11,7 @@ import { ErrorBanner } from '@/components/ui/error-banner';
 import { TableLoader } from '@/components/ui/page-loader';
 import {
   Clock, Plus, Calendar, FileCheck, Send, ChevronLeft, Timer,
-  ClipboardList,
+  ClipboardList, XCircle, Trash2, Loader2,
 } from 'lucide-react';
 
 interface TimeEntry {
@@ -138,8 +138,29 @@ export default function TimesheetsPage() {
     try {
       await apiClient.request(`/timesheets/${id}/approve`, { method: 'POST' });
       toast.success('Timesheet Approved', 'The timesheet has been approved');
+      setSelectedSheet(null);
       fetchTimesheets();
     } catch (err: any) { toast.error('Failed to approve timesheet', err.message); }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await apiClient.request(`/timesheets/${id}/reject`, { method: 'POST' });
+      toast.success('Timesheet Rejected', 'The timesheet has been sent back for revision');
+      setSelectedSheet(null);
+      fetchTimesheets();
+    } catch (err: any) { toast.error('Failed to reject timesheet', err.message); }
+  };
+
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!selectedSheet) return;
+    try {
+      await apiClient.request(`/timesheets/${selectedSheet.id}/entries/${entryId}`, { method: 'DELETE' });
+      const updated = await apiClient.request(`/timesheets/${selectedSheet.id}`);
+      setSelectedSheet(updated);
+      toast.success('Entry Removed', 'Time entry has been deleted');
+      fetchTimesheets();
+    } catch (err: any) { toast.error('Failed to delete entry', err.message); }
   };
 
   // Stats
@@ -186,13 +207,22 @@ export default function TimesheetsPage() {
               </>
             )}
             {selectedSheet.status === 'SUBMITTED' && (
-              <button
-                onClick={() => handleApprove(selectedSheet.id)}
-                className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                <FileCheck className="h-4 w-4" />
-                Approve
-              </button>
+              <>
+                <button
+                  onClick={() => handleReject(selectedSheet.id)}
+                  className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium border border-destructive text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Reject
+                </button>
+                <button
+                  onClick={() => handleApprove(selectedSheet.id)}
+                  className="inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  <FileCheck className="h-4 w-4" />
+                  Approve
+                </button>
+              </>
             )}
           </div>
         }
@@ -222,6 +252,9 @@ export default function TimesheetsPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Project</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Task</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                {selectedSheet.status === 'DRAFT' && (
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -234,6 +267,16 @@ export default function TimesheetsPage() {
                   <td className="px-4 py-3">
                     <StatusBadge variant={getStatusVariant(e.entryType)}>{e.entryType}</StatusBadge>
                   </td>
+                  {selectedSheet.status === 'DRAFT' && (
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => handleDeleteEntry(e.id)}
+                        className="h-7 px-2 rounded-md text-xs font-medium text-destructive hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors inline-flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" /> Remove
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {(!selectedSheet.entries || selectedSheet.entries.length === 0) && (

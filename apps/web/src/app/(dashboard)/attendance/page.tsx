@@ -52,31 +52,17 @@ export default function AttendancePage() {
     status: 'PRESENT',
   });
 
-  // Fetch employees once on mount
-  useEffect(() => {
-    let cancelled = false;
-    const loadEmployees = async () => {
-      try {
-        const response = await apiClient.getEmployees({ limit: 100, status: 'ACTIVE' });
-        if (!cancelled) setEmployees(response.data);
-      } catch (err: any) {
-        if (!cancelled) console.error('Failed to fetch employees:', err);
-      }
-    };
-    loadEmployees();
-    return () => { cancelled = true; };
-  }, []);
+  // Track whether employees have been loaded (avoids re-fetching on filter changes)
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
 
-  // Fetch attendance data when filters or page changes
+  // Fetch attendance data (and employees on first load) — parallel via Promise.all
   useEffect(() => {
     let cancelled = false;
-    const loadAttendance = async () => {
+    const loadData = async () => {
       try {
-        if (!cancelled) {
-          setLoading(true);
-          setError(null);
-        }
-        const response = await apiClient.getAttendance({
+        if (!cancelled) { setLoading(true); setError(null); }
+
+        const attendancePromise = apiClient.getAttendance({
           page: currentPage,
           limit: 20,
           ...(employeeFilter && { employeeId: employeeFilter }),
@@ -84,9 +70,26 @@ export default function AttendancePage() {
           ...(endDate && { endDate }),
           ...(statusFilter && { status: statusFilter as any }),
         });
-        if (!cancelled) {
-          setAttendance(response.data);
-          setTotalPages(response.meta.totalPages);
+
+        if (!employeesLoaded) {
+          // First load: fetch employees + attendance in parallel
+          const [empResponse, attResponse] = await Promise.all([
+            apiClient.getEmployees({ limit: 100, status: 'ACTIVE' }),
+            attendancePromise,
+          ]);
+          if (!cancelled) {
+            setEmployees(empResponse.data);
+            setEmployeesLoaded(true);
+            setAttendance(attResponse.data);
+            setTotalPages(attResponse.meta.totalPages);
+          }
+        } else {
+          // Subsequent loads: only re-fetch attendance
+          const attResponse = await attendancePromise;
+          if (!cancelled) {
+            setAttendance(attResponse.data);
+            setTotalPages(attResponse.meta.totalPages);
+          }
         }
       } catch (err: any) {
         if (!cancelled) setError(err.message || 'Failed to fetch attendance records');
@@ -94,9 +97,9 @@ export default function AttendancePage() {
         if (!cancelled) setLoading(false);
       }
     };
-    loadAttendance();
+    loadData();
     return () => { cancelled = true; };
-  }, [currentPage, employeeFilter, startDate, endDate, statusFilter]);
+  }, [currentPage, employeeFilter, startDate, endDate, statusFilter, employeesLoaded]);
 
   const fetchEmployees = async () => {
     try {

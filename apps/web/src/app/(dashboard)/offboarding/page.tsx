@@ -12,7 +12,8 @@ import { TableLoader } from '@/components/ui/page-loader';
 import {
   UserMinus, Plus, ArrowLeft, Loader2, AlertCircle,
   ClipboardList, CheckCircle2, Clock, AlertTriangle, UserX,
-  Calendar, Hash, ArrowRight,
+  Calendar, Hash, ArrowRight, FileText, Edit2, Trash2, X as XIcon,
+  MessageSquare, Save,
 } from 'lucide-react';
 
 interface OffboardingProcess {
@@ -25,7 +26,16 @@ interface OffboardingProcess {
   createdAt: string;
 }
 
+interface ChecklistTemplate {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  isActive: boolean;
+  items: { title: string; assignedRole?: string; order?: number }[];
+}
+
 const separationTypes = ['RESIGNATION', 'TERMINATION', 'RETIREMENT', 'CONTRACT_END', 'LAYOFF'];
+const assignableRoles = ['HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'COMPANY_ADMIN'];
 
 export default function OffboardingPage() {
   const toast = useToast();
@@ -39,8 +49,19 @@ export default function OffboardingPage() {
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [form, setForm] = useState({ employeeId: '', separationType: 'RESIGNATION', lastWorkingDay: '' });
   const [employees, setEmployees] = useState<any[]>([]);
+  // Exit Interview
+  const [showExitInterview, setShowExitInterview] = useState(false);
+  const [exitNotes, setExitNotes] = useState('');
+  const [savingInterview, setSavingInterview] = useState(false);
+  // Checklist Templates
+  const [activeTab, setActiveTab] = useState<'processes' | 'templates'>('processes');
+  const [checklists, setChecklists] = useState<ChecklistTemplate[]>([]);
+  const [showChecklistForm, setShowChecklistForm] = useState(false);
+  const [editingChecklist, setEditingChecklist] = useState<ChecklistTemplate | null>(null);
+  const [checklistForm, setChecklistForm] = useState({ name: '', isDefault: false, items: [{ title: '', assignedRole: '' }] });
+  const [deletingChecklistId, setDeletingChecklistId] = useState<string | null>(null);
 
-  useEffect(() => { fetchProcesses(); fetchEmployees(); }, []);
+  useEffect(() => { Promise.all([fetchProcesses(), fetchEmployees(), fetchChecklists()]); }, []);
 
   const fetchProcesses = async () => {
     try {
@@ -60,6 +81,112 @@ export default function OffboardingPage() {
       const data = await apiClient.getEmployees();
       setEmployees(Array.isArray(data) ? data : data?.data || []);
     } catch {}
+  };
+
+  const fetchChecklists = async () => {
+    try {
+      const data = await apiClient.request('/offboarding/checklists');
+      setChecklists(Array.isArray(data) ? data : data?.data || []);
+    } catch {}
+  };
+
+  const handleSaveExitInterview = async () => {
+    if (!selectedProcess || !exitNotes.trim()) return;
+    try {
+      setSavingInterview(true);
+      await apiClient.request(`/offboarding/${selectedProcess.id}/exit-interview`, {
+        method: 'POST',
+        body: JSON.stringify({ notes: exitNotes }),
+      });
+      toast.success('Exit Interview Saved', 'Interview notes have been recorded');
+      setShowExitInterview(false);
+      setExitNotes('');
+    } catch (err: any) {
+      toast.error('Failed to save exit interview', err.message);
+    } finally {
+      setSavingInterview(false);
+    }
+  };
+
+  const handleCreateChecklist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!checklistForm.name.trim()) { toast.error('Validation Error', 'Name is required'); return; }
+    const items = checklistForm.items.filter(i => i.title.trim()).map((i, idx) => ({
+      title: i.title, assignedRole: i.assignedRole || undefined, order: idx + 1,
+    }));
+    if (items.length === 0) { toast.error('Validation Error', 'Add at least one task'); return; }
+    try {
+      setSubmitting(true);
+      await apiClient.request('/offboarding/checklists', {
+        method: 'POST',
+        body: JSON.stringify({ name: checklistForm.name, isDefault: checklistForm.isDefault, items }),
+      });
+      toast.success('Checklist Created', `"${checklistForm.name}" template created`);
+      setShowChecklistForm(false);
+      setChecklistForm({ name: '', isDefault: false, items: [{ title: '', assignedRole: '' }] });
+      fetchChecklists();
+    } catch (err: any) {
+      toast.error('Failed to create checklist', err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateChecklist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingChecklist) return;
+    const items = checklistForm.items.filter(i => i.title.trim()).map((i, idx) => ({
+      title: i.title, assignedRole: i.assignedRole || undefined, order: idx + 1,
+    }));
+    try {
+      setSubmitting(true);
+      await apiClient.request(`/offboarding/checklists/${editingChecklist.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: checklistForm.name, isDefault: checklistForm.isDefault, items }),
+      });
+      toast.success('Checklist Updated', `"${checklistForm.name}" template updated`);
+      setEditingChecklist(null);
+      setChecklistForm({ name: '', isDefault: false, items: [{ title: '', assignedRole: '' }] });
+      fetchChecklists();
+    } catch (err: any) {
+      toast.error('Failed to update checklist', err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteChecklist = async (id: string) => {
+    try {
+      await apiClient.request(`/offboarding/checklists/${id}`, { method: 'DELETE' });
+      toast.success('Checklist Deleted', 'Template has been removed');
+      setDeletingChecklistId(null);
+      fetchChecklists();
+    } catch (err: any) {
+      toast.error('Failed to delete checklist', err.message);
+    }
+  };
+
+  const addChecklistItem = () => {
+    setChecklistForm({ ...checklistForm, items: [...checklistForm.items, { title: '', assignedRole: '' }] });
+  };
+
+  const updateChecklistItem = (index: number, field: string, value: string) => {
+    const updated = [...checklistForm.items];
+    updated[index] = { ...updated[index], [field]: value };
+    setChecklistForm({ ...checklistForm, items: updated });
+  };
+
+  const removeChecklistItem = (index: number) => {
+    setChecklistForm({ ...checklistForm, items: checklistForm.items.filter((_, i) => i !== index) });
+  };
+
+  const openEditChecklist = (cl: ChecklistTemplate) => {
+    setEditingChecklist(cl);
+    setChecklistForm({
+      name: cl.name,
+      isDefault: cl.isDefault,
+      items: cl.items.length > 0 ? cl.items.map(i => ({ title: i.title, assignedRole: i.assignedRole || '' })) : [{ title: '', assignedRole: '' }],
+    });
   };
 
   const validateForm = (): string | null => {
@@ -222,6 +349,53 @@ export default function OffboardingPage() {
           </div>
         </div>
 
+        {/* Exit Interview */}
+        {selectedProcess.status !== 'COMPLETED' && (
+          <div className="rounded-xl border bg-card p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Exit Interview</h3>
+              </div>
+              {!showExitInterview && (
+                <button
+                  onClick={() => setShowExitInterview(true)}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium border border-input bg-background text-foreground rounded-lg hover:bg-muted transition-colors"
+                >
+                  <FileText className="w-3 h-3" /> Record Interview
+                </button>
+              )}
+            </div>
+            {showExitInterview && (
+              <div className="space-y-3">
+                <textarea
+                  value={exitNotes}
+                  onChange={(e) => setExitNotes(e.target.value)}
+                  className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors min-h-[120px]"
+                  placeholder="Record exit interview notes, reason for leaving, feedback, suggestions for improvement..."
+                  rows={5}
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => { setShowExitInterview(false); setExitNotes(''); }}
+                    className="h-8 px-3 text-xs font-medium border border-input rounded-lg hover:bg-muted transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveExitInterview}
+                    disabled={savingInterview || !exitNotes.trim()}
+                    className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {savingInterview ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                    Save Interview
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Complete Offboarding */}
         {selectedProcess.status !== 'COMPLETED' && !confirmComplete && (
           <button
@@ -284,63 +458,245 @@ export default function OffboardingPage() {
         <StatCard title="Completed" value={completedCount} icon={CheckCircle2} iconColor="green" loading={loading} />
       </div>
 
-      {/* Process List */}
-      {loading ? (
-        <div className="rounded-xl border bg-card overflow-hidden">
-          <TableLoader rows={4} cols={4} />
-        </div>
-      ) : processes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border bg-card">
-          <ClipboardList className="w-12 h-12 text-muted-foreground/40 mb-4" />
-          <h3 className="text-lg font-semibold text-foreground">No offboarding processes</h3>
-          <p className="text-sm text-muted-foreground mt-1 max-w-sm">Start an offboarding process when an employee is leaving the organization.</p>
-          <button
-            onClick={openStartForm}
-            className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Start Offboarding
-          </button>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {processes.map((p) => {
-            const completedTasks = p.tasks?.filter((t) => t.status === 'COMPLETED').length || 0;
-            const totalTasks = p.tasks?.length || 0;
-            const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-            return (
-              <div
-                key={p.id}
-                onClick={() => setSelectedProcess(p)}
-                className="rounded-xl border bg-card p-4 cursor-pointer hover:shadow-md hover:border-primary/20 transition-all"
+      {/* Tabs */}
+      <div className="flex gap-1 border-b">
+        <button
+          onClick={() => setActiveTab('processes')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'processes' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+        >
+          Processes
+        </button>
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'templates' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+        >
+          Checklist Templates
+        </button>
+      </div>
+
+      {/* Processes Tab */}
+      {activeTab === 'processes' && (
+        <>
+          {loading ? (
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <TableLoader rows={4} cols={4} />
+            </div>
+          ) : processes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border bg-card">
+              <ClipboardList className="w-12 h-12 text-muted-foreground/40 mb-4" />
+              <h3 className="text-lg font-semibold text-foreground">No offboarding processes</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">Start an offboarding process when an employee is leaving the organization.</p>
+              <button
+                onClick={openStartForm}
+                className="mt-4 inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center flex-shrink-0">
-                      <UserMinus className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <Plus className="w-4 h-4" /> Start Offboarding
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {processes.map((p) => {
+                const completedTasks = p.tasks?.filter((t) => t.status === 'COMPLETED').length || 0;
+                const totalTasks = p.tasks?.length || 0;
+                const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => setSelectedProcess(p)}
+                    className="rounded-xl border bg-card p-4 cursor-pointer hover:shadow-md hover:border-primary/20 transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center flex-shrink-0">
+                          <UserMinus className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-foreground">{p.employee.firstName} {p.employee.lastName}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {p.separationType.replace(/_/g, ' ')} &middot; Last day: {new Date(p.lastWorkingDay).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-muted rounded-full h-1.5">
+                            <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-12 text-right">{completedTasks}/{totalTasks}</span>
+                        </div>
+                        <StatusBadge variant={getStatusVariant(p.status)} dot>{p.status.replace(/_/g, ' ')}</StatusBadge>
+                        <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Checklist Templates Tab */}
+      {activeTab === 'templates' && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button
+              onClick={() => { setShowChecklistForm(true); setChecklistForm({ name: '', isDefault: false, items: [{ title: '', assignedRole: '' }] }); }}
+              className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-4 h-4" /> New Template
+            </button>
+          </div>
+
+          {checklists.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border bg-card">
+              <ClipboardList className="w-12 h-12 text-muted-foreground/40 mb-4" />
+              <h3 className="text-lg font-semibold text-foreground">No checklist templates</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">Create reusable checklist templates to standardize your offboarding process.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {checklists.map((cl) => (
+                <div key={cl.id} className="group rounded-xl border bg-card p-4 hover:shadow-md hover:border-primary/20 transition-all">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-medium text-foreground">{p.employee.firstName} {p.employee.lastName}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {p.separationType.replace(/_/g, ' ')} &middot; Last day: {new Date(p.lastWorkingDay).toLocaleDateString()}
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-foreground">{cl.name}</h3>
+                        {cl.isDefault && <StatusBadge variant="info">Default</StatusBadge>}
+                        {!cl.isActive && <StatusBadge variant="neutral">Inactive</StatusBadge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {cl.items?.length || 0} tasks
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 bg-muted rounded-full h-1.5">
-                        <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
-                      </div>
-                      <span className="text-xs text-muted-foreground w-12 text-right">{completedTasks}/{totalTasks}</span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => openEditChecklist(cl)}
+                        className="p-1.5 text-muted-foreground hover:text-primary rounded-md hover:bg-muted transition-colors"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      {deletingChecklistId === cl.id ? (
+                        <span className="flex items-center gap-1 text-xs">
+                          <button onClick={() => handleDeleteChecklist(cl.id)} className="px-2 py-1 text-destructive font-medium hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md transition-colors">Delete</button>
+                          <button onClick={() => setDeletingChecklistId(null)} className="px-2 py-1 text-muted-foreground hover:bg-muted rounded-md transition-colors">Cancel</button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setDeletingChecklistId(cl.id)}
+                          className="p-1.5 text-muted-foreground hover:text-destructive rounded-md hover:bg-muted transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
-                    <StatusBadge variant={getStatusVariant(p.status)} dot>{p.status.replace(/_/g, ' ')}</StatusBadge>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
                   </div>
+                  {cl.items && cl.items.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {cl.items.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="w-4 h-4 rounded border border-input flex-shrink-0" />
+                          <span>{item.title}</span>
+                          {item.assignedRole && <StatusBadge variant="neutral">{item.assignedRole.replace(/_/g, ' ')}</StatusBadge>}
+                        </div>
+                      ))}
+                      {cl.items.length > 5 && (
+                        <p className="text-xs text-muted-foreground pl-6">...and {cl.items.length - 5} more tasks</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Create/Edit Checklist Template Modal */}
+      <Modal
+        open={showChecklistForm || !!editingChecklist}
+        onClose={() => { setShowChecklistForm(false); setEditingChecklist(null); setChecklistForm({ name: '', isDefault: false, items: [{ title: '', assignedRole: '' }] }); }}
+        size="lg"
+      >
+        <ModalHeader onClose={() => { setShowChecklistForm(false); setEditingChecklist(null); }}>
+          {editingChecklist ? 'Edit Checklist Template' : 'Create Checklist Template'}
+        </ModalHeader>
+        <form onSubmit={editingChecklist ? handleUpdateChecklist : handleCreateChecklist}>
+          <ModalBody>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Template Name <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  value={checklistForm.name}
+                  onChange={(e) => setChecklistForm({ ...checklistForm, name: e.target.value })}
+                  placeholder="e.g. Standard Offboarding Checklist"
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isDefault"
+                  checked={checklistForm.isDefault}
+                  onChange={(e) => setChecklistForm({ ...checklistForm, isDefault: e.target.checked })}
+                  className="accent-primary"
+                />
+                <label htmlFor="isDefault" className="text-sm text-foreground cursor-pointer">Set as default checklist</label>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-foreground">Tasks</label>
+                  <button type="button" onClick={addChecklistItem} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                    <Plus className="h-3.5 w-3.5" /> Add Task
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {checklistForm.items.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={item.title}
+                        onChange={(e) => updateChecklistItem(i, 'title', e.target.value)}
+                        placeholder={`Task ${i + 1}`}
+                        className={inputClass}
+                      />
+                      <select
+                        value={item.assignedRole}
+                        onChange={(e) => updateChecklistItem(i, 'assignedRole', e.target.value)}
+                        className="h-10 w-40 px-2 border border-input bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                      >
+                        <option value="">No role</option>
+                        {assignableRoles.map((r) => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
+                      </select>
+                      {checklistForm.items.length > 1 && (
+                        <button type="button" onClick={() => removeChecklistItem(i)}
+                          className="p-1.5 text-muted-foreground hover:text-destructive rounded-md hover:bg-muted transition-colors flex-shrink-0">
+                          <XIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <button type="button" onClick={() => { setShowChecklistForm(false); setEditingChecklist(null); }} disabled={submitting}
+              className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting}
+              className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {editingChecklist ? 'Save Changes' : 'Create Template'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Start Offboarding Modal */}
       <Modal open={showStart} onClose={() => setShowStart(false)} size="md">

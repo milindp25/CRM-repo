@@ -11,7 +11,7 @@ import { ErrorBanner } from '@/components/ui/error-banner';
 import { TableLoader } from '@/components/ui/page-loader';
 import {
   ClipboardList, Plus, BarChart3, MessageSquare, Send, X as XIcon,
-  Eye, Lock, ChevronLeft,
+  Eye, Lock, ChevronLeft, Trash2, Loader2,
 } from 'lucide-react';
 
 interface Survey {
@@ -129,6 +129,14 @@ export default function SurveysPage() {
       toast.info('Survey Closed', 'No more responses will be accepted');
       fetchSurveys();
     } catch (err: any) { toast.error('Failed to close survey', err.message); }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await apiClient.request(`/surveys/${id}`, { method: 'DELETE' });
+      toast.success('Survey Deleted', 'Survey has been removed');
+      fetchSurveys();
+    } catch (err: any) { toast.error('Failed to delete survey', err.message); }
   };
 
   const handleRespond = async (surveyId: string) => {
@@ -361,6 +369,12 @@ export default function SurveysPage() {
                         Analytics
                       </button>
                     )}
+                    {s.status === 'DRAFT' && (
+                      <button onClick={() => handleDelete(s.id)}
+                        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-destructive hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -503,7 +517,105 @@ export default function SurveysPage() {
         </ModalHeader>
         <ModalBody>
           {analytics ? (
-            <pre className="text-sm text-foreground bg-muted/30 rounded-lg p-4 overflow-auto max-h-96">{JSON.stringify(analytics, null, 2)}</pre>
+            <div className="space-y-6">
+              {/* Summary */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-lg border bg-muted/30 p-4 text-center">
+                  <p className="text-2xl font-bold text-foreground">{analytics.totalResponses ?? 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Total Responses</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 p-4 text-center">
+                  <p className="text-2xl font-bold text-foreground">{analytics.completionRate != null ? `${Math.round(analytics.completionRate)}%` : 'N/A'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Completion Rate</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 p-4 text-center">
+                  <p className="text-2xl font-bold text-foreground">{analytics.questionAnalytics?.length ?? 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Questions</p>
+                </div>
+              </div>
+
+              {/* Per-question results */}
+              {analytics.questionAnalytics?.map((qr: any, qi: number) => (
+                <div key={qi} className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="text-sm font-medium text-foreground">
+                      {qi + 1}. {qr.questionText || qr.text || `Question ${qi + 1}`}
+                    </h4>
+                    <StatusBadge variant="neutral">{qr.type || 'RATING'}</StatusBadge>
+                  </div>
+
+                  {/* RATING — show average score */}
+                  {qr.type === 'RATING' && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Average: <span className="font-semibold text-foreground">{Number(qr.averageScore ?? 0).toFixed(1)}</span> / 5
+                        <span className="ml-2">({qr.answeredCount ?? 0} responses)</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* NPS — show score + breakdown */}
+                  {qr.type === 'NPS' && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        NPS Score: <span className="font-semibold text-foreground">{qr.npsScore ?? 0}</span>
+                        <span className="ml-2">({qr.answeredCount ?? 0} responses)</span>
+                      </p>
+                      {(qr.promoters != null || qr.passives != null || qr.detractors != null) && (
+                        <div className="flex gap-4 text-xs text-muted-foreground">
+                          <span className="text-green-600 dark:text-green-400">Promoters: {qr.promoters ?? 0}</span>
+                          <span className="text-yellow-600 dark:text-yellow-400">Passives: {qr.passives ?? 0}</span>
+                          <span className="text-red-600 dark:text-red-400">Detractors: {qr.detractors ?? 0}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* MULTIPLE_CHOICE — show option counts */}
+                  {qr.type === 'MULTIPLE_CHOICE' && qr.optionCounts && (
+                    <div className="space-y-1">
+                      {Object.entries(qr.optionCounts).map(([option, count]: [string, any]) => {
+                        const total = Object.values(qr.optionCounts).reduce((s: number, v: any) => s + Number(v), 0);
+                        const pct = total > 0 ? Math.round((Number(count) / total) * 100) : 0;
+                        return (
+                          <div key={option} className="flex items-center gap-2 text-xs">
+                            <span className="w-28 truncate text-muted-foreground">{option}</span>
+                            <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+                              <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="w-12 text-muted-foreground text-right">{count} ({pct}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* TEXT — show recent responses */}
+                  {qr.type === 'TEXT' && qr.responses && (
+                    <div className="space-y-2 max-h-40 overflow-auto">
+                      {qr.responses.slice(0, 10).map((r: string, ri: number) => (
+                        <div key={ri} className="text-sm text-muted-foreground bg-muted/30 rounded-md px-3 py-2 italic">
+                          &ldquo;{r}&rdquo;
+                        </div>
+                      ))}
+                      {qr.responses.length > 10 && (
+                        <p className="text-xs text-muted-foreground">...and {qr.responses.length - 10} more responses</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Fallback for unknown types */}
+                  {!['RATING', 'NPS', 'MULTIPLE_CHOICE', 'TEXT'].includes(qr.type) && (
+                    <pre className="text-xs text-muted-foreground bg-muted/30 rounded-md p-2 overflow-auto">{JSON.stringify(qr, null, 2)}</pre>
+                  )}
+                </div>
+              ))}
+
+              {/* Fallback if no questionResults */}
+              {!analytics.questionAnalytics && (
+                <pre className="text-sm text-foreground bg-muted/30 rounded-lg p-4 overflow-auto max-h-96">{JSON.stringify(analytics, null, 2)}</pre>
+              )}
+            </div>
           ) : (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />

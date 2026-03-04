@@ -12,6 +12,7 @@ import { TableLoader } from '@/components/ui/page-loader';
 import {
   Plus, Users, DollarSign, FileText, Clock, ArrowLeft,
   Receipt, Loader2, AlertCircle, Briefcase, CheckCircle, XCircle, CreditCard,
+  Edit2, Trash2, UserX,
 } from 'lucide-react';
 
 interface Contractor {
@@ -49,12 +50,15 @@ export default function ContractorsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null);
+  const [editingContractor, setEditingContractor] = useState<Contractor | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<ContractorInvoice[]>([]);
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
-  const [form, setForm] = useState({
+  const defaultForm = {
     firstName: '', lastName: '', email: '', phone: '', companyName: '',
-    contractType: 'HOURLY', hourlyRate: '', startDate: '',
-  });
+    contractType: 'HOURLY', hourlyRate: '', startDate: '', endDate: '',
+  };
+  const [form, setForm] = useState({ ...defaultForm });
   const [formError, setFormError] = useState<string | null>(null);
   const [invoiceForm, setInvoiceForm] = useState({ amount: '', description: '', periodStart: '', periodEnd: '' });
 
@@ -107,18 +111,48 @@ export default function ContractorsPage() {
     try {
       setSubmitting(true);
       setFormError(null);
-      await apiClient.request('/contractors', {
-        method: 'POST',
-        body: JSON.stringify({ ...form, hourlyRate: form.hourlyRate ? Number(form.hourlyRate) : undefined }),
-      });
+      const payload = { ...form, hourlyRate: form.hourlyRate ? Number(form.hourlyRate) : undefined, endDate: form.endDate || undefined };
+      await apiClient.request('/contractors', { method: 'POST', body: JSON.stringify(payload) });
       setShowCreate(false);
-      setForm({ firstName: '', lastName: '', email: '', phone: '', companyName: '', contractType: 'HOURLY', hourlyRate: '', startDate: '' });
+      setForm({ ...defaultForm });
       toast.success('Contractor Added', `${form.firstName} ${form.lastName} has been added`);
       fetchContractors();
     } catch (err: any) {
       setFormError(err.message || 'Failed to add contractor');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingContractor) return;
+    const validationError = validateContractor();
+    if (validationError) { setFormError(validationError); return; }
+    try {
+      setSubmitting(true);
+      setFormError(null);
+      const payload = { ...form, hourlyRate: form.hourlyRate ? Number(form.hourlyRate) : undefined, endDate: form.endDate || undefined };
+      await apiClient.request(`/contractors/${editingContractor.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+      setEditingContractor(null);
+      setForm({ ...defaultForm });
+      toast.success('Contractor Updated', `${form.firstName} ${form.lastName} has been updated`);
+      fetchContractors();
+    } catch (err: any) {
+      setFormError(err.message || 'Failed to update contractor');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await apiClient.request(`/contractors/${id}`, { method: 'DELETE' });
+      toast.success('Contractor Terminated', 'Contractor has been terminated');
+      setDeletingId(null);
+      fetchContractors();
+    } catch (err: any) {
+      toast.error('Failed to terminate contractor', err.message);
     }
   };
 
@@ -157,7 +191,24 @@ export default function ContractorsPage() {
   const openCreateForm = () => {
     setShowCreate(true);
     setFormError(null);
-    setForm({ firstName: '', lastName: '', email: '', phone: '', companyName: '', contractType: 'HOURLY', hourlyRate: '', startDate: '' });
+    setForm({ ...defaultForm });
+  };
+
+  const openEditForm = (c: Contractor, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingContractor(c);
+    setFormError(null);
+    setForm({
+      firstName: c.firstName,
+      lastName: c.lastName,
+      email: c.email,
+      phone: c.phone || '',
+      companyName: c.companyName || '',
+      contractType: c.contractType,
+      hourlyRate: c.hourlyRate ? String(c.hourlyRate) : '',
+      startDate: c.startDate ? c.startDate.split('T')[0] : '',
+      endDate: c.endDate ? c.endDate.split('T')[0] : '',
+    });
   };
 
   const activeCount = contractors.filter(c => c.status === 'ACTIVE').length;
@@ -181,6 +232,12 @@ export default function ContractorsPage() {
             <StatusBadge variant={getStatusVariant(selectedContractor.status)} dot>
               {selectedContractor.status}
             </StatusBadge>
+            <button
+              onClick={() => openEditForm(selectedContractor)}
+              className="inline-flex items-center gap-2 h-9 px-4 border border-input bg-background text-foreground text-sm font-medium rounded-lg hover:bg-muted transition-colors"
+            >
+              <Edit2 className="w-4 h-4" /> Edit
+            </button>
             <button
               onClick={() => setShowInvoiceForm(true)}
               className="inline-flex items-center gap-2 h-9 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
@@ -215,6 +272,24 @@ export default function ContractorsPage() {
             <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Start Date</span>
             <p className="text-foreground">{new Date(selectedContractor.startDate).toLocaleDateString()}</p>
           </div>
+          {selectedContractor.endDate && (
+            <div className="space-y-1">
+              <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">End Date</span>
+              <p className="text-foreground">{new Date(selectedContractor.endDate).toLocaleDateString()}</p>
+            </div>
+          )}
+          {selectedContractor.phone && (
+            <div className="space-y-1">
+              <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Phone</span>
+              <p className="text-foreground">{selectedContractor.phone}</p>
+            </div>
+          )}
+          {selectedContractor.companyName && (
+            <div className="space-y-1">
+              <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Company</span>
+              <p className="text-foreground">{selectedContractor.companyName}</p>
+            </div>
+          )}
         </div>
 
         {/* Invoices Section */}
@@ -380,7 +455,7 @@ export default function ContractorsPage() {
             <div
               key={c.id}
               onClick={() => { setSelectedContractor(c); fetchInvoices(c.id); }}
-              className="rounded-xl border bg-card p-4 cursor-pointer hover:shadow-md hover:border-primary/20 transition-all"
+              className="group rounded-xl border bg-card p-4 cursor-pointer hover:shadow-md hover:border-primary/20 transition-all"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -394,7 +469,34 @@ export default function ContractorsPage() {
                     </p>
                   </div>
                 </div>
-                <StatusBadge variant={getStatusVariant(c.status)} dot>{c.status}</StatusBadge>
+                <div className="flex items-center gap-2">
+                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                    <button
+                      onClick={(e) => openEditForm(c, e)}
+                      className="p-1.5 text-muted-foreground hover:text-primary rounded-md hover:bg-muted transition-colors"
+                      title="Edit"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    {c.status === 'ACTIVE' && (
+                      deletingId === c.id ? (
+                        <span className="flex items-center gap-1 text-xs" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => handleDelete(c.id)} className="px-2 py-1 text-destructive font-medium hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md transition-colors">Terminate</button>
+                          <button onClick={() => setDeletingId(null)} className="px-2 py-1 text-muted-foreground hover:bg-muted rounded-md transition-colors">Cancel</button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeletingId(c.id); }}
+                          className="p-1.5 text-muted-foreground hover:text-destructive rounded-md hover:bg-muted transition-colors"
+                          title="Terminate"
+                        >
+                          <UserX className="w-3.5 h-3.5" />
+                        </button>
+                      )
+                    )}
+                  </div>
+                  <StatusBadge variant={getStatusVariant(c.status)} dot>{c.status}</StatusBadge>
+                </div>
               </div>
             </div>
           ))}
@@ -458,6 +560,11 @@ export default function ContractorsPage() {
                   <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })}
                     className={inputClass} required />
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">End Date</label>
+                  <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                    className={inputClass} />
+                </div>
               </div>
             </div>
           </ModalBody>
@@ -470,6 +577,84 @@ export default function ContractorsPage() {
               className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
               Add Contractor
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+      {/* Edit Contractor Modal */}
+      <Modal open={!!editingContractor} onClose={() => { setEditingContractor(null); setForm({ ...defaultForm }); }} size="lg">
+        <ModalHeader onClose={() => { setEditingContractor(null); setForm({ ...defaultForm }); }}>Edit Contractor</ModalHeader>
+        <form onSubmit={handleUpdate}>
+          <ModalBody>
+            <div className="space-y-4">
+              {formError && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-sm text-red-700 dark:text-red-400">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {formError}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">First Name <span className="text-destructive">*</span></label>
+                  <input type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                    placeholder="John" className={inputClass} required />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Last Name <span className="text-destructive">*</span></label>
+                  <input type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                    placeholder="Doe" className={inputClass} required />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Email <span className="text-destructive">*</span></label>
+                  <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="john@example.com" className={inputClass} required />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Phone</label>
+                  <input type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="+1 (555) 000-0000" className={inputClass} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Contract Type</label>
+                  <select value={form.contractType} onChange={(e) => setForm({ ...form, contractType: e.target.value })}
+                    className={inputClass}>
+                    <option value="HOURLY">Hourly</option>
+                    <option value="FIXED_PRICE">Fixed Price</option>
+                    <option value="MILESTONE">Milestone</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Hourly Rate</label>
+                  <input type="number" value={form.hourlyRate} onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
+                    placeholder="0.00" className={inputClass} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Company Name</label>
+                  <input type="text" value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+                    placeholder="Freelance LLC" className={inputClass} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Start Date <span className="text-destructive">*</span></label>
+                  <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                    className={inputClass} required />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">End Date</label>
+                  <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                    className={inputClass} />
+                </div>
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <button type="button" onClick={() => { setEditingContractor(null); setForm({ ...defaultForm }); }} disabled={submitting}
+              className="h-9 px-4 border border-input rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting}
+              className="h-9 px-4 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              Save Changes
             </button>
           </ModalFooter>
         </form>
