@@ -5,6 +5,7 @@ import { FeatureProvider } from '@/contexts/feature-context';
 import { LocaleProvider } from '@/contexts/locale-context';
 import { ThemeProvider } from '@/components/common/theme-provider';
 import { ToastProvider } from '@/components/ui/toast';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -27,6 +28,7 @@ export default function RootLayout({
             <AuthProvider>
               <FeatureProvider>
                 <ToastProvider>{children}</ToastProvider>
+                <SpeedInsights />
               </FeatureProvider>
             </AuthProvider>
           </LocaleProvider>
