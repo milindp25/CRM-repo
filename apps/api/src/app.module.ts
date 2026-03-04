@@ -88,7 +88,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
       {
         name: 'default',
         ttl: 60000,
-        limit: 100,
+        limit: 200,
       },
       {
         name: 'auth',

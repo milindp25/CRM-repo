@@ -26,23 +26,21 @@ export class CompanyService {
     const company = await this.repository.findById(companyId);
     if (!company) throw new NotFoundException('Company not found');
 
-    let baseFeatures: string[];
     let source: string;
 
-    // If explicit features are set, use them
-    if (company.featuresEnabled && company.featuresEnabled.length > 0) {
-      baseFeatures = company.featuresEnabled as string[];
-      source = 'custom';
-    } else {
-      // Otherwise derive from subscription tier
-      const tier = company.subscriptionTier as SubscriptionTier;
-      baseFeatures = [...(TIER_FEATURES[tier] ?? TIER_FEATURES[SubscriptionTier.FREE])];
-      source = 'tier';
-    }
+    // Always include tier-based features as the baseline
+    const tier = company.subscriptionTier as SubscriptionTier;
+    const tierFeatures = [...(TIER_FEATURES[tier] ?? TIER_FEATURES[SubscriptionTier.FREE])];
+
+    // Merge explicit custom features if set
+    const customFeatures = (company.featuresEnabled && company.featuresEnabled.length > 0)
+      ? company.featuresEnabled as string[]
+      : [];
+    source = customFeatures.length > 0 ? 'custom' : 'tier';
 
     // Merge paid add-on features
     const addonFeatures = await this.repository.findActiveAddonFeatures(companyId);
-    const allFeatures = [...new Set([...baseFeatures, ...addonFeatures])];
+    const allFeatures = [...new Set([...tierFeatures, ...customFeatures, ...addonFeatures])];
 
     return {
       features: allFeatures,

@@ -69,10 +69,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const profile = await apiClient.getProfile();
         if (!cancelled) setUser(profile);
       } catch (err) {
-        // Token invalid or expired
+        // Token invalid or expired — clear tokens and redirect to login with expired flag
         if (!cancelled) {
           apiClient.clearTokens();
           setUser(null);
+          // Only redirect if we're on a protected page (not already on login/register)
+          const path = window.location.pathname;
+          if (path !== '/login' && path !== '/register' && path !== '/') {
+            router.push('/login?expired=true');
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -186,7 +191,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (err.statusCode === 401) {
           apiClient.clearTokens();
           setUser(null);
-          router.push('/login');
+          router.push('/login?expired=true');
         } else {
           setError(err.message);
         }

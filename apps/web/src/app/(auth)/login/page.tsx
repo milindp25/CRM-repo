@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { LoginForm } from '@/components/auth/login-form';
+import { SessionExpiredBanner } from '@/components/auth/session-expired-banner';
 
 export const metadata = {
   title: 'Login | HRPlatform',
   description: 'Sign in to your HRPlatform account'
 };
 
-export default function LoginPage() {
+export default function LoginPage({ searchParams }: { searchParams: { expired?: string } }) {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel — Feature showcase (hidden on mobile) */}
@@ -107,6 +108,8 @@ export default function LoginPage() {
 
         <div className="flex-1 flex items-center justify-center px-6 py-12">
           <div className="w-full max-w-[420px] space-y-8">
+            {searchParams.expired === 'true' && <SessionExpiredBanner />}
+
             <div className="space-y-2">
               <h1 className="text-3xl font-bold tracking-tight text-foreground">
                 Welcome back
