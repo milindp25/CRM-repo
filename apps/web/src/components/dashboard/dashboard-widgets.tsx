@@ -32,7 +32,7 @@ const OrgChartComponent = dynamic(
 
 /* ─── Shared helpers ─────────────────────────────────── */
 
-function WidgetLoader() {
+export function WidgetLoader() {
   return (
     <div className="flex justify-center py-8">
       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -74,11 +74,17 @@ function EmptyState({ icon: Icon, message }: { icon: React.ElementType; message:
   );
 }
 
+/* ─── Widget props (all accept optional GraphQL data) ── */
+
+interface WidgetProps {
+  data?: any;
+}
+
 /* ═══════════════════════════════════════════════════════
    1. Welcome Widget
    ═══════════════════════════════════════════════════════ */
 
-export function WelcomeWidget() {
+export function WelcomeWidget(_props: WidgetProps) {
   const { user } = useAuthContext();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -97,15 +103,16 @@ export function WelcomeWidget() {
    2. Stats Overview Widget (Admin/HR/Manager)
    ═══════════════════════════════════════════════════════ */
 
-export function StatsOverviewWidget() {
+export function StatsOverviewWidget({ data: gqlData }: WidgetProps) {
   const [stats, setStats] = useState({
     totalEmployees: 0, activeEmployees: 0,
     presentToday: 0, absentToday: 0, wfhToday: 0,
     pendingLeaves: 0, draftPayrolls: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return; // GraphQL data provided, skip REST fetch
     (async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
@@ -126,27 +133,38 @@ export function StatsOverviewWidget() {
         });
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  // Use GraphQL data if provided
+  const s = gqlData !== undefined ? {
+    totalEmployees: gqlData?.totalEmployees ?? 0,
+    activeEmployees: gqlData?.activeEmployees ?? 0,
+    presentToday: gqlData?.presentToday ?? 0,
+    absentToday: gqlData?.absentToday ?? 0,
+    wfhToday: gqlData?.wfhToday ?? 0,
+    pendingLeaves: gqlData?.pendingLeaves ?? 0,
+    draftPayrolls: gqlData?.draftPayrolls ?? 0,
+  } : stats;
 
   if (loading) return <WidgetLoader />;
 
-  const attendanceRate = stats.activeEmployees > 0 ? Math.round((stats.presentToday / stats.activeEmployees) * 100) : 0;
+  const attendanceRate = s.activeEmployees > 0 ? Math.round((s.presentToday / s.activeEmployees) * 100) : 0;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard title="Total Employees" value={stats.totalEmployees}
-        subtitle={`${stats.activeEmployees} active`} icon={Users} iconColor="blue"
+      <StatCard title="Total Employees" value={s.totalEmployees}
+        subtitle={`${s.activeEmployees} active`} icon={Users} iconColor="blue"
         onClick={() => window.location.href = '/employees'} />
-      <StatCard title="Present Today" value={stats.presentToday}
-        subtitle={stats.wfhToday > 0 ? `${stats.wfhToday} remote` : `${stats.absentToday} absent`}
+      <StatCard title="Present Today" value={s.presentToday}
+        subtitle={s.wfhToday > 0 ? `${s.wfhToday} remote` : `${s.absentToday} absent`}
         icon={UserCheck} iconColor="green"
-        trend={stats.activeEmployees > 0 ? { value: attendanceRate, label: 'rate' } : undefined}
+        trend={s.activeEmployees > 0 ? { value: attendanceRate, label: 'rate' } : undefined}
         onClick={() => window.location.href = '/attendance'} />
-      <StatCard title="Time Off Requests" value={stats.pendingLeaves}
+      <StatCard title="Time Off Requests" value={s.pendingLeaves}
         subtitle="Awaiting approval" icon={ClipboardList}
-        iconColor={stats.pendingLeaves > 0 ? 'amber' : 'green'}
+        iconColor={s.pendingLeaves > 0 ? 'amber' : 'green'}
         onClick={() => window.location.href = '/leave'} />
-      <StatCard title="Draft Payrolls" value={stats.draftPayrolls}
+      <StatCard title="Draft Payrolls" value={s.draftPayrolls}
         subtitle="Ready to process" icon={DollarSign} iconColor="purple"
         onClick={() => window.location.href = '/payroll'} />
     </div>
@@ -157,52 +175,57 @@ export function StatsOverviewWidget() {
    3. My Attendance Widget (Employee view)
    ═══════════════════════════════════════════════════════ */
 
-export function MyAttendanceWidget() {
+export function MyAttendanceWidget({ data: gqlData }: WidgetProps) {
   const [record, setRecord] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
         const res = await apiClient.getAttendance({ startDate: today, endDate: today });
-        // The current user's attendance may be in the list
         const records = res.data || [];
         setRecord(records.length > 0 ? records[0] : null);
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  // Use GraphQL data: myAttendance is an array, pick the first record
+  const r = gqlData !== undefined
+    ? (Array.isArray(gqlData) && gqlData.length > 0 ? gqlData[0] : null)
+    : record;
 
   return (
     <WidgetShell title="My Attendance" icon={CalendarCheck} linkHref="/attendance" linkLabel="Mark Attendance">
       {loading ? <WidgetLoader /> : (
         <div className="p-5">
-          {record ? (
+          {r ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status</span>
-                <StatusBadge variant={getStatusVariant(record.status)} size="sm">{record.status}</StatusBadge>
+                <StatusBadge variant={getStatusVariant(r.status)} size="sm">{r.status}</StatusBadge>
               </div>
-              {record.checkInTime && (
+              {r.checkInTime && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Check In</span>
                   <span className="text-sm font-medium text-foreground">
-                    {new Date(record.checkInTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(r.checkInTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               )}
-              {record.checkOutTime && (
+              {r.checkOutTime && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Check Out</span>
                   <span className="text-sm font-medium text-foreground">
-                    {new Date(record.checkOutTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(r.checkOutTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               )}
-              {record.workHours != null && (
+              {r.workHours != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Hours</span>
-                  <span className="text-sm font-semibold text-foreground">{Number(record.workHours).toFixed(1)}h</span>
+                  <span className="text-sm font-semibold text-foreground">{Number(r.workHours).toFixed(1)}h</span>
                 </div>
               )}
             </div>
@@ -225,27 +248,30 @@ export function MyAttendanceWidget() {
    4. My Leaves Widget (Employee view)
    ═══════════════════════════════════════════════════════ */
 
-export function MyLeavesWidget() {
+export function MyLeavesWidget({ data: gqlData }: WidgetProps) {
   const [leaves, setLeaves] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const res = await apiClient.getLeave({ status: 'PENDING' });
         setLeaves((res.data || []).slice(0, 3));
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  const items = gqlData !== undefined ? (gqlData || []).slice(0, 3) : leaves;
 
   return (
     <WidgetShell title="My Leaves" icon={Briefcase} linkHref="/leave">
       {loading ? <WidgetLoader /> : (
         <div className="divide-y">
-          {leaves.length === 0 ? (
+          {items.length === 0 ? (
             <EmptyState icon={Briefcase} message="No pending leave requests" />
           ) : (
-            leaves.map(leave => (
+            items.map((leave: any) => (
               <div key={leave.id} className="px-5 py-3 flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <StatusBadge variant={getStatusVariant(leave.leaveType)} size="sm">
@@ -270,11 +296,12 @@ export function MyLeavesWidget() {
    5. My Payslip Widget (Employee view)
    ═══════════════════════════════════════════════════════ */
 
-export function MyPayslipWidget() {
+export function MyPayslipWidget({ data: gqlData }: WidgetProps) {
   const [payslip, setPayslip] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const res = await apiClient.getPayroll({ take: 1 });
@@ -282,31 +309,32 @@ export function MyPayslipWidget() {
         setPayslip(records.length > 0 ? records[0] : null);
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
 
+  const p = gqlData !== undefined ? gqlData : payslip;
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   return (
     <WidgetShell title="Latest Payslip" icon={DollarSign} linkHref="/payroll/my-payslips">
       {loading ? <WidgetLoader /> : (
         <div className="p-5">
-          {payslip ? (
+          {p ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Period</span>
                 <span className="text-sm font-medium text-foreground">
-                  {months[payslip.payPeriodMonth - 1]} {payslip.payPeriodYear}
+                  {months[p.payPeriodMonth - 1]} {p.payPeriodYear}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Net Pay</span>
                 <span className="text-lg font-bold text-foreground tabular-nums">
-                  ₹{Number(payslip.netSalary || 0).toLocaleString('en-IN')}
+                  ₹{Number(p.netSalary || 0).toLocaleString('en-IN')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status</span>
-                <StatusBadge variant={getStatusVariant(payslip.status)} size="sm">{payslip.status}</StatusBadge>
+                <StatusBadge variant={getStatusVariant(p.status)} size="sm">{p.status}</StatusBadge>
               </div>
             </div>
           ) : (
@@ -320,11 +348,12 @@ export function MyPayslipWidget() {
 
 /* ═══════════════════════════════════════════════════════
    6. Pending Approvals Widget (Manager/HR/Admin)
+   Note: Has approve/reject actions that still use REST
    ═══════════════════════════════════════════════════════ */
 
-export function PendingApprovalsWidget() {
+export function PendingApprovalsWidget({ data: gqlData }: WidgetProps) {
   const [leaves, setLeaves] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
   const toast = useToast();
 
   const fetchData = async () => {
@@ -334,13 +363,19 @@ export function PendingApprovalsWidget() {
     } catch {} finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    if (gqlData !== undefined) {
+      setLeaves((gqlData || []).slice(0, 5));
+      return;
+    }
+    fetchData();
+  }, [gqlData]);
 
   const handleApprove = async (id: string) => {
     try {
       await apiClient.approveLeave(id);
       toast.success('Leave approved');
-      await fetchData();
+      await fetchData(); // Refetch via REST after mutation
     } catch (err: any) {
       toast.error('Failed', err.message || 'Could not approve leave');
     }
@@ -402,11 +437,12 @@ export function PendingApprovalsWidget() {
    7. Team Attendance Widget (Manager/HR/Admin)
    ═══════════════════════════════════════════════════════ */
 
-export function TeamAttendanceWidget() {
+export function TeamAttendanceWidget({ data: gqlData }: WidgetProps) {
   const [stats, setStats] = useState({ present: 0, absent: 0, wfh: 0, total: 0 });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
@@ -425,39 +461,46 @@ export function TeamAttendanceWidget() {
         });
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  const s = gqlData !== undefined ? {
+    present: gqlData?.present ?? 0,
+    absent: gqlData?.absent ?? 0,
+    wfh: gqlData?.wfh ?? 0,
+    total: gqlData?.total ?? 0,
+  } : stats;
 
   return (
     <WidgetShell title="Today's Attendance" icon={CalendarCheck} linkHref="/attendance" linkLabel="Mark Attendance">
       {loading ? <WidgetLoader /> : (<div className="p-5">
-        {stats.total === 0 ? (
+        {s.total === 0 ? (
           <p className="text-sm text-muted-foreground">No employees to track yet</p>
         ) : (
           <div className="space-y-3">
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
               <span className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                <span className="text-muted-foreground">Present: <strong className="text-foreground">{stats.present}</strong></span>
+                <span className="text-muted-foreground">Present: <strong className="text-foreground">{s.present}</strong></span>
               </span>
               <span className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                <span className="text-muted-foreground">Absent: <strong className="text-foreground">{stats.absent}</strong></span>
+                <span className="text-muted-foreground">Absent: <strong className="text-foreground">{s.absent}</strong></span>
               </span>
               <span className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-                <span className="text-muted-foreground">Remote: <strong className="text-foreground">{stats.wfh}</strong></span>
+                <span className="text-muted-foreground">Remote: <strong className="text-foreground">{s.wfh}</strong></span>
               </span>
               <span className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
-                <span className="text-muted-foreground">Unmarked: <strong className="text-foreground">{Math.max(0, stats.total - stats.present - stats.absent)}</strong></span>
+                <span className="text-muted-foreground">Unmarked: <strong className="text-foreground">{Math.max(0, s.total - s.present - s.absent)}</strong></span>
               </span>
             </div>
             <div className="w-full bg-muted rounded-full h-2 flex overflow-hidden">
-              {stats.total > 0 && (
+              {s.total > 0 && (
                 <>
-                  <div className="bg-green-500 h-2 transition-all duration-500" style={{ width: `${(stats.present / stats.total) * 100}%` }} />
-                  <div className="bg-red-400 h-2 transition-all duration-500" style={{ width: `${(stats.absent / stats.total) * 100}%` }} />
-                  <div className="bg-blue-400 h-2 transition-all duration-500" style={{ width: `${(stats.wfh / stats.total) * 100}%` }} />
+                  <div className="bg-green-500 h-2 transition-all duration-500" style={{ width: `${(s.present / s.total) * 100}%` }} />
+                  <div className="bg-red-400 h-2 transition-all duration-500" style={{ width: `${(s.absent / s.total) * 100}%` }} />
+                  <div className="bg-blue-400 h-2 transition-all duration-500" style={{ width: `${(s.wfh / s.total) * 100}%` }} />
                 </>
               )}
             </div>
@@ -473,11 +516,12 @@ export function TeamAttendanceWidget() {
    8. Team Leaves Widget (Manager/HR/Admin)
    ═══════════════════════════════════════════════════════ */
 
-export function TeamLeavesWidget() {
+export function TeamLeavesWidget({ data: gqlData }: WidgetProps) {
   const [leaves, setLeaves] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const res = await apiClient.getLeave({ status: 'APPROVED' });
@@ -486,16 +530,18 @@ export function TeamLeavesWidget() {
         setLeaves(upcoming);
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  const items = gqlData !== undefined ? (gqlData || []).slice(0, 5) : leaves;
 
   return (
     <WidgetShell title="Team on Leave" icon={Briefcase} linkHref="/leave">
       {loading ? <WidgetLoader /> : (
         <div className="divide-y">
-          {leaves.length === 0 ? (
+          {items.length === 0 ? (
             <EmptyState icon={Briefcase} message="No one on leave" />
           ) : (
-            leaves.map(leave => (
+            items.map((leave: any) => (
               <div key={leave.id} className="px-5 py-3 flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground truncate">
@@ -523,7 +569,7 @@ export function TeamLeavesWidget() {
    9. Calendar Widget (Wrapper)
    ═══════════════════════════════════════════════════════ */
 
-export function CalendarWidgetWrapper() {
+export function CalendarWidgetWrapper(_props: WidgetProps) {
   return (
     <div className="rounded-xl border bg-card p-5 h-full">
       <CalendarWidget />
@@ -535,7 +581,7 @@ export function CalendarWidgetWrapper() {
    10. Activity Feed Widget
    ═══════════════════════════════════════════════════════ */
 
-export function ActivityFeedWidget() {
+export function ActivityFeedWidget(_props: WidgetProps) {
   return (
     <WidgetShell title="Recent Activity" icon={Activity} linkHref="/audit-logs" linkLabel="View history">
       <div className="px-5 py-3">
@@ -549,7 +595,7 @@ export function ActivityFeedWidget() {
    11. Org Chart Widget
    ═══════════════════════════════════════════════════════ */
 
-export function OrgChartWidget() {
+export function OrgChartWidget(_props: WidgetProps) {
   return (
     <WidgetShell title="Organization" icon={Building2} linkHref="/departments">
       <div className="px-5 py-3">
@@ -563,11 +609,12 @@ export function OrgChartWidget() {
    12. Announcements Widget
    ═══════════════════════════════════════════════════════ */
 
-export function AnnouncementsWidget() {
+export function AnnouncementsWidget({ data: gqlData }: WidgetProps) {
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const res = await apiClient.request<any>('/social/announcements');
@@ -575,16 +622,18 @@ export function AnnouncementsWidget() {
         setAnnouncements(list.slice(0, 3));
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  const items = gqlData !== undefined ? (gqlData || []).slice(0, 3) : announcements;
 
   return (
     <WidgetShell title="Announcements" icon={Megaphone} linkHref="/social">
       {loading ? <WidgetLoader /> : (
         <div className="divide-y">
-          {announcements.length === 0 ? (
+          {items.length === 0 ? (
             <EmptyState icon={Megaphone} message="No announcements" />
           ) : (
-            announcements.map(ann => (
+            items.map((ann: any) => (
               <div key={ann.id} className="px-5 py-3">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-foreground truncate">{ann.title}</p>
@@ -608,11 +657,12 @@ export function AnnouncementsWidget() {
    13. Kudos Feed Widget
    ═══════════════════════════════════════════════════════ */
 
-export function KudosFeedWidget() {
+export function KudosFeedWidget({ data: gqlData }: WidgetProps) {
   const [kudos, setKudos] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const res = await apiClient.request<any>('/social/kudos');
@@ -620,16 +670,18 @@ export function KudosFeedWidget() {
         setKudos(list.slice(0, 3));
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  const items = gqlData !== undefined ? (gqlData || []).slice(0, 3) : kudos;
 
   return (
     <WidgetShell title="Recognition" icon={Heart} linkHref="/social">
       {loading ? <WidgetLoader /> : (
         <div className="divide-y">
-          {kudos.length === 0 ? (
+          {items.length === 0 ? (
             <EmptyState icon={Heart} message="No kudos yet" />
           ) : (
-            kudos.map(k => (
+            items.map((k: any) => (
               <div key={k.id} className="px-5 py-3">
                 <p className="text-sm text-foreground">
                   <span className="font-medium">{k.sender?.firstName}</span>
@@ -650,11 +702,12 @@ export function KudosFeedWidget() {
    14. Birthdays & Anniversaries Widget
    ═══════════════════════════════════════════════════════ */
 
-export function BirthdaysWidget() {
+export function BirthdaysWidget({ data: gqlData }: WidgetProps) {
   const [employees, setEmployees] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const res = await apiClient.getEmployees({ limit: 200 });
@@ -668,16 +721,18 @@ export function BirthdaysWidget() {
         setEmployees(upcoming);
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  const items = gqlData !== undefined ? (gqlData || []).slice(0, 5) : employees;
 
   return (
     <WidgetShell title="Birthdays This Month" icon={Cake}>
       {loading ? <WidgetLoader /> : (
         <div className="divide-y">
-          {employees.length === 0 ? (
+          {items.length === 0 ? (
             <EmptyState icon={Cake} message="No birthdays this month" />
           ) : (
-            employees.map(emp => (
+            items.map((emp: any) => (
               <div key={emp.id} className="px-5 py-3 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-950 flex items-center justify-center">
                   <Cake className="w-4 h-4 text-pink-600 dark:text-pink-400" />
@@ -685,7 +740,7 @@ export function BirthdaysWidget() {
                 <div>
                   <p className="text-sm font-medium text-foreground">{emp.firstName} {emp.lastName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(emp.dateOfBirth).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    {emp.dateOfBirth ? new Date(emp.dateOfBirth).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
                   </p>
                 </div>
               </div>
@@ -701,39 +756,42 @@ export function BirthdaysWidget() {
    15. HR Analytics Widget (HR/Admin)
    ═══════════════════════════════════════════════════════ */
 
-export function HRAnalyticsWidget() {
+export function HRAnalyticsWidget({ data: gqlData }: WidgetProps) {
   const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const res = await apiClient.request<any>('/analytics/overview');
         setData(res);
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  const d = gqlData !== undefined ? gqlData : data;
 
   return (
     <WidgetShell title="HR Analytics" icon={Activity} linkHref="/analytics" linkLabel="Full analytics">
       {loading ? <WidgetLoader /> : (
         <div className="p-5">
-          {data ? (
+          {d ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-2xl font-bold text-foreground">{data.totalEmployees ?? 0}</p>
+                <p className="text-2xl font-bold text-foreground">{d.totalEmployees ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Headcount</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{data.newHires ?? 0}</p>
-                <p className="text-xs text-muted-foreground">New Hires</p>
+                <p className="text-2xl font-bold text-foreground">{d.attritionRate != null ? `${d.attritionRate}%` : (d.newHires ?? 0)}</p>
+                <p className="text-xs text-muted-foreground">{d.attritionRate != null ? 'Attrition' : 'New Hires'}</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{data.terminations ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Exits</p>
+                <p className="text-2xl font-bold text-foreground">{d.terminations ?? d.openPositions ?? 0}</p>
+                <p className="text-xs text-muted-foreground">{d.terminations != null ? 'Exits' : 'Open Roles'}</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{data.openPositions ?? 0}</p>
+                <p className="text-2xl font-bold text-foreground">{d.openPositions ?? 0}</p>
                 <p className="text-xs text-muted-foreground">Open Roles</p>
               </div>
             </div>
@@ -750,33 +808,36 @@ export function HRAnalyticsWidget() {
    16. Recruitment Pipeline Widget (HR/Admin)
    ═══════════════════════════════════════════════════════ */
 
-export function RecruitmentPipelineWidget() {
+export function RecruitmentPipelineWidget({ data: gqlData }: WidgetProps) {
   const [postings, setPostings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(gqlData === undefined);
 
   useEffect(() => {
+    if (gqlData !== undefined) return;
     (async () => {
       try {
         const data = await apiClient.getJobPostings({ status: 'OPEN' });
         setPostings(data.slice(0, 4));
       } catch {} finally { setLoading(false); }
     })();
-  }, []);
+  }, [gqlData]);
+
+  const items = gqlData !== undefined ? (gqlData || []).slice(0, 4) : postings;
 
   return (
     <WidgetShell title="Recruitment Pipeline" icon={UserPlus} linkHref="/recruitment">
       {loading ? <WidgetLoader /> : (
         <div className="divide-y">
-          {postings.length === 0 ? (
+          {items.length === 0 ? (
             <EmptyState icon={UserPlus} message="No open positions" />
           ) : (
-            postings.map(post => (
+            items.map((post: any) => (
               <div key={post.id} className="px-5 py-3 flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground truncate">{post.title}</p>
-                  <p className="text-xs text-muted-foreground">{post.department?.name || 'No department'}</p>
+                  <p className="text-xs text-muted-foreground">{post.department?.name || post.department || 'No department'}</p>
                 </div>
-                <span className="text-xs text-muted-foreground">{post.applicantCount || 0} applicants</span>
+                <span className="text-xs text-muted-foreground">{post.applicantCount || post._count?.applicants || 0} applicants</span>
               </div>
             ))
           )}
@@ -790,7 +851,7 @@ export function RecruitmentPipelineWidget() {
    Widget Registry Map
    ═══════════════════════════════════════════════════════ */
 
-export const WIDGET_MAP: Record<string, React.ComponentType> = {
+export const WIDGET_MAP: Record<string, React.ComponentType<WidgetProps>> = {
   welcome: WelcomeWidget,
   stats_overview: StatsOverviewWidget,
   my_attendance: MyAttendanceWidget,
@@ -807,6 +868,26 @@ export const WIDGET_MAP: Record<string, React.ComponentType> = {
   birthdays: BirthdaysWidget,
   hr_analytics: HRAnalyticsWidget,
   recruitment_pipeline: RecruitmentPipelineWidget,
+};
+
+/* ═══════════════════════════════════════════════════════
+   Widget ID to GraphQL data key mapping
+   ═══════════════════════════════════════════════════════ */
+
+export const WIDGET_DATA_KEY: Record<string, string> = {
+  stats_overview: 'statsOverview',
+  my_attendance: 'myAttendance',
+  my_leaves: 'myLeaves',
+  my_payslip: 'myPayslip',
+  pending_approvals: 'pendingApprovals',
+  team_attendance: 'teamAttendance',
+  team_leaves: 'teamLeaves',
+  announcements: 'announcements',
+  kudos_feed: 'kudos',
+  birthdays: 'birthdays',
+  hr_analytics: 'analyticsOverview',
+  recruitment_pipeline: 'recruitmentPipeline',
+  activity_feed: 'activityFeed',
 };
 
 /* ═══════════════════════════════════════════════════════

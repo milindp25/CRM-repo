@@ -2,6 +2,8 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { ApiKeyThrottlerGuard } from './common/guards/api-key-throttler.guard';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -41,6 +43,7 @@ import { ContractorModule } from './modules/contractor/contractor.module';
 import { GeofenceModule } from './modules/geofence/geofence.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { GraphqlApiModule } from './modules/graphql/graphql-api.module';
 import { GatewayModule } from './common/gateways/gateway.module';
 import { validate } from './config/env.validation';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -103,6 +106,15 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     // Task Scheduling
     ScheduleModule.forRoot(),
 
+    // GraphQL (code-first)
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      autoSchemaFile: true,
+      path: '/graphql',
+      playground: process.env.NODE_ENV !== 'production',
+      context: ({ req, res }: { req: any; res: any }) => ({ req, res }),
+    }),
+
     // Core Modules
     DatabaseModule,
 
@@ -142,6 +154,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     GeofenceModule,
     AnalyticsModule,
     DashboardModule,
+    GraphqlApiModule,
 
     // Real-time WebSocket Gateway
     GatewayModule,

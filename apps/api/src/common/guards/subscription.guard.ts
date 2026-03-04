@@ -9,6 +9,7 @@ import { UserRole } from '@hrplatform/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { CacheService } from '../services/cache.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { getRequestFromContext } from '../utils/get-request';
 
 @Injectable()
 export class SubscriptionGuard implements CanActivate {
@@ -28,7 +29,7 @@ export class SubscriptionGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = getRequestFromContext(context);
     const { user } = request;
 
     // No user context (shouldn't happen after JwtAuthGuard, but safety check)

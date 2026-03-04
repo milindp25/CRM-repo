@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { gqlRequest } from '@/lib/graphql-client';
+import { DIRECTORY_QUERY } from '@/lib/graphql/queries';
 import { PageContainer } from '@/components/ui/page-container';
 import { StatCard } from '@/components/ui/stat-card';
 import { ErrorBanner } from '@/components/ui/error-banner';
@@ -17,8 +19,8 @@ interface DirectoryEmployee {
   lastName: string;
   workEmail: string;
   workPhone: string | null;
-  department: { name: string } | null;
-  designation: { title: string } | null;
+  department: string | { name: string } | null;
+  designation: string | { title: string } | null;
   dateOfJoining: string;
 }
 
@@ -31,48 +33,80 @@ export default function DirectoryPage() {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'directory' | 'celebrations'>('directory');
 
-  useEffect(() => {
-    fetchDirectory();
-    fetchCelebrations();
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => fetchDirectory(), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  const fetchDirectory = async () => {
+  const fetchAll = useCallback(async (searchTerm?: string) => {
     try {
       setLoading(true);
       setError(null);
+
+      // Try GraphQL first (1 call instead of 3)
+      try {
+        const result = await gqlRequest<{
+          directoryPage: {
+            employees: any[];
+            birthdays: any[];
+            anniversaries: any[];
+          };
+        }>(DIRECTORY_QUERY, { search: searchTerm || null });
+
+        const page = result.directoryPage;
+        // Map flat string fields to expected shape
+        const mapped = (page.employees || []).map((e: any) => ({
+          ...e,
+          department: e.department ? (typeof e.department === 'string' ? { name: e.department } : e.department) : null,
+          designation: e.designation ? (typeof e.designation === 'string' ? { title: e.designation } : e.designation) : null,
+        }));
+        setEmployees(mapped);
+        setBirthdays(page.birthdays || []);
+        setAnniversaries(page.anniversaries || []);
+        return;
+      } catch {
+        // Fallback to REST
+      }
+
+      // REST fallback (3 calls)
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      const data = await apiClient.request(`/social/directory?${params}`);
-      setEmployees(Array.isArray(data) ? data : data?.data || []);
+      if (searchTerm) params.set('search', searchTerm);
+
+      const [dirData, bd, an] = await Promise.all([
+        apiClient.request(`/social/directory?${params}`),
+        apiClient.request('/social/directory/birthdays'),
+        apiClient.request('/social/directory/anniversaries'),
+      ]);
+      setEmployees(Array.isArray(dirData) ? dirData : dirData?.data || []);
+      setBirthdays(Array.isArray(bd) ? bd : []);
+      setAnniversaries(Array.isArray(an) ? an : []);
     } catch (err: any) {
       setError(err.message || 'Failed to load directory');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchCelebrations = async () => {
-    try {
-      const [bd, an] = await Promise.all([
-        apiClient.request('/social/directory/birthdays'),
-        apiClient.request('/social/directory/anniversaries'),
-      ]);
-      setBirthdays(Array.isArray(bd) ? bd : []);
-      setAnniversaries(Array.isArray(an) ? an : []);
-    } catch {}
-  };
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchAll(search), 300);
+    return () => clearTimeout(timer);
+  }, [search, fetchAll]);
 
   const tabs = [
     { id: 'directory' as const, label: 'Directory', icon: Users },
     { id: 'celebrations' as const, label: 'Celebrations', icon: PartyPopper },
   ];
 
-  const uniqueDepartments = new Set(employees.map(e => e.department?.name).filter(Boolean)).size;
+  const getDeptName = (dept: DirectoryEmployee['department']) => {
+    if (!dept) return null;
+    return typeof dept === 'string' ? dept : dept.name;
+  };
+
+  const getDesignationTitle = (des: DirectoryEmployee['designation']) => {
+    if (!des) return null;
+    return typeof des === 'string' ? des : des.title;
+  };
+
+  const uniqueDepartments = new Set(employees.map(e => getDeptName(e.department)).filter(Boolean)).size;
 
   return (
     <PageContainer
@@ -80,7 +114,7 @@ export default function DirectoryPage() {
       description="Search and connect with your colleagues"
       breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Directory' }]}
     >
-      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={fetchDirectory} />}
+      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => fetchAll(search)} />}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -148,7 +182,7 @@ export default function DirectoryPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-medium text-foreground truncate">{emp.firstName} {emp.lastName}</h3>
-                      <p className="text-xs text-muted-foreground truncate">{emp.designation?.title || 'No designation'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{getDesignationTitle(emp.designation) || 'No designation'}</p>
                     </div>
                   </div>
                   <div className="mt-3 space-y-1.5 text-sm">
@@ -162,10 +196,10 @@ export default function DirectoryPage() {
                         <span>{emp.workPhone}</span>
                       </div>
                     )}
-                    {emp.department && (
+                    {getDeptName(emp.department) && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>{emp.department.name}</span>
+                        <span>{getDeptName(emp.department)}</span>
                       </div>
                     )}
                   </div>
@@ -201,7 +235,7 @@ export default function DirectoryPage() {
                       <span className="text-sm font-medium text-foreground">{b.first_name || b.firstName} {b.last_name || b.lastName}</span>
                     </div>
                     <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {b.date_of_birth ? new Date(b.date_of_birth).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                      {(b.date_of_birth || b.dateOfBirth) ? new Date(b.date_of_birth || b.dateOfBirth).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
                     </span>
                   </div>
                 ))}
@@ -232,7 +266,7 @@ export default function DirectoryPage() {
                       <span className="text-sm font-medium text-foreground">{a.first_name || a.firstName} {a.last_name || a.lastName}</span>
                     </div>
                     <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {a.date_of_joining ? new Date(a.date_of_joining).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                      {(a.date_of_joining || a.dateOfJoining) ? new Date(a.date_of_joining || a.dateOfJoining).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
                     </span>
                   </div>
                 ))}

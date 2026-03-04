@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import type { DashboardWidgetLayout } from '@/lib/api-client';
+import { gqlRequest } from '@/lib/graphql-client';
+import { DASHBOARD_QUERY } from '@/lib/graphql/queries';
 import { useAuthContext } from '@/contexts/auth-context';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PageLoader } from '@/components/ui/page-loader';
 import { ErrorBanner } from '@/components/ui/error-banner';
-import { WIDGET_MAP, getDefaultLayout, QuickAction } from '@/components/dashboard/dashboard-widgets';
+import { WIDGET_MAP, WIDGET_DATA_KEY, getDefaultLayout, QuickAction } from '@/components/dashboard/dashboard-widgets';
 import {
   Plus, CalendarCheck, FileCheck, DollarSign,
 } from 'lucide-react';
@@ -19,6 +21,7 @@ export default function DashboardPage() {
   const [layout, setLayout] = useState<DashboardWidgetLayout[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [dashboardData, setDashboardData] = useState<Record<string, any> | undefined>(undefined);
 
   useEffect(() => {
     (async () => {
@@ -26,18 +29,39 @@ export default function DashboardPage() {
         setLoading(true);
         setError('');
 
-        // Try the widget API (requires DASHBOARD_CONFIG feature)
-        const [widgetsRes, configRes] = await Promise.allSettled([
+        // Step 1: Determine layout (widget API or role-based default)
+        let resolvedLayout: DashboardWidgetLayout[] = [];
+
+        const [, configRes] = await Promise.allSettled([
           apiClient.getDashboardWidgets(),
           apiClient.getDashboardConfig(),
         ]);
 
         if (configRes.status === 'fulfilled' && configRes.value.layout?.length > 0) {
-          // Use the API-provided layout (filters by role on the backend)
-          setLayout(configRes.value.layout);
+          resolvedLayout = configRes.value.layout;
         } else {
-          // Fallback to role-based defaults (FREE tier or API error)
-          setLayout(getDefaultLayout(user?.role));
+          resolvedLayout = getDefaultLayout(user?.role);
+        }
+
+        setLayout(resolvedLayout);
+
+        // Step 2: Fetch all widget data via single GraphQL call
+        const visibleIds = resolvedLayout
+          .filter(l => l.visible)
+          .map(l => l.widgetId)
+          .filter(id => WIDGET_DATA_KEY[id]); // Only widgets that have GraphQL data
+
+        if (visibleIds.length > 0) {
+          try {
+            const result = await gqlRequest<{ dashboardData: Record<string, any> }>(
+              DASHBOARD_QUERY,
+              { widgetIds: visibleIds },
+            );
+            setDashboardData(result.dashboardData);
+          } catch {
+            // GraphQL failed — widgets will fallback to individual REST calls
+            setDashboardData(undefined);
+          }
         }
       } catch {
         // Full fallback
@@ -86,9 +110,12 @@ export default function DashboardPage() {
           const Widget = WIDGET_MAP[item.widgetId];
           if (!Widget) return null;
           const isFullWidth = item.size === 'full';
+          // Pass GraphQL data to widgets that support it
+          const dataKey = WIDGET_DATA_KEY[item.widgetId];
+          const widgetData = dataKey && dashboardData ? dashboardData[dataKey] : undefined;
           return (
             <div key={item.widgetId} className={isFullWidth ? 'lg:col-span-2' : ''}>
-              <Widget />
+              <Widget data={widgetData} />
             </div>
           );
         })}

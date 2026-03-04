@@ -9,6 +9,7 @@ import { UserRole, TIER_FEATURES, SubscriptionTier } from '@hrplatform/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { CacheService } from '../services/cache.service';
 import { FEATURE_KEY } from '../decorators/feature.decorator';
+import { getRequestFromContext } from '../utils/get-request';
 
 @Injectable()
 export class FeatureGuard implements CanActivate {
@@ -29,7 +30,7 @@ export class FeatureGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = getRequestFromContext(context);
     const { user } = request;
 
     // No user context - skip (public routes)

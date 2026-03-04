@@ -1,5 +1,6 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { ThrottlerGuard, ThrottlerRequest, ThrottlerLimitDetail } from '@nestjs/throttler';
+import { getRequestFromContext } from '../utils/get-request';
 
 /**
  * Custom throttler guard that applies per-API-key rate limits.
@@ -33,7 +34,7 @@ export class ApiKeyThrottlerGuard extends ThrottlerGuard {
     requestProps: ThrottlerRequest,
   ): Promise<boolean> {
     const { context } = requestProps;
-    const req = context.switchToHttp().getRequest();
+    const req = getRequestFromContext(context);
 
     if (req.user?.role === 'API_KEY' && req.user.apiKeyRateLimit) {
       requestProps.limit = req.user.apiKeyRateLimit;
@@ -50,7 +51,7 @@ export class ApiKeyThrottlerGuard extends ThrottlerGuard {
     context: ExecutionContext,
     throttlerLimitDetail: ThrottlerLimitDetail,
   ): Promise<string> {
-    const req = context.switchToHttp().getRequest();
+    const req = getRequestFromContext(context);
 
     if (req.user?.role === 'API_KEY') {
       return `API key rate limit exceeded. Limit: ${throttlerLimitDetail.limit} requests/hour. Try again later.`;

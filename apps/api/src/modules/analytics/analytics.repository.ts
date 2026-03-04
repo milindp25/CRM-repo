@@ -11,20 +11,20 @@ export class AnalyticsRepository {
    * Count active employees, grouped by department.
    */
   async getHeadcount(companyId: string) {
-    // Single query: get departments with employee counts
-    const departments = await this.prisma.department.findMany({
-      where: { companyId },
-      select: {
-        id: true,
-        name: true,
-        _count: { select: { employees: { where: { isActive: true } } } },
-      },
-    });
-
-    // Count unassigned employees
-    const unassignedCount = await this.prisma.employee.count({
-      where: { companyId, isActive: true, departmentId: null },
-    });
+    // Run both queries in parallel (previously sequential)
+    const [departments, unassignedCount] = await Promise.all([
+      this.prisma.department.findMany({
+        where: { companyId },
+        select: {
+          id: true,
+          name: true,
+          _count: { select: { employees: { where: { isActive: true } } } },
+        },
+      }),
+      this.prisma.employee.count({
+        where: { companyId, isActive: true, departmentId: null },
+      }),
+    ]);
 
     const headcountByDepartment = departments
       .filter((d) => d._count.employees > 0)
@@ -101,19 +101,20 @@ export class AnalyticsRepository {
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth() - months, 1);
 
-    // Two sequential queries to avoid connection pool exhaustion
-    const allEmployees = await this.prisma.employee.findMany({
-      where: {
-        companyId,
-        OR: [
-          { dateOfLeaving: null },
-          { dateOfLeaving: { gte: startDate } },
-        ],
-      },
-      select: { dateOfJoining: true, dateOfLeaving: true },
-    });
-
-    const totalEmployees = await this.prisma.employee.count({ where: { companyId } });
+    // Run both queries in parallel
+    const [allEmployees, totalEmployees] = await Promise.all([
+      this.prisma.employee.findMany({
+        where: {
+          companyId,
+          OR: [
+            { dateOfLeaving: null },
+            { dateOfLeaving: { gte: startDate } },
+          ],
+        },
+        select: { dateOfJoining: true, dateOfLeaving: true },
+      }),
+      this.prisma.employee.count({ where: { companyId } }),
+    ]);
 
     // Compute leavers count
     const leaversCount = allEmployees.filter(

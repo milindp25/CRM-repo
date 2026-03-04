@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { apiClient, type Employee, type Leave } from '@/lib/api-client';
+import { gqlRequest } from '@/lib/graphql-client';
+import { LEAVE_BALANCE_QUERY } from '@/lib/graphql/queries';
 
 // Standard annual leave entitlements (days per year)
 const LEAVE_ENTITLEMENTS: Record<string, number> = {
@@ -57,44 +59,67 @@ export default function LeaveBalancePage() {
       setLoading(true);
       setError('');
 
-      const [empRes, approvedRes, pendingRes] = await Promise.all([
-        apiClient.getEmployees({ limit: 100, status: 'ACTIVE' }),
-        apiClient.getLeave({
-          status: 'APPROVED',
-          startDate: `${year}-01-01`,
-          endDate: `${year}-12-31`,
-        }),
-        apiClient.getLeave({
-          status: 'PENDING',
-          startDate: `${year}-01-01`,
-          endDate: `${year}-12-31`,
-        }),
-      ]);
+      let allEmployees: any[] = [];
+      let allLeaves: any[] = [];
 
-      const allEmployees = empRes.data;
+      // Try GraphQL first (single call instead of 3 REST calls)
+      try {
+        const result = await gqlRequest<{
+          leaveBalancePage: {
+            employees: any[];
+            leaves: any[];
+          };
+        }>(LEAVE_BALANCE_QUERY, { year });
+
+        const page = result.leaveBalancePage;
+        allEmployees = (page.employees || []).map((e: any) => ({
+          ...e,
+          department: e.departmentName ? { name: e.departmentName } : null,
+        }));
+        allLeaves = page.leaves || [];
+      } catch {
+        // Fallback to REST (3 calls)
+        const [empRes, approvedRes, pendingRes] = await Promise.all([
+          apiClient.getEmployees({ limit: 100, status: 'ACTIVE' }),
+          apiClient.getLeave({
+            status: 'APPROVED',
+            startDate: `${year}-01-01`,
+            endDate: `${year}-12-31`,
+          }),
+          apiClient.getLeave({
+            status: 'PENDING',
+            startDate: `${year}-01-01`,
+            endDate: `${year}-12-31`,
+          }),
+        ]);
+        allEmployees = empRes.data;
+        allLeaves = [...(approvedRes.data || []), ...(pendingRes.data || [])];
+      }
+
       setEmployees(allEmployees);
 
       const filteredEmployees = selectedEmployee
         ? allEmployees.filter(e => e.id === selectedEmployee)
         : allEmployees;
 
-      const approvedLeaves = approvedRes.data;
-      const pendingLeaves = pendingRes.data;
+      // Split leaves by status (GraphQL returns all statuses together)
+      const approvedLeaves = allLeaves.filter((l: any) => l.status === 'APPROVED');
+      const pendingLeaves = allLeaves.filter((l: any) => l.status === 'PENDING');
 
       const result: EmployeeLeaveBalance[] = filteredEmployees.map(emp => {
-        const empApproved = approvedLeaves.filter(l => l.employeeId === emp.id);
-        const empPending = pendingLeaves.filter(l => l.employeeId === emp.id);
+        const empApproved = approvedLeaves.filter((l: any) => l.employeeId === emp.id);
+        const empPending = pendingLeaves.filter((l: any) => l.employeeId === emp.id);
 
         const leaveTypes = Object.keys(LEAVE_ENTITLEMENTS);
 
         const balanceRows = leaveTypes.map(type => {
           const usedDays = empApproved
-            .filter(l => l.leaveType === type)
-            .reduce((sum, l) => sum + Number(l.totalDays), 0);
+            .filter((l: any) => l.leaveType === type)
+            .reduce((sum: number, l: any) => sum + Number(l.totalDays), 0);
 
           const pendingDays = empPending
-            .filter(l => l.leaveType === type)
-            .reduce((sum, l) => sum + Number(l.totalDays), 0);
+            .filter((l: any) => l.leaveType === type)
+            .reduce((sum: number, l: any) => sum + Number(l.totalDays), 0);
 
           const entitlement = LEAVE_ENTITLEMENTS[type];
           const remaining = entitlement > 0 ? Math.max(0, entitlement - usedDays) : 0;

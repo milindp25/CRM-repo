@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { gqlRequest } from '@/lib/graphql-client';
+import { SOCIAL_PAGE_QUERY } from '@/lib/graphql/queries';
 import { RoleGate } from '@/components/common/role-gate';
 import { Permission } from '@hrplatform/shared';
 import { useToast } from '@/components/ui/toast';
@@ -31,8 +33,10 @@ interface Kudos {
   id: string;
   message: string;
   category: string;
-  sender: { firstName: string; lastName: string };
-  recipient: { firstName: string; lastName: string };
+  sender: { firstName: string; lastName: string } | null;
+  senderName?: string;
+  recipient: { firstName: string; lastName: string } | null;
+  recipientName?: string;
   createdAt: string;
 }
 
@@ -77,31 +81,57 @@ export default function SocialPage() {
 
   useEffect(() => {
     fetchData();
-    fetchEmployees();
   }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      // Try GraphQL first (1 call instead of 3)
+      try {
+        const result = await gqlRequest<{
+          socialPage: {
+            announcements: any[];
+            kudos: any[];
+            employees: any[];
+          };
+        }>(SOCIAL_PAGE_QUERY);
+
+        const page = result.socialPage;
+        setAnnouncements(page.announcements || []);
+
+        // Map kudos: GraphQL returns senderName/recipientName strings
+        const mappedKudos = (page.kudos || []).map((k: any) => ({
+          ...k,
+          sender: k.sender || (k.senderName ? { firstName: k.senderName.split(' ')[0], lastName: k.senderName.split(' ').slice(1).join(' ') } : null),
+          recipient: k.recipient || (k.recipientName ? { firstName: k.recipientName.split(' ')[0], lastName: k.recipientName.split(' ').slice(1).join(' ') } : null),
+        }));
+        setKudos(mappedKudos);
+        setEmployees(page.employees || []);
+        return;
+      } catch {
+        // Fallback to REST
+      }
+
+      // REST fallback (3 calls)
       const [ann, kd] = await Promise.all([
         apiClient.request('/social/announcements'),
         apiClient.request('/social/kudos'),
       ]);
       setAnnouncements(Array.isArray(ann) ? ann : ann?.data || []);
       setKudos(Array.isArray(kd) ? kd : kd?.data || []);
+
+      // Fetch employees separately for the kudos form
+      try {
+        const data = await apiClient.getEmployees();
+        setEmployees(Array.isArray(data) ? data : data?.data || []);
+      } catch {}
     } catch (err: any) {
       setError(err.message || 'Failed to load social feed');
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchEmployees = async () => {
-    try {
-      const data = await apiClient.getEmployees();
-      setEmployees(Array.isArray(data) ? data : data?.data || []);
-    } catch {}
   };
 
   // Kudos handlers
@@ -198,6 +228,15 @@ export default function SocialPage() {
     { id: 'announcements' as const, label: 'Announcements', icon: Megaphone },
     { id: 'kudos' as const, label: 'Kudos', icon: Heart },
   ];
+
+  // Helper to get sender/recipient display names
+  const getKudosName = (k: Kudos, field: 'sender' | 'recipient') => {
+    const obj = k[field];
+    if (obj) return `${obj.firstName} ${obj.lastName}`;
+    if (field === 'sender' && k.senderName) return k.senderName;
+    if (field === 'recipient' && k.recipientName) return k.recipientName;
+    return 'Unknown';
+  };
 
   return (
     <PageContainer
@@ -332,8 +371,10 @@ export default function SocialPage() {
             </div>
           ) : (
             kudos.map((k) => {
-              const cat = categoryConfig[k.category] || { icon: Award, label: k.category.replace(/_/g, ' ') };
+              const cat = categoryConfig[k.category] || { icon: Award, label: k.category?.replace(/_/g, ' ') || 'Recognition' };
               const CatIcon = cat.icon;
+              const senderName = getKudosName(k, 'sender');
+              const recipientName = getKudosName(k, 'recipient');
               return (
                 <div key={k.id} className="rounded-xl border bg-card p-5 hover:shadow-sm transition-all">
                   <div className="flex items-start gap-3">
@@ -342,9 +383,9 @@ export default function SocialPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-foreground">
-                        <span className="font-semibold">{k.sender.firstName} {k.sender.lastName}</span>
+                        <span className="font-semibold">{senderName}</span>
                         <span className="text-muted-foreground"> recognized </span>
-                        <span className="font-semibold">{k.recipient.firstName} {k.recipient.lastName}</span>
+                        <span className="font-semibold">{recipientName}</span>
                       </p>
                       <p className="text-sm text-muted-foreground mt-1.5">{k.message}</p>
                       <div className="flex items-center gap-2 mt-3">

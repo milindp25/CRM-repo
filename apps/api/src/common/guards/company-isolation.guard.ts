@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '@hrplatform/shared';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { getRequestFromContext } from '../utils/get-request';
 
 /**
  * Ensures users can only access their own company data (multi-tenancy)
@@ -25,7 +26,7 @@ export class CompanyIsolationGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = getRequestFromContext(context);
     const user = request.user;
 
     // No user context (shouldn't happen after JwtAuthGuard, but safety check)
