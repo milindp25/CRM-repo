@@ -866,7 +866,7 @@ export const WIDGET_MAP: Record<string, React.ComponentType<WidgetProps>> = {
   announcements: AnnouncementsWidget,
   kudos_feed: KudosFeedWidget,
   birthdays: BirthdaysWidget,
-  hr_analytics: HRAnalyticsWidget,
+  // hr_analytics: HRAnalyticsWidget, // Disabled — analytics.getOverview() adds ~2.5s latency
   recruitment_pipeline: RecruitmentPipelineWidget,
 };
 
@@ -885,7 +885,7 @@ export const WIDGET_DATA_KEY: Record<string, string> = {
   announcements: 'announcements',
   kudos_feed: 'kudos',
   birthdays: 'birthdays',
-  hr_analytics: 'analyticsOverview',
+  // hr_analytics: 'analyticsOverview', // Disabled — analytics.getOverview() adds ~2.5s latency
   recruitment_pipeline: 'recruitmentPipeline',
   activity_feed: 'activityFeed',
 };
