@@ -14,13 +14,16 @@ export interface Response<T> {
 }
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, Response<T>>
-{
+export class TransformInterceptor<T> implements NestInterceptor<T, any> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<Response<T>> {
+  ): Observable<any> {
+    // Skip response wrapping for GraphQL — Apollo Server handles its own response format
+    if (context.getType<string>() === 'graphql') {
+      return next.handle();
+    }
+
     return next.handle().pipe(
       map((data) => ({
         success: true,

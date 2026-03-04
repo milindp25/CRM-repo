@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@apollo/server": "^5.4.0",
+    "@as-integrations/express5": "^1.1.2",
     "@hrplatform/database": "workspace:*",
     "@hrplatform/shared": "workspace:*",
     "@nestjs/apollo": "^13.2.4",

@@ -15,6 +15,17 @@ import { getRequestFromContext } from '../utils/get-request';
 @Injectable()
 export class ApiKeyThrottlerGuard extends ThrottlerGuard {
   /**
+   * Skip throttling for GraphQL requests (ThrottlerGuard base class
+   * uses switchToHttp() which is incompatible with GraphQL context).
+   */
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    if (context.getType<string>() === 'graphql') {
+      return true; // Skip throttling for GraphQL — already rate-limited at HTTP layer
+    }
+    return super.canActivate(context);
+  }
+
+  /**
    * Return the tracker key. For API key requests, use the apiKeyId
    * so each key gets its own rate-limit bucket.
    */
